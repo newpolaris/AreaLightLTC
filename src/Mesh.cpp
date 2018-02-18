@@ -346,9 +346,11 @@ void CubeMesh::init()
   
   std::vector<glm::vec3> &positions = m_vertexBuffer.getPosition();
   std::vector<glm::vec3> &normals = m_vertexBuffer.getNormal();
+  std::vector<glm::vec2> &coords = m_vertexBuffer.getTexcoord();
   
   positions.resize( m_count );
   normals.resize( m_count );
+  coords.resize( m_count );
   
   #define PX  0u
   #define NX  6u
@@ -409,7 +411,13 @@ void CubeMesh::init()
   positions[NZ+4u] = glm::vec3( 1.0f, 1.0f, -1.0f);
   normals[NZ+0u] = normals[NZ+1u] = normals[NZ+2u] = 
   normals[NZ+3u] = normals[NZ+4u] = normals[NZ+5u] = - default_normals[2u];
-  
+
+  coords[PX+0u] = coords[NX+0u] = coords[PY+0u] = coords[NY+0u] = coords[PZ+0u] = coords[NZ+0u] = glm::vec2(1.0f, 0.f);
+  coords[PX+1u] = coords[NX+1u] = coords[PY+1u] = coords[NY+1u] = coords[PZ+1u] = coords[NZ+1u] = glm::vec2(0.0f, 0.f);
+  coords[PX+2u] = coords[NX+2u] = coords[PY+2u] = coords[NY+2u] = coords[PZ+2u] = coords[NZ+2u] = glm::vec2(0.0f, 1.f);
+  coords[PX+3u] = coords[NX+3u] = coords[PY+3u] = coords[NY+3u] = coords[PZ+3u] = coords[NZ+3u] = glm::vec2(0.0f, 1.f);
+  coords[PX+4u] = coords[NX+4u] = coords[PY+4u] = coords[NY+4u] = coords[PZ+4u] = coords[NZ+4u] = glm::vec2(1.0f, 1.f);
+  coords[PX+5u] = coords[NX+5u] = coords[PY+5u] = coords[NY+5u] = coords[PZ+5u] = coords[NZ+5u] = glm::vec2(1.0f, 0.f);
   
   //-------------------------
   

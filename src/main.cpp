@@ -54,15 +54,16 @@ namespace
     BaseTexturePtr m_texDepthMap;
     CubeMesh m_cube;
     ProgramShader m_shader;
-    ProgramShader m_shaderDetphShader;
+    ProgramShader m_shaderDepthShader;
 
     glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
+
+    GLuint m_depthMapFBO = 0;
 
     //?
 
     TCamera camera;
 
-    GLuint m_EmptyVAO = 0;
     bool bWireframe = false;
 
     //?
@@ -77,6 +78,7 @@ namespace
 	void prepareRender();
     void render();
 	void renderHUD();
+    void renderScene(ProgramShader& shader);
 	void update();
 	void updateHUD();
 
@@ -190,12 +192,8 @@ namespace {
         Timer::getInstance().start();
 
         // App Objects
-        camera.setViewParams( glm::vec3( 5.0f, 5.0f, 20.0f), glm::vec3( 5.0f, 5.0f, 0.0f) );
+        camera.setViewParams( glm::vec3( 0.0f, 0.0f, 3.0f), glm::vec3( 0.0f, 0.0f, 0.0f) );
         camera.setMoveCoefficient(0.35f);
-
-        GLuint m_VertexArrayID = 0;
-        GL_ASSERT(glGenVertexArrays(1, &m_VertexArrayID));
-        GL_ASSERT(glBindVertexArray(m_VertexArrayID));
 
 		// to prevent osx input bug
 		fflush(stdout);
@@ -258,8 +256,6 @@ namespace {
         glFrontFace(GL_CCW);
 
         glDisable( GL_MULTISAMPLE );
-
-        glGenVertexArrays(1, &m_EmptyVAO);
 	}
 
 	void initWindow(int argc, char** argv)
@@ -302,6 +298,9 @@ namespace {
 
 	void finalizeApp()
 	{
+        glDeleteFramebuffers(1, &m_depthMapFBO);
+        m_depthMapFBO = 0;
+
         glswShutdown();  
 		m_cube.destroy();
 
@@ -314,6 +313,7 @@ namespace {
 	{
 		do {
 			update();
+            updateHUD();
 			render();
             renderHUD();
 
@@ -337,14 +337,16 @@ namespace {
         glViewport(0, 0, width, height);
 
         float aspectRatio = ((float)width) / ((float)height);
-        camera.setProjectionParams( 45.0f, aspectRatio, 0.1f, 250.0f);
+        camera.setProjectionParams( 45.0f, aspectRatio, 0.1f, 100.0f);
     }
 
 	void update()
 	{
         Timer::getInstance().update();
         camera.update();
-		updateHUD();
+
+        // move light position over time
+        lightPos.z = sin(glfwGetTime() * 0.5f) * 3.0f;
 	}
 
 	void updateHUD()
@@ -362,6 +364,36 @@ namespace {
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );    
         glPolygonMode(GL_FRONT_AND_BACK, (bWireframe) ? GL_LINE : GL_FILL);
 
+        // 0. create depth cubemap transformation matrices
+        // -----------------------------------------------
+        float near_plane = 1.0f;
+        float far_plane  = 25.0f;
+        glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)SHADOW_WIDTH / (float)SHADOW_WIDTH, near_plane, far_plane);
+        std::vector<glm::mat4> shadowTransforms;
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
+        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
+
+        // 1. render scene to depth cubemap
+        // --------------------------------
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_WIDTH);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_depthMapFBO);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            m_shaderDepthShader.bind();
+            for (unsigned int i = 0; i < 6; ++i)
+                m_shaderDepthShader.setUniform("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+            m_shaderDepthShader.setUniform("far_plane", far_plane);
+            m_shaderDepthShader.setUniform("lightPos", lightPos);
+            renderScene(m_shaderDepthShader);
+
+        // 2. render scene as normal 
+        // -------------------------
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, display_w, display_h);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         m_shader.bind();
         glm::mat4 projection = camera.getProjectionMatrix();
         glm::mat4 view = camera.getViewMatrix();
@@ -374,11 +406,7 @@ namespace {
         m_shader.bindTexture("diffuseTexture", m_texWood, 0);
         m_shader.bindTexture("depthMap", m_texDepthMap, 1);
 
-        glm::mat4 model = glm::mat4(1.f);
-        model = glm::scale(model, glm::vec3(10.f));
-        m_shader.setUniform("model", model);
-
-        m_cube.draw();
+        renderScene(m_shader);
     }
 
 	void renderHUD()
@@ -387,6 +415,46 @@ namespace {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         ImGui::Render();
 	}
+
+    void renderScene(ProgramShader& shader)
+    {
+        // room cube
+        glm::mat4 model = glm::mat4(1.f);
+        model = glm::scale(model, glm::vec3(5.0f));
+        shader.setUniform("model", model);
+        glDisable(GL_CULL_FACE); // note that we disable culling here since we render 'inside' the cube instead of the usual 'outside' which throws off the normal culling methods.
+        shader.setUniform("reverse_normals", 1); // A small little hack to invert normals when drawing cube from the inside so lighting still works.
+        m_cube.draw();
+        shader.setUniform("reverse_normals", 0); // and of course disable it
+        glEnable(GL_CULL_FACE);
+        // cubes
+        model = glm::mat4(1.f);
+        model = glm::translate(model, glm::vec3(4.0f, -3.5f, 0.0));
+        model = glm::scale(model, glm::vec3(0.5f));
+        shader.setUniform("model", model);
+        m_cube.draw();
+        model = glm::mat4(1.f);
+        model = glm::translate(model, glm::vec3(2.0f, 3.0f, 1.0));
+        model = glm::scale(model, glm::vec3(0.75f));
+        shader.setUniform("model", model);
+        m_cube.draw();
+        model = glm::mat4(1.f);
+        model = glm::translate(model, glm::vec3(-3.0f, -1.0f, 0.0));
+        model = glm::scale(model, glm::vec3(0.5f));
+        shader.setUniform("model", model);
+        m_cube.draw();
+        model = glm::mat4(1.f);
+        model = glm::translate(model, glm::vec3(-1.5f, 1.0f, 1.5));
+        model = glm::scale(model, glm::vec3(0.5f));
+        shader.setUniform("model", model);
+        m_cube.draw();
+        model = glm::mat4(1.f);
+        model = glm::translate(model, glm::vec3(-1.5f, 2.0f, -3.0));
+        model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
+        model = glm::scale(model, glm::vec3(0.75f));
+        shader.setUniform("model", model);
+        m_cube.draw();
+    }
 
 	void prepareRender()
     {
@@ -405,7 +473,21 @@ namespace {
         m_shader.addShader(GL_FRAGMENT_SHADER, "PointShadows.Fragment");
         m_shader.link();
 
+        m_shaderDepthShader.initalize();
+        m_shaderDepthShader.addShader(GL_VERTEX_SHADER, "Depth.Vertex");
+        m_shaderDepthShader.addShader(GL_GEOMETRY_SHADER, "Depth.Geometry");
+        m_shaderDepthShader.addShader(GL_FRAGMENT_SHADER, "Depth.Fragment");
+        m_shaderDepthShader.link();
+
 		m_cube.init();
+
+        // attach depth texture as FBO's depth buffer
+        glCreateFramebuffers(1, &m_depthMapFBO);
+        glNamedFramebufferTexture(m_depthMapFBO, GL_DEPTH_ATTACHMENT, m_texDepthMap->m_TextureID, 0);
+        glNamedFramebufferDrawBuffer(m_depthMapFBO, GL_NONE);
+        glNamedFramebufferReadBuffer(m_depthMapFBO, GL_NONE);
+        GLuint status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        assert(status == GL_FRAMEBUFFER_COMPLETE);
     }
 
     void glfw_keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods) 
