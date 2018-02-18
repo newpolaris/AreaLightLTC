@@ -23,7 +23,7 @@ static std::vector<std::string> directory = { ".", "./shaders" };
 
 void ProgramShader::initalize()
 {
-    if(!m_id) {
+    if (!m_id) {
         m_id = glCreateProgram();
     }
 
@@ -43,16 +43,18 @@ void ProgramShader::destroy()
 
 void ProgramShader::addShader(GLenum shaderType, const std::string &tag)
 {
-    if(glswGetError() != 0) {
+    // require initialization
+    assert(m_id > 0);
+
+    if (glswGetError() != 0) {
         fprintf(stderr, "GLSW : %s", glswGetError());
     }
     assert(glswGetError() == 0);
 
-
     const char* cTag = tag.c_str();
     const GLchar *source = glswGetShader(cTag);
 
-    if(0 == source)
+    if (0 == source)
     {
         fprintf(stderr, "Error : shader \"%s\" not found, check your directory.\n", cTag);
         fprintf(stderr, "Execution terminated.\n");
@@ -67,8 +69,6 @@ void ProgramShader::addShader(GLenum shaderType, const std::string &tag)
     char const* sourcePointer = preprocessed.c_str();
     GLuint shader = glCreateShader(shaderType);
     glShaderSource(shader, 1, &sourcePointer, 0);
-    // NOTE: had some issues using include paths with 
-    // https://www.opengl.org/registry/specs/ARB/shading_language_include.txt
     glCompileShader(shader);
 
     GLint status = 0;
@@ -199,9 +199,9 @@ bool ProgramShader::bindTexture(const std::string &name, const BaseTexturePtr& t
 {
     GLint loc = glGetUniformLocation(m_id, name.c_str());
 
-    if(-1 == loc)
+    if (-1 == loc)
     {
-        printf("ProgramShader : can't find texture \"%s\".", name.c_str());
+        printf("ProgramShader : can't find texture \"%s\".\n", name.c_str());
         return false;
     }
 
@@ -218,7 +218,7 @@ bool ProgramShader::bindImage(const std::string &name, const BaseTexturePtr &tex
 
     if(-1 == loc)
     {
-        printf("ProgramShader : can't find image \"%s\".", name.c_str());
+        printf("ProgramShader : can't find image \"%s\".\n", name.c_str());
         return false;
     }
 

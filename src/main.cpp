@@ -43,14 +43,20 @@
 
 namespace
 {
-    const unsigned int WINDOW_WIDTH = 1280;
-    const unsigned int WINDOW_HEIGHT = 720;
+    const uint32_t SHADOW_WIDTH = 1024;
+    const uint32_t WINDOW_WIDTH = 1280;
+    const uint32_t WINDOW_HEIGHT = 720;
 	const char* WINDOW_NAME = "Point Shadow";
 
 	bool bCloseApp = false;
 	GLFWwindow* window = nullptr;  
-
+    BaseTexturePtr m_texWood;
+    BaseTexturePtr m_texDepthMap;
     CubeMesh m_cube;
+    ProgramShader m_shader;
+    ProgramShader m_shaderDetphShader;
+
+    glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
 
     //?
 
@@ -71,8 +77,6 @@ namespace
 	void prepareRender();
     void render();
 	void renderHUD();
-    void renderTestCubeSample();
-    void renderTexturedCube();
 	void update();
 	void updateHUD();
 
@@ -189,11 +193,9 @@ namespace {
         camera.setViewParams( glm::vec3( 5.0f, 5.0f, 20.0f), glm::vec3( 5.0f, 5.0f, 0.0f) );
         camera.setMoveCoefficient(0.35f);
 
-        GLuint m_VertexArrayID;
+        GLuint m_VertexArrayID = 0;
         GL_ASSERT(glGenVertexArrays(1, &m_VertexArrayID));
         GL_ASSERT(glBindVertexArray(m_VertexArrayID));
-
-		m_cube.init();
 
 		// to prevent osx input bug
 		fflush(stdout);
@@ -233,11 +235,11 @@ namespace {
 
     #if _DEBUG
         glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         if (glDebugMessageCallback) {
             cout << "Register OpenGL debug callback " << endl;
             glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);
             glDebugMessageCallback(OpenglCallbackFunction, nullptr);
-            glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         }
         else
             cout << "glDebugMessageCallback not available" << endl;
@@ -251,6 +253,7 @@ namespace {
         glDisable( GL_STENCIL_TEST );
         glClearStencil( 0 );
 
+        glEnable(GL_CULL_FACE);
         glCullFace( GL_BACK );    
         glFrontFace(GL_CCW);
 
@@ -312,6 +315,7 @@ namespace {
 		do {
 			update();
 			render();
+            renderHUD();
 
 			/* Swap front and back buffers */
 			glfwSwapBuffers(window);
@@ -356,9 +360,25 @@ namespace {
         glViewport(0, 0, display_w, display_h);
         glClearColor(0, 0, 0, 0);
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );    
-        glPolygonMode(GL_FRONT_AND_BACK, (bWireframe)? GL_LINE : GL_FILL);
+        glPolygonMode(GL_FRONT_AND_BACK, (bWireframe) ? GL_LINE : GL_FILL);
 
-		renderHUD();
+        m_shader.bind();
+        glm::mat4 projection = camera.getProjectionMatrix();
+        glm::mat4 view = camera.getViewMatrix();
+        m_shader.setUniform("projection", projection);
+        m_shader.setUniform("view", view);
+        // set lighting uniforms
+        m_shader.setUniform("lightPos", lightPos);
+        m_shader.setUniform("viewPos", camera.getPosition());
+        m_shader.setUniform("far_plane", camera.getFar());
+        m_shader.bindTexture("diffuseTexture", m_texWood, 0);
+        m_shader.bindTexture("depthMap", m_texDepthMap, 1);
+
+        glm::mat4 model = glm::mat4(1.f);
+        model = glm::scale(model, glm::vec3(10.f));
+        m_shader.setUniform("model", model);
+
+        m_cube.draw();
     }
 
 	void renderHUD()
@@ -370,6 +390,22 @@ namespace {
 
 	void prepareRender()
     {
+        m_texWood = BaseTexture::Create("resources/wood.png");
+        m_texDepthMap = BaseTexture::Create(
+            SHADOW_WIDTH, SHADOW_WIDTH, 
+            GL_TEXTURE_CUBE_MAP, GL_DEPTH_COMPONENT24, 1);
+        m_texDepthMap->parameter(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        m_texDepthMap->parameter(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        m_texDepthMap->parameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        m_texDepthMap->parameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        m_texDepthMap->parameter(GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+        m_shader.initalize();
+        m_shader.addShader(GL_VERTEX_SHADER, "PointShadows.Vertex");
+        m_shader.addShader(GL_FRAGMENT_SHADER, "PointShadows.Fragment");
+        m_shader.link();
+
+		m_cube.init();
     }
 
     void glfw_keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods) 

@@ -71,6 +71,7 @@ namespace {
 
 BaseTexturePtr BaseTexture::Create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels)
 {
+    assert(levels > 0);
     auto tex = std::make_shared<BaseTexture>();
     if (tex->create(width, height, target, format, levels))
         return tex;
@@ -82,6 +83,8 @@ BaseTexturePtr BaseTexture::Create(const std::string& filename)
     auto tex = std::make_shared<BaseTexture>();
     if (tex->create(filename))
         return tex;
+    // failed to load image
+    assert(false);
     return nullptr;
 }
 

@@ -113,7 +113,7 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:/Users/newpolaris/Projects/PointShadow/external/glfw-3.1.2/CMakeLists.txt;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;C:\Program Files\CMake\share\cmake-3.10\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindThreads.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckLibraryExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckIncludeFile.c.in;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindDoxygen.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3Config.cmake.in;C:\Program Files\CMake\share\cmake-3.10\Modules\BasicConfigVersion-SameMajorVersion.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\docs\Doxyfile.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw_config.h.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3.pc.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\cmake_uninstall.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:/Users/newpolaris/Projects/PointShadow/external/glfw-3.1.2/CMakeLists.txt;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;C:\Program Files\CMake\share\cmake-3.10\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindThreads.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckLibraryExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindDoxygen.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3Config.cmake.in;C:\Program Files\CMake\share\cmake-3.10\Modules\BasicConfigVersion-SameMajorVersion.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\docs\Doxyfile.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw_config.h.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3.pc.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\cmake_uninstall.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building Custom Rule C:/Users/newpolaris/Projects/PointShadow/external/glfw-3.1.2/CMakeLists.txt</Message>
@@ -126,7 +126,7 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:/Users/newpolaris/Projects/PointShadow/external/glfw-3.1.2/CMakeLists.txt;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;C:\Program Files\CMake\share\cmake-3.10\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindThreads.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckLibraryExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckIncludeFile.c.in;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindDoxygen.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3Config.cmake.in;C:\Program Files\CMake\share\cmake-3.10\Modules\BasicConfigVersion-SameMajorVersion.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\docs\Doxyfile.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw_config.h.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3.pc.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\cmake_uninstall.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:/Users/newpolaris/Projects/PointShadow/external/glfw-3.1.2/CMakeLists.txt;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;C:\Program Files\CMake\share\cmake-3.10\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindThreads.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckLibraryExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindDoxygen.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3Config.cmake.in;C:\Program Files\CMake\share\cmake-3.10\Modules\BasicConfigVersion-SameMajorVersion.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\docs\Doxyfile.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw_config.h.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3.pc.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\cmake_uninstall.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">Building Custom Rule C:/Users/newpolaris/Projects/PointShadow/external/glfw-3.1.2/CMakeLists.txt</Message>
@@ -139,7 +139,7 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">C:/Users/newpolaris/Projects/PointShadow/external/glfw-3.1.2/CMakeLists.txt;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;C:\Program Files\CMake\share\cmake-3.10\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindThreads.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckLibraryExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckIncludeFile.c.in;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindDoxygen.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3Config.cmake.in;C:\Program Files\CMake\share\cmake-3.10\Modules\BasicConfigVersion-SameMajorVersion.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\docs\Doxyfile.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw_config.h.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3.pc.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\cmake_uninstall.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">C:/Users/newpolaris/Projects/PointShadow/external/glfw-3.1.2/CMakeLists.txt;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;C:\Program Files\CMake\share\cmake-3.10\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindThreads.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckLibraryExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindDoxygen.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3Config.cmake.in;C:\Program Files\CMake\share\cmake-3.10\Modules\BasicConfigVersion-SameMajorVersion.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\docs\Doxyfile.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw_config.h.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3.pc.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\cmake_uninstall.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|Win32'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">Building Custom Rule C:/Users/newpolaris/Projects/PointShadow/external/glfw-3.1.2/CMakeLists.txt</Message>
@@ -152,7 +152,7 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">C:/Users/newpolaris/Projects/PointShadow/external/glfw-3.1.2/CMakeLists.txt;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;C:\Program Files\CMake\share\cmake-3.10\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindThreads.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckLibraryExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckIncludeFile.c.in;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindDoxygen.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3Config.cmake.in;C:\Program Files\CMake\share\cmake-3.10\Modules\BasicConfigVersion-SameMajorVersion.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\docs\Doxyfile.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw_config.h.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3.pc.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\cmake_uninstall.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">C:/Users/newpolaris/Projects/PointShadow/external/glfw-3.1.2/CMakeLists.txt;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;C:\Program Files\CMake\share\cmake-3.10\Modules\FindOpenGL.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindThreads.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckLibraryExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckSymbolExists.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CheckIncludeFile.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindDoxygen.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\FindPackageMessage.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\CMakePackageConfigHelpers.cmake;C:\Program Files\CMake\share\cmake-3.10\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3Config.cmake.in;C:\Program Files\CMake\share\cmake-3.10\Modules\BasicConfigVersion-SameMajorVersion.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\docs\Doxyfile.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw_config.h.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw3.pc.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\cmake_uninstall.cmake.in;C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'">false</LinkObjects>
     </CustomBuild>
@@ -164,101 +164,9 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{8FA5B567-28F2-30D1-BC2C-058D63468E7F}</Project>
       <Name>ZERO_CHECK</Name>
     </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\examples\boing.vcxproj">
-      <Project>{ECB11DE1-BA68-394E-AC33-33CA08CA8A6F}</Project>
-      <Name>boing</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\clipboard.vcxproj">
-      <Project>{4333C239-B2AC-36D7-9589-BBCF1A56F8B3}</Project>
-      <Name>clipboard</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\cursor.vcxproj">
-      <Project>{07A75141-F54A-39EA-8957-08E31DB9910F}</Project>
-      <Name>cursor</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\empty.vcxproj">
-      <Project>{B18A579F-E242-3467-B165-DDD71883EDA1}</Project>
-      <Name>empty</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\events.vcxproj">
-      <Project>{7641077C-DC26-31A0-BDCA-E3773028FBC3}</Project>
-      <Name>events</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\gamma.vcxproj">
-      <Project>{B04C967E-9D38-36F8-BB3E-CBD59D624918}</Project>
-      <Name>gamma</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\examples\gears.vcxproj">
-      <Project>{6CDCD18A-879A-3219-9370-BC6F696DB3AB}</Project>
-      <Name>gears</Name>
-    </ProjectReference>
     <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\src\glfw.vcxproj">
       <Project>{C59ED1F7-6F2D-323E-ABC5-46E303DE2753}</Project>
       <Name>glfw</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\glfwinfo.vcxproj">
-      <Project>{2E59AA8C-9526-3C80-866B-4B126B0BE0F8}</Project>
-      <Name>glfwinfo</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\examples\heightmap.vcxproj">
-      <Project>{7ADDDB44-D613-3D98-8FB5-AAAE4303C909}</Project>
-      <Name>heightmap</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\iconify.vcxproj">
-      <Project>{4632FC21-8686-3D3F-A8B3-3018A2053E8F}</Project>
-      <Name>iconify</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\joysticks.vcxproj">
-      <Project>{57D53E8B-2901-3B7C-B05C-9DAFF5002CE0}</Project>
-      <Name>joysticks</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\monitors.vcxproj">
-      <Project>{CCAD7981-E7B4-3FDC-BFF2-4101EFD8E5D4}</Project>
-      <Name>monitors</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\msaa.vcxproj">
-      <Project>{344D3F19-C603-3B47-BE0C-59543583DBE3}</Project>
-      <Name>msaa</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\examples\particles.vcxproj">
-      <Project>{F98F6256-7441-321B-9F77-FC9457DC6E84}</Project>
-      <Name>particles</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\reopen.vcxproj">
-      <Project>{1787A709-DD3C-3C8E-9E5B-F7C74D6CACD5}</Project>
-      <Name>reopen</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\sharing.vcxproj">
-      <Project>{5E870B86-8A66-3C7A-9E6F-136D375DE4C3}</Project>
-      <Name>sharing</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\examples\simple.vcxproj">
-      <Project>{ED25641C-D361-3A82-937D-E20D95A78830}</Project>
-      <Name>simple</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\examples\splitview.vcxproj">
-      <Project>{8364BB3D-261E-36F4-834C-708712D94954}</Project>
-      <Name>splitview</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\tearing.vcxproj">
-      <Project>{D6DD3CCC-4998-3532-BDB1-3C9A98595752}</Project>
-      <Name>tearing</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\threads.vcxproj">
-      <Project>{426224D1-9BEE-3D22-918D-3FDFA80758E1}</Project>
-      <Name>threads</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\title.vcxproj">
-      <Project>{EAD9D487-4F06-3EE0-A749-BD08CD939681}</Project>
-      <Name>title</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\examples\wave.vcxproj">
-      <Project>{7E181AE0-6DC5-3927-AF06-D84250B01176}</Project>
-      <Name>wave</Name>
-    </ProjectReference>
-    <ProjectReference Include="C:\Users\newpolaris\Projects\PointShadow\external\glfw-3.1.2\tests\windows.vcxproj">
-      <Project>{44BD3CFD-332C-3BCF-AAE6-185884C05257}</Project>
-      <Name>windows</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -118,6 +118,8 @@ class TCamera
     float getMoveCoefficient() const { return m_moveCoef; }
     float getRotationCoefficient() const { return m_rotationCoef; }
     float getInertiaCoefficient() const { return m_inertiaCoef; }
+    float getFar() const { return m_zFar; }
+    float getNear() const { return m_zNear; }
     
     bool isXAxisLimited() const { return m_bLimitPitchAngle; }
     bool isXAxisInverted() const { return m_bInvertPitch; }
