@@ -402,7 +402,7 @@ namespace {
         // set lighting uniforms
         m_shader.setUniform("lightPos", lightPos);
         m_shader.setUniform("viewPos", camera.getPosition());
-        m_shader.setUniform("far_plane", camera.getFar());
+        m_shader.setUniform("far_plane", far_plane);
         m_shader.bindTexture("diffuseTexture", m_texWood, 0);
         m_shader.bindTexture("depthMap", m_texDepthMap, 1);
 
