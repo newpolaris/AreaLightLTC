@@ -24,8 +24,6 @@ void main()
 
 -- Fragment
 
-#define MaxNumLight 1
-
 struct lightData
 {
     float enabled;
@@ -61,14 +59,15 @@ in VS_OUT {
     vec4 PositionV;
 } fs_in;
 
-// const int numberOfLights = 2;
-layout (binding = 0) uniform Light
+const int numberOfLights = 1;
+uniform Light
 {
-    lightData lights2[MaxNumLight];
+    vec4 lightPosition;
+    // lightData lights[numberOfLights];
 };
 
 uniform mat4 view;
-uniform vec3 lightPos;
+uniform vec4 lightPos;
 uniform vec4 mat_ambient;
 uniform vec4 mat_diffuse;
 uniform vec4 mat_specular;
@@ -122,18 +121,18 @@ void main()
     vec3 v_transformedNormal = fs_in.NormalV;
     vec3 v_eyePosition = vec3(fs_in.PositionV);
 
-    lightData lights[MaxNumLight];
-    lights[0].position = vec4(vec3(view*vec4(lightPos, 1.0)), 1.0);
-    lights[0].ambient = vec4(0.3, 0.3, 0.3, 1.0);
-    lights[0].diffuse = vec4(1.0, 1.0, 1.0, 1.0);
-    lights[0].specular = vec4(0.5, 0.0, 0.0, 1.0);
-    lights[0].constantAttenuation = 0.1;
-    lights[0].linearAttenuation = 0.1;
-    lights[0].quadraticAttenuation = 0.0;
+    lightData light; //= Lgt.lights[0];
+    light.position = lightPosition; // Lgt.lights[0].position; // vec4(vec3(view*vec4(lightPos, 1.0)), 1.0);
+    light.ambient = vec4(0.3, 0.3, 0.3, 1.0);
+    light.diffuse = vec4(1.0, 1.0, 1.0, 1.0);
+    light.specular = vec4(0.5, 0.0, 0.0, 1.0);
+    light.constantAttenuation = 0.1;
+    light.linearAttenuation = 0.1;
+    light.quadraticAttenuation = 0.0;
 
-    for (int i = 0; i < MaxNumLight; i++)
+    for (int i = 0; i < numberOfLights; i++)
     {
-        pointLight(lights[i], v_transformedNormal, v_eyePosition, ambient, diffuse, specular);
+        pointLight(light, v_transformedNormal, v_eyePosition, ambient, diffuse, specular);
     }
     vec4 localColor = vec4(ambient, 1.0) * mat_ambient + vec4(diffuse, 1.0) * mat_diffuse + vec4(specular, 1.0) * mat_specular + mat_emissive;
     FragColor = localColor;

@@ -45,7 +45,7 @@
 namespace
 {
      __declspec(align(16))
-    struct lightBlock
+    struct Light
     {
         float enabled;
         glm::vec4 ambient;
@@ -75,7 +75,8 @@ namespace
      __declspec(align(16))
     struct LightBlock
     {
-         lightBlock lights[1];
+         glm::vec4 position;
+         // Light lights[1];
     };
 
     const uint32_t SHADOW_WIDTH = 1024;
@@ -90,7 +91,7 @@ namespace
     ProgramShader m_shader;
 
     GLuint g_lightUniformBuffer = GL_NONE;
-    const int g_lightBlockIndex = 0;
+    const int g_lightBlockPoint = 0;
 
     glm::vec3 lightPos(0.0f, 3.0f, 0.0f);
 
@@ -379,10 +380,12 @@ namespace {
         // move light position over time
         lightPos.z = sin(static_cast<float>(glfwGetTime()) * 0.5f) * 3.0f;
 
-        lightBlock lightData;
+        LightBlock lightData;
+        lightData.position = camera.getViewMatrix() * glm::vec4(lightPos, 1.0f);
 
         glBindBuffer(GL_UNIFORM_BUFFER, g_lightUniformBuffer);
-		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(lightBlock), &lightData);
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(lightData), &lightData);
+        // glBufferData(GL_UNIFORM_BUFFER, sizeof(LightBlock), &lightData, GL_DYNAMIC_DRAW);
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	}
 
@@ -417,7 +420,6 @@ namespace {
         m_shader.setUniform("projection", projection);
         m_shader.setUniform("view", view);
         // set lighting uniforms
-        m_shader.setUniform("lightPos", lightPos);
         m_shader.setUniform("mat_ambient", mat_ambient);
         m_shader.setUniform("mat_diffuse", mat_diffuse);
         m_shader.setUniform("mat_specular", mat_specular);
@@ -476,16 +478,17 @@ namespace {
 		m_cube.init();
         m_plane.init();
 
+        GLuint lightBlock = glGetUniformBlockIndex(m_shader.getShaderID(), "Light");
+        glUniformBlockBinding(m_shader.getShaderID(), lightBlock, g_lightBlockPoint);
+
         //Setup our Uniform Buffers
         glGenBuffers(1, &g_lightUniformBuffer);
         glBindBuffer(GL_UNIFORM_BUFFER, g_lightUniformBuffer);
-        glBufferData(GL_UNIFORM_BUFFER, sizeof(LightBlock), NULL, GL_DYNAMIC_DRAW);
+        glBufferData(GL_UNIFORM_BUFFER, sizeof(LightBlock), nullptr, GL_DYNAMIC_DRAW);
 
-        // Bind the static buffers.
-        glBindBufferRange(GL_UNIFORM_BUFFER, g_lightBlockIndex, g_lightUniformBuffer, 0, sizeof(LightBlock));
-
-        GLuint lightBlock = glGetUniformBlockIndex(m_shader.getShaderID(), "Light");
-        glUniformBlockBinding(m_shader.getShaderID(), lightBlock, g_lightBlockIndex);
+        // Bind the buffer object to the uniform block
+        glBindBufferBase(GL_UNIFORM_BUFFER, g_lightBlockPoint, g_lightUniformBuffer);
+        // glBindBufferRange(GL_UNIFORM_BUFFER, g_lightBlockPoint, g_lightUniformBuffer, 0, sizeof(LightBlock));
     }
 
     void glfw_keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods) 

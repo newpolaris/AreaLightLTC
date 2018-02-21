@@ -30,7 +30,7 @@ public:
     void unbind() const { glUseProgram( 0u ); }
     
     /** Return the program id */
-    GLuint getId() const { return m_id; }
+    GLuint getShaderID() const { return m_id; }
     
     bool setUniform(const std::string &name, GLint v) const;
     bool setUniform(const std::string &name, GLfloat v) const;
