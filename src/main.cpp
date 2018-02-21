@@ -44,6 +44,40 @@
 
 namespace
 {
+     __declspec(align(16))
+    struct lightBlock
+    {
+        float enabled;
+        glm::vec4 ambient;
+        float type; // 0 = pointlight 1 = directionlight
+        glm::vec4 position; // where are we
+        glm::vec4 diffuse; // how diffuse
+        glm::vec4 specular; // what kinda specular stuff we got going on?
+        // attenuation
+        float constantAttenuation;
+        float linearAttenuation;
+        float quadraticAttenuation;
+        // only for spot
+        float spotCutoff;
+        float spotCosCutoff;
+        float spotExponent;
+        // spot and area
+        glm::vec3 spotDirection;
+        // only for directional
+        glm::vec3 halfVector;
+        // only for area
+        float width;
+        float height;
+        glm::vec3 right;
+        glm::vec3 up;
+    };
+
+     __declspec(align(16))
+    struct LightBlock
+    {
+         lightBlock lights[1];
+    };
+
     const uint32_t SHADOW_WIDTH = 1024;
     const uint32_t WINDOW_WIDTH = 1280;
     const uint32_t WINDOW_HEIGHT = 720;
@@ -55,7 +89,10 @@ namespace
     PlaneMesh m_plane;
     ProgramShader m_shader;
 
-    glm::vec3 lightPos(0.0f, 5.0f, 0.0f);
+    GLuint g_lightUniformBuffer = GL_NONE;
+    const int g_lightBlockIndex = 0;
+
+    glm::vec3 lightPos(0.0f, 3.0f, 0.0f);
 
     //?
 
@@ -341,6 +378,12 @@ namespace {
 
         // move light position over time
         lightPos.z = sin(static_cast<float>(glfwGetTime()) * 0.5f) * 3.0f;
+
+        lightBlock lightData;
+
+        glBindBuffer(GL_UNIFORM_BUFFER, g_lightUniformBuffer);
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(lightBlock), &lightData);
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	}
 
 	void updateHUD()
@@ -361,17 +404,28 @@ namespace {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, display_w, display_h);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         glm::mat4 projection = camera.getProjectionMatrix();
         glm::mat4 view = camera.getViewMatrix();
+        glm::vec4 mat_ambient = glm::vec4(glm::vec3(0.5f), 1.f);
+        glm::vec4 mat_diffuse = glm::vec4(glm::vec3(0.5f), 1.f);
+        glm::vec4 mat_specular = glm::vec4(glm::vec3(0.5f), 1.f);;
+        glm::vec4 mat_emissive = glm::vec4(0.0f);
+        float mat_shininess = 8.0;
+
         m_shader.bind();
         m_shader.setUniform("projection", projection);
         m_shader.setUniform("view", view);
         // set lighting uniforms
         m_shader.setUniform("lightPos", lightPos);
-        m_shader.setUniform("viewPos", camera.getPosition());
+        m_shader.setUniform("mat_ambient", mat_ambient);
+        m_shader.setUniform("mat_diffuse", mat_diffuse);
+        m_shader.setUniform("mat_specular", mat_specular);
+        m_shader.setUniform("mat_emissive", mat_emissive);
+        m_shader.setUniform("mat_shininess", mat_shininess);
 
         glm::mat4 model = glm::mat4(1.f);
-        model = glm::translate(model, glm::vec3(0.0f, -3.5f, 0.0));
+        model = glm::translate(model, glm::vec3(3.0f, -3.5f, 0.0));
         model = glm::scale(model, glm::vec3(0.5f));
         m_shader.setUniform("model", model);
         m_plane.draw();
@@ -421,6 +475,17 @@ namespace {
 
 		m_cube.init();
         m_plane.init();
+
+        //Setup our Uniform Buffers
+        glGenBuffers(1, &g_lightUniformBuffer);
+        glBindBuffer(GL_UNIFORM_BUFFER, g_lightUniformBuffer);
+        glBufferData(GL_UNIFORM_BUFFER, sizeof(LightBlock), NULL, GL_DYNAMIC_DRAW);
+
+        // Bind the static buffers.
+        glBindBufferRange(GL_UNIFORM_BUFFER, g_lightBlockIndex, g_lightUniformBuffer, 0, sizeof(LightBlock));
+
+        GLuint lightBlock = glGetUniformBlockIndex(m_shader.getShaderID(), "Light");
+        glUniformBlockBinding(m_shader.getShaderID(), lightBlock, g_lightBlockIndex);
     }
 
     void glfw_keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods) 
