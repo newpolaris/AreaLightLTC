@@ -51,14 +51,11 @@ namespace
 
 	bool bCloseApp = false;
 	GLFWwindow* window = nullptr;  
-    BaseTexturePtr m_texWood;
-    BaseTexturePtr m_texDepthMap;
     CubeMesh m_cube;
+    PlaneMesh m_plane;
     ProgramShader m_shader;
-    ProgramShader m_shaderDepthShader;
-    FramebufferPtr m_depthMapFBO;
 
-    glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
+    glm::vec3 lightPos(0.0f, 5.0f, 0.0f);
 
     //?
 
@@ -78,7 +75,6 @@ namespace
 	void prepareRender();
     void render();
 	void renderHUD();
-    void renderScene(ProgramShader& shader);
 	void update();
 	void updateHUD();
 
@@ -300,6 +296,7 @@ namespace {
 	{
         glswShutdown();  
 		m_cube.destroy();
+        m_plane.destroy();
 
         Logger::getInstance().close();
 		ImGui_ImplGlfwGL3_Shutdown();
@@ -361,49 +358,51 @@ namespace {
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );    
         glPolygonMode(GL_FRONT_AND_BACK, (bWireframe) ? GL_LINE : GL_FILL);
 
-        // 0. create depth cubemap transformation matrices
-        // -----------------------------------------------
-        float near_plane = 1.0f;
-        float far_plane  = 25.0f;
-        glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)SHADOW_WIDTH / (float)SHADOW_WIDTH, near_plane, far_plane);
-        std::vector<glm::mat4> shadowTransforms;
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
-        shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f)));
-
-        // 1. render scene to depth cubemap
-        // --------------------------------
-        glViewport(0, 0, SHADOW_WIDTH, SHADOW_WIDTH);
-        m_depthMapFBO->bind();
-        glClear(GL_DEPTH_BUFFER_BIT);
-        m_shaderDepthShader.bind();
-        for(unsigned int i = 0; i < 6; ++i)
-            m_shaderDepthShader.setUniform("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
-        m_shaderDepthShader.setUniform("far_plane", far_plane);
-        m_shaderDepthShader.setUniform("lightPos", lightPos);
-        renderScene(m_shaderDepthShader);
-
-        // 2. render scene as normal 
-        // -------------------------
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, display_w, display_h);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        m_shader.bind();
         glm::mat4 projection = camera.getProjectionMatrix();
         glm::mat4 view = camera.getViewMatrix();
+        m_shader.bind();
         m_shader.setUniform("projection", projection);
         m_shader.setUniform("view", view);
         // set lighting uniforms
         m_shader.setUniform("lightPos", lightPos);
         m_shader.setUniform("viewPos", camera.getPosition());
-        m_shader.setUniform("far_plane", far_plane);
-        m_shader.bindTexture("diffuseTexture", m_texWood, 0);
-        m_shader.bindTexture("depthMap", m_texDepthMap, 1);
 
-        renderScene(m_shader);
+        glm::mat4 model = glm::mat4(1.f);
+        model = glm::translate(model, glm::vec3(0.0f, -3.5f, 0.0));
+        model = glm::scale(model, glm::vec3(0.5f));
+        m_shader.setUniform("model", model);
+        m_plane.draw();
+
+        // cubes
+        model = glm::mat4(1.f);
+        model = glm::translate(model, glm::vec3(4.0f, -3.5f, 0.0));
+        model = glm::scale(model, glm::vec3(0.5f));
+        m_shader.setUniform("model", model);
+        m_cube.draw();
+        model = glm::mat4(1.f);
+        model = glm::translate(model, glm::vec3(2.0f, 3.0f, 1.0));
+        model = glm::scale(model, glm::vec3(0.75f));
+        m_shader.setUniform("model", model);
+        m_cube.draw();
+        model = glm::mat4(1.f);
+        model = glm::translate(model, glm::vec3(-3.0f, -1.0f, 0.0));
+        model = glm::scale(model, glm::vec3(0.5f));
+        m_shader.setUniform("model", model);
+        m_cube.draw();
+        model = glm::mat4(1.f);
+        model = glm::translate(model, glm::vec3(-1.5f, 1.0f, 1.5));
+        model = glm::scale(model, glm::vec3(0.5f));
+        m_shader.setUniform("model", model);
+        m_cube.draw();
+        model = glm::mat4(1.f);
+        model = glm::translate(model, glm::vec3(-1.5f, 2.0f, -3.0));
+        model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
+        model = glm::scale(model, glm::vec3(0.75f));
+        m_shader.setUniform("model", model);
+        m_cube.draw();
     }
 
 	void renderHUD()
@@ -413,75 +412,15 @@ namespace {
         ImGui::Render();
 	}
 
-    void renderScene(ProgramShader& shader)
-    {
-        // room cube
-        glm::mat4 model = glm::mat4(1.f);
-        model = glm::scale(model, glm::vec3(5.0f));
-        shader.setUniform("model", model);
-        glDisable(GL_CULL_FACE); // note that we disable culling here since we render 'inside' the cube instead of the usual 'outside' which throws off the normal culling methods.
-        shader.setUniform("reverse_normals", 1); // A small little hack to invert normals when drawing cube from the inside so lighting still works.
-        m_cube.draw();
-        shader.setUniform("reverse_normals", 0); // and of course disable it
-        glEnable(GL_CULL_FACE);
-        // cubes
-        model = glm::mat4(1.f);
-        model = glm::translate(model, glm::vec3(4.0f, -3.5f, 0.0));
-        model = glm::scale(model, glm::vec3(0.5f));
-        shader.setUniform("model", model);
-        m_cube.draw();
-        model = glm::mat4(1.f);
-        model = glm::translate(model, glm::vec3(2.0f, 3.0f, 1.0));
-        model = glm::scale(model, glm::vec3(0.75f));
-        shader.setUniform("model", model);
-        m_cube.draw();
-        model = glm::mat4(1.f);
-        model = glm::translate(model, glm::vec3(-3.0f, -1.0f, 0.0));
-        model = glm::scale(model, glm::vec3(0.5f));
-        shader.setUniform("model", model);
-        m_cube.draw();
-        model = glm::mat4(1.f);
-        model = glm::translate(model, glm::vec3(-1.5f, 1.0f, 1.5));
-        model = glm::scale(model, glm::vec3(0.5f));
-        shader.setUniform("model", model);
-        m_cube.draw();
-        model = glm::mat4(1.f);
-        model = glm::translate(model, glm::vec3(-1.5f, 2.0f, -3.0));
-        model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
-        model = glm::scale(model, glm::vec3(0.75f));
-        shader.setUniform("model", model);
-        m_cube.draw();
-    }
-
 	void prepareRender()
     {
-        m_texWood = BaseTexture::Create("resources/wood.png");
-        m_texDepthMap = BaseTexture::Create(
-            SHADOW_WIDTH, SHADOW_WIDTH, 
-            GL_TEXTURE_CUBE_MAP, GL_DEPTH_COMPONENT24, 1);
-        m_texDepthMap->parameter(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        m_texDepthMap->parameter(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        m_texDepthMap->parameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        m_texDepthMap->parameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        m_texDepthMap->parameter(GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
         m_shader.initalize();
-        m_shader.addShader(GL_VERTEX_SHADER, "PointShadows.Vertex");
-        m_shader.addShader(GL_FRAGMENT_SHADER, "PointShadows.Fragment");
+        m_shader.addShader(GL_VERTEX_SHADER, "AreaShadow.Vertex");
+        m_shader.addShader(GL_FRAGMENT_SHADER, "AreaShadow.Fragment");
         m_shader.link();
 
-        m_shaderDepthShader.initalize();
-        m_shaderDepthShader.addShader(GL_VERTEX_SHADER, "Depth.Vertex");
-        m_shaderDepthShader.addShader(GL_GEOMETRY_SHADER, "Depth.Geometry");
-        m_shaderDepthShader.addShader(GL_FRAGMENT_SHADER, "Depth.Fragment");
-        m_shaderDepthShader.link();
-
 		m_cube.init();
-
-        // attach depth texture as FBO's depth buffer
-        FramebufferDesc depthMapDesc;
-        depthMapDesc.addComponent(AttachmentBinding(m_texDepthMap, GL_DEPTH_ATTACHMENT));
-        m_depthMapFBO = Framebuffer::Create(depthMapDesc);
+        m_plane.init();
     }
 
     void glfw_keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods) 
