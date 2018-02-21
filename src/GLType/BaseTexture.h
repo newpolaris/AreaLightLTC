@@ -25,6 +25,8 @@ public:
     bool createFromFileGLI(const std::string& filename);
     bool createFromFileSTB(const std::string& filename);
 
+    GLuint getTextureID() const noexcept;
+
 	GLuint m_TextureID;
 	GLenum m_Target;
 	GLenum m_Format;

@@ -303,6 +303,11 @@ bool BaseTexture::createFromFileSTB(const std::string& filename)
 	return true;
 }
 
+GLuint BaseTexture::getTextureID() const noexcept
+{
+    return m_TextureID;
+}
+
 void BaseTexture::destroy()
 {
 	if (!m_TextureID)

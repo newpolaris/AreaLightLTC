@@ -33,6 +33,7 @@
 
 #include <GLType/ProgramShader.h>
 #include <GLType/BaseTexture.h>
+#include <GLType/Framebuffer.h>
 #include <SkyBox.h>
 #include <Mesh.h>
 
@@ -55,10 +56,9 @@ namespace
     CubeMesh m_cube;
     ProgramShader m_shader;
     ProgramShader m_shaderDepthShader;
+    FramebufferPtr m_depthMapFBO;
 
     glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
-
-    GLuint m_depthMapFBO = 0;
 
     //?
 
@@ -298,9 +298,6 @@ namespace {
 
 	void finalizeApp()
 	{
-        glDeleteFramebuffers(1, &m_depthMapFBO);
-        m_depthMapFBO = 0;
-
         glswShutdown();  
 		m_cube.destroy();
 
@@ -346,7 +343,7 @@ namespace {
         camera.update();
 
         // move light position over time
-        lightPos.z = sin(glfwGetTime() * 0.5f) * 3.0f;
+        lightPos.z = sin(static_cast<float>(glfwGetTime()) * 0.5f) * 3.0f;
 	}
 
 	void updateHUD()
@@ -380,14 +377,14 @@ namespace {
         // 1. render scene to depth cubemap
         // --------------------------------
         glViewport(0, 0, SHADOW_WIDTH, SHADOW_WIDTH);
-        glBindFramebuffer(GL_FRAMEBUFFER, m_depthMapFBO);
-            glClear(GL_DEPTH_BUFFER_BIT);
-            m_shaderDepthShader.bind();
-            for (unsigned int i = 0; i < 6; ++i)
-                m_shaderDepthShader.setUniform("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
-            m_shaderDepthShader.setUniform("far_plane", far_plane);
-            m_shaderDepthShader.setUniform("lightPos", lightPos);
-            renderScene(m_shaderDepthShader);
+        m_depthMapFBO->bind();
+        glClear(GL_DEPTH_BUFFER_BIT);
+        m_shaderDepthShader.bind();
+        for(unsigned int i = 0; i < 6; ++i)
+            m_shaderDepthShader.setUniform("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+        m_shaderDepthShader.setUniform("far_plane", far_plane);
+        m_shaderDepthShader.setUniform("lightPos", lightPos);
+        renderScene(m_shaderDepthShader);
 
         // 2. render scene as normal 
         // -------------------------
@@ -482,12 +479,9 @@ namespace {
 		m_cube.init();
 
         // attach depth texture as FBO's depth buffer
-        glCreateFramebuffers(1, &m_depthMapFBO);
-        glNamedFramebufferTexture(m_depthMapFBO, GL_DEPTH_ATTACHMENT, m_texDepthMap->m_TextureID, 0);
-        glNamedFramebufferDrawBuffer(m_depthMapFBO, GL_NONE);
-        glNamedFramebufferReadBuffer(m_depthMapFBO, GL_NONE);
-        GLuint status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-        assert(status == GL_FRAMEBUFFER_COMPLETE);
+        FramebufferDesc depthMapDesc;
+        depthMapDesc.addComponent(AttachmentBinding(m_texDepthMap, GL_DEPTH_ATTACHMENT));
+        m_depthMapFBO = Framebuffer::Create(depthMapDesc);
     }
 
     void glfw_keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods) 
