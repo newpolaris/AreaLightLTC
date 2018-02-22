@@ -44,12 +44,12 @@
 
 namespace
 {
-     __declspec(align(16))
     struct Light
     {
         float enabled;
-        glm::vec4 ambient;
         float type; // 0 = pointlight 1 = directionlight
+        float pad0[2];
+        glm::vec4 ambient;
         glm::vec4 position; // where are we
         glm::vec4 diffuse; // how diffuse
         glm::vec4 specular; // what kinda specular stuff we got going on?
@@ -57,26 +57,23 @@ namespace
         float constantAttenuation;
         float linearAttenuation;
         float quadraticAttenuation;
-        // only for spot
-        float spotCutoff;
-        float spotCosCutoff;
-        float spotExponent;
+        float pad1;
         // spot and area
         glm::vec3 spotDirection;
-        // only for directional
-        glm::vec3 halfVector;
+        float pad2;
         // only for area
         float width;
         float height;
         glm::vec3 right;
+        float pad3;
         glm::vec3 up;
+        float pad4;
     };
 
      __declspec(align(16))
     struct LightBlock
     {
-         glm::vec4 position;
-         // Light lights[1];
+         Light lights[1];
     };
 
     const uint32_t SHADOW_WIDTH = 1024;
@@ -380,12 +377,19 @@ namespace {
         // move light position over time
         lightPos.z = sin(static_cast<float>(glfwGetTime()) * 0.5f) * 3.0f;
 
-        LightBlock lightData;
-        lightData.position = camera.getViewMatrix() * glm::vec4(lightPos, 1.0f);
+        LightBlock lightData = { 0, };
+        lightData.lights[0].enabled = true;
+        lightData.lights[0].type = 0;
+        lightData.lights[0].position = camera.getViewMatrix() * glm::vec4(lightPos, 1.0f);
+        lightData.lights[0].ambient = glm::vec4(0.3, 0.3, 0.3, 1.0);
+        lightData.lights[0].diffuse = glm::vec4(1.0, 1.0, 1.0, 1.0);
+        lightData.lights[0].specular = glm::vec4(0.5, 0.0, 0.0, 1.0);
+        lightData.lights[0].constantAttenuation = 0.1f;
+        lightData.lights[0].linearAttenuation = 0.1f;
+        lightData.lights[0].quadraticAttenuation = 0.0f;
 
         glBindBuffer(GL_UNIFORM_BUFFER, g_lightUniformBuffer);
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(lightData), &lightData);
-        // glBufferData(GL_UNIFORM_BUFFER, sizeof(LightBlock), &lightData, GL_DYNAMIC_DRAW);
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	}
 

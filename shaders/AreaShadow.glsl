@@ -27,8 +27,8 @@ void main()
 struct lightData
 {
     float enabled;
-    vec4 ambient;
     float type; // 0 = pointlight 1 = directionlight
+    vec4 ambient;
     vec4 position; // where are we
     vec4 diffuse; // how diffuse
     vec4 specular; // what kinda specular stuff we got going on?
@@ -36,14 +36,8 @@ struct lightData
     float constantAttenuation;
     float linearAttenuation;
     float quadraticAttenuation;
-    // only for spot
-    float spotCutoff;
-    float spotCosCutoff;
-    float spotExponent;
     // spot and area
     vec3 spotDirection;
-    // only for directional
-    vec3 halfVector;
     // only for area
     float width;
     float height;
@@ -62,8 +56,7 @@ in VS_OUT {
 const int numberOfLights = 1;
 uniform Light
 {
-    vec4 lightPosition;
-    // lightData lights[numberOfLights];
+    lightData lights[numberOfLights];
 };
 
 uniform mat4 view;
@@ -121,18 +114,9 @@ void main()
     vec3 v_transformedNormal = fs_in.NormalV;
     vec3 v_eyePosition = vec3(fs_in.PositionV);
 
-    lightData light; //= Lgt.lights[0];
-    light.position = lightPosition; // Lgt.lights[0].position; // vec4(vec3(view*vec4(lightPos, 1.0)), 1.0);
-    light.ambient = vec4(0.3, 0.3, 0.3, 1.0);
-    light.diffuse = vec4(1.0, 1.0, 1.0, 1.0);
-    light.specular = vec4(0.5, 0.0, 0.0, 1.0);
-    light.constantAttenuation = 0.1;
-    light.linearAttenuation = 0.1;
-    light.quadraticAttenuation = 0.0;
-
     for (int i = 0; i < numberOfLights; i++)
     {
-        pointLight(light, v_transformedNormal, v_eyePosition, ambient, diffuse, specular);
+        pointLight(lights[i], v_transformedNormal, v_eyePosition, ambient, diffuse, specular);
     }
     vec4 localColor = vec4(ambient, 1.0) * mat_ambient + vec4(diffuse, 1.0) * mat_diffuse + vec4(specular, 1.0) * mat_specular + mat_emissive;
     FragColor = localColor;
