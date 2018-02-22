@@ -44,10 +44,11 @@
 
 namespace
 {
+     
     struct Light
     {
         float enabled;
-        float type; // 0 = pointlight 1 = directionlight
+        float type; // 0 = pointlight, 1 = directionlight
         float pad0[2];
         glm::vec4 ambient;
         glm::vec4 position; // where are we
@@ -70,7 +71,6 @@ namespace
         float pad4;
     };
 
-     __declspec(align(16))
     struct LightBlock
     {
          Light lights[1];
@@ -388,15 +388,88 @@ namespace {
         lightData.lights[0].linearAttenuation = 0.1f;
         lightData.lights[0].quadraticAttenuation = 0.0f;
 
-        glBindBuffer(GL_UNIFORM_BUFFER, g_lightUniformBuffer);
-		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(lightData), &lightData);
-		glBindBuffer(GL_UNIFORM_BUFFER, 0);
+        glNamedBufferSubData(g_lightUniformBuffer, 0, sizeof(lightData), &lightData);
 	}
 
 	void updateHUD()
 	{
 		ImGui_ImplGlfwGL3_NewFrame();
 	}
+
+    void _initActiveUniformBlock(const ProgramShader& program) noexcept
+    {
+        GLint numUniformBlock = 0;
+        GLint maxUniformBlockLength = 0;
+        GLint maxUniformLength = 0;
+
+        GLuint _program = program.getShaderID();
+        glGetProgramiv(_program, GL_ACTIVE_UNIFORM_BLOCKS, &numUniformBlock);
+        glGetProgramiv(_program, GL_ACTIVE_UNIFORM_BLOCK_MAX_NAME_LENGTH, &maxUniformBlockLength);
+        glGetProgramiv(_program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &maxUniformLength);
+
+        if(numUniformBlock == 0)
+            return;
+
+        auto nameUniformBlock = std::make_unique<GLchar[]>(maxUniformBlockLength + 1);
+        nameUniformBlock[maxUniformBlockLength] = 0;
+
+        for (GLint i = 0; i < numUniformBlock; ++i)
+        {
+            GLsizei lengthUniformBlock = 0;
+            glGetActiveUniformBlockName(_program, (GLuint)i, maxUniformBlockLength, &lengthUniformBlock, nameUniformBlock.get());
+            if (lengthUniformBlock == 0)
+                continue;
+
+            GLuint location = glGetUniformBlockIndex(_program, nameUniformBlock.get());
+            if (location == GL_INVALID_INDEX)
+                continue;
+
+            glUniformBlockBinding(_program, location, i);
+
+            GLint count = 0;
+            glGetActiveUniformBlockiv(_program, location, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &count);
+            if (count == 0)
+                continue;
+
+            GLint size = 0;
+            std::vector<GLint> indices(count);
+            std::vector<GLint> offset((std::size_t)count);
+            std::vector<GLint> type((std::size_t)count);
+            std::vector<GLint> datasize((std::size_t)count);
+            std::vector<GLchar> name(maxUniformLength);
+
+            glGetActiveUniformBlockiv(_program, location, GL_UNIFORM_BLOCK_DATA_SIZE, &size);
+            glGetActiveUniformBlockiv(_program, location, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, indices.data());
+            glGetActiveUniformsiv(_program, count, (GLuint*)&indices[0], GL_UNIFORM_OFFSET, &offset[0]);
+            glGetActiveUniformsiv(_program, count, (GLuint*)&indices[0], GL_UNIFORM_TYPE, &type[0]);
+            glGetActiveUniformsiv(_program, count, (GLuint*)&indices[0], GL_UNIFORM_SIZE, &datasize[0]);
+
+        #if 0
+            auto uniformblock = std::make_shared<OGLGraphicsUniformBlock>();
+            uniformblock->setName(nameUniformBlock.get());
+            uniformblock->setBindingPoint(location);
+            uniformblock->setBlockSize(size);
+            uniformblock->setType(GraphicsUniformType::GraphicsUniformTypeUniformBuffer);
+            uniformblock->setShaderStageFlags(GraphicsShaderStageFlagBits::GraphicsShaderStageAll);
+
+            for (GLint j = 0; j < count; j++)
+            {
+                GLsizei length = 0;
+                glGetActiveUniformName(_program, indices[j], maxUniformLength, &length, name.data());
+
+                auto uniform = std::make_shared<OGLGraphicsUniform>();
+                uniform->setName(std::string(name.data(), length));
+                uniform->setBindingPoint(indices[j]);
+                uniform->setOffset(offset[j]);
+                uniform->setType(toGraphicsUniformType(uniform->getName(), type[j]));
+
+                uniformblock->addGraphicsUniform(uniform);
+            }
+
+            _activeParams.push_back(uniformblock);
+        #endif
+        }
+    }
 
     void render()
     {    
@@ -419,6 +492,9 @@ namespace {
         glm::vec4 mat_specular = glm::vec4(glm::vec3(0.5f), 1.f);;
         glm::vec4 mat_emissive = glm::vec4(0.0f);
         float mat_shininess = 8.0;
+
+        // Bind the buffer object to the uniform block
+        glBindBufferBase(GL_UNIFORM_BUFFER, g_lightBlockPoint, g_lightUniformBuffer);
 
         m_shader.bind();
         m_shader.setUniform("projection", projection);
@@ -479,6 +555,8 @@ namespace {
         m_shader.addShader(GL_FRAGMENT_SHADER, "AreaShadow.Fragment");
         m_shader.link();
 
+        _initActiveUniformBlock(m_shader);
+
 		m_cube.init();
         m_plane.init();
 
@@ -486,13 +564,8 @@ namespace {
         glUniformBlockBinding(m_shader.getShaderID(), lightBlock, g_lightBlockPoint);
 
         //Setup our Uniform Buffers
-        glGenBuffers(1, &g_lightUniformBuffer);
-        glBindBuffer(GL_UNIFORM_BUFFER, g_lightUniformBuffer);
-        glBufferData(GL_UNIFORM_BUFFER, sizeof(LightBlock), nullptr, GL_DYNAMIC_DRAW);
-
-        // Bind the buffer object to the uniform block
-        glBindBufferBase(GL_UNIFORM_BUFFER, g_lightBlockPoint, g_lightUniformBuffer);
-        // glBindBufferRange(GL_UNIFORM_BUFFER, g_lightBlockPoint, g_lightUniformBuffer, 0, sizeof(LightBlock));
+        glCreateBuffers(1, &g_lightUniformBuffer);
+        glNamedBufferStorage(g_lightUniformBuffer, sizeof(LightBlock), nullptr, GL_DYNAMIC_STORAGE_BIT);
     }
 
     void glfw_keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods) 
