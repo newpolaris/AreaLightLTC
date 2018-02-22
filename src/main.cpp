@@ -8,9 +8,11 @@
 #include <glfw3.h>
 
 // GLM for matrix transformation
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp> 
+#include <glm/gtx/quaternion.hpp>
 
 // GLSL Wrangler
 #include <glsw/glsw.h>
@@ -42,13 +44,33 @@
 #include <vector>
 #include <algorithm>
 
-namespace
+namespace light
 {
-     
-    struct Light
+    SphereMesh m_sphereMesh(16);
+    PlaneMesh m_areaMesh(1.0);
+    ProgramShader m_shaderFlat;
+
+    void initialize()
+    {
+        m_shaderFlat.initalize();
+        m_shaderFlat.addShader(GL_VERTEX_SHADER, "Flat.Vertex");
+        m_shaderFlat.addShader(GL_FRAGMENT_SHADER, "Flat.Fragment");
+        m_shaderFlat.link();
+
+        m_areaMesh.init();
+        m_sphereMesh.init();
+    }
+
+    void shutdown()
+    {
+        m_areaMesh.destroy();
+        m_sphereMesh.destroy();
+    }
+
+    struct LightBlock
     {
         float enabled;
-        float type; // 0 = pointlight, 1 = directionlight
+        float type; // 0 = pointlight, 1 = arealight
         float pad0[2];
         glm::vec4 ambient;
         glm::vec4 position; // where are we
@@ -71,11 +93,117 @@ namespace
         float pad4;
     };
 
-    struct LightBlock
+    class Light
     {
-         Light lights[1];
+    public:
+
+        Light();
+
+        void draw(const TCamera& camera);
+        void update(const TCamera& camera, GLuint bufferID);
+
+        const glm::vec3& getPosition() noexcept;
+        void setPosition(const glm::vec3& position) noexcept;
+        void setRotation(const glm::quat& quaternion) noexcept;
+        float getType() noexcept;
+        void setType(float type) noexcept;
+
+        glm::vec3 m_position;
+        glm::mat4 m_rotation;
+        float m_type;
+        float m_width;
+        float m_height;
     };
 
+    Light::Light() :
+        m_position(glm::vec3(0.f)),
+        m_rotation(glm::mat4(1.f)),
+        m_type(0.f),
+        m_width(5.f),
+        m_height(5.f)
+    {
+    }
+
+    void Light::draw(const TCamera& camera)
+    {
+        glm::mat4 projection = camera.getProjectionMatrix();
+        glm::mat4 view = camera.getViewMatrix();
+
+        glDisable(GL_CULL_FACE);
+
+        glm::mat4 model = glm::mat4(1.f);
+        model = glm::translate(model, glm::vec3(m_position));
+        model = model * m_rotation;
+
+        if (m_type == 0.f)
+            model = glm::scale(model, glm::vec3(1.f));
+        else if (m_type == 1.f)
+            model = glm::scale(model, glm::vec3(m_width, 1, m_height));
+
+        m_shaderFlat.bind();
+        m_shaderFlat.setUniform("projection", projection);
+        m_shaderFlat.setUniform("view", view);
+        m_shaderFlat.setUniform("model", model);
+        m_shaderFlat.setUniform("color", glm::vec3(1.f));
+
+        if (m_type == 0.f)
+            m_sphereMesh.draw();
+        else if (m_type == 1.f)
+            m_areaMesh.draw();
+
+        glEnable(GL_CULL_FACE);
+    }
+
+    void Light::update(const TCamera& camera, GLuint bufferID)
+    {
+        auto lightEyePosition = camera.getViewMatrix() * glm::vec4(m_position, 1.0f);
+
+        LightBlock light = { 0, };
+        light.enabled = true;
+        light.type = m_type;
+        light.position = lightEyePosition;
+        light.ambient = glm::vec4(glm::vec3(0.1f), 1.0f);
+        light.diffuse = glm::vec4(1.0f);
+        light.specular = glm::vec4(1.0f);
+        light.constantAttenuation = 1.0f;
+        light.linearAttenuation = 0.0001f;
+        light.quadraticAttenuation = 0.0001f;
+        light.width = m_width;
+        light.height = m_height;
+        light.spotDirection = glm::vec3(m_rotation[1]);
+        light.up = glm::vec3(m_rotation[2]);
+        light.right = glm::vec3(m_rotation[0]);
+        glNamedBufferSubData(bufferID, 0, sizeof(light), &light);
+    }
+
+    const glm::vec3& Light::getPosition() noexcept
+    {
+        return m_position;
+    }
+
+    void Light::setPosition(const glm::vec3& position) noexcept
+    {
+        m_position = position;
+    }
+
+    void Light::setRotation(const glm::quat& quaternion) noexcept
+    {
+        m_rotation = glm::toMat4(quaternion);
+    }
+
+    float Light::getType() noexcept
+    {
+        return m_type;
+    }
+
+    void Light::setType(float type) noexcept
+    {
+        m_type = type;
+    }
+}
+
+namespace
+{
     const uint32_t SHADOW_WIDTH = 1024;
     const uint32_t WINDOW_WIDTH = 1280;
     const uint32_t WINDOW_HEIGHT = 720;
@@ -85,16 +213,15 @@ namespace
 	GLFWwindow* window = nullptr;  
     CubeMesh m_cube;
     PlaneMesh m_plane;
+    light::Light m_light;
     ProgramShader m_shader;
 
     GLuint g_lightUniformBuffer = GL_NONE;
     const int g_lightBlockPoint = 0;
 
-    glm::vec3 lightPos(0.0f, 3.0f, 0.0f);
-
     //?
 
-    TCamera camera;
+    TCamera m_camera;
 
     bool bWireframe = false;
 
@@ -223,8 +350,8 @@ namespace {
         Timer::getInstance().start();
 
         // App Objects
-        camera.setViewParams( glm::vec3( 0.0f, 0.0f, 3.0f), glm::vec3( 0.0f, 0.0f, 0.0f) );
-        camera.setMoveCoefficient(0.35f);
+        m_camera.setViewParams( glm::vec3( 0.0f, 0.0f, 3.0f), glm::vec3( 0.0f, 0.0f, 0.0f) );
+        m_camera.setMoveCoefficient(0.35f);
 
 		// to prevent osx input bug
 		fflush(stdout);
@@ -329,6 +456,7 @@ namespace {
 
 	void finalizeApp()
 	{
+        light::shutdown();
         glswShutdown();  
 		m_cube.destroy();
         m_plane.destroy();
@@ -366,110 +494,26 @@ namespace {
         glViewport(0, 0, width, height);
 
         float aspectRatio = ((float)width) / ((float)height);
-        camera.setProjectionParams( 45.0f, aspectRatio, 0.1f, 100.0f);
+        m_camera.setProjectionParams( 45.0f, aspectRatio, 0.1f, 100.0f);
     }
 
 	void update()
 	{
         Timer::getInstance().update();
-        camera.update();
+        m_camera.update();
 
         // move light position over time
-        lightPos.z = sin(static_cast<float>(glfwGetTime()) * 0.5f) * 3.0f;
+        auto pos = m_light.getPosition();
+        pos.z = sin(static_cast<float>(glfwGetTime()) * 0.5f) * 3.0f;
+        m_light.setPosition(pos);
 
-        LightBlock lightData = { 0, };
-        lightData.lights[0].enabled = true;
-        lightData.lights[0].type = 0;
-        lightData.lights[0].position = camera.getViewMatrix() * glm::vec4(lightPos, 1.0f);
-        lightData.lights[0].ambient = glm::vec4(0.3, 0.3, 0.3, 1.0);
-        lightData.lights[0].diffuse = glm::vec4(1.0, 1.0, 1.0, 1.0);
-        lightData.lights[0].specular = glm::vec4(0.5, 0.0, 0.0, 1.0);
-        lightData.lights[0].constantAttenuation = 0.1f;
-        lightData.lights[0].linearAttenuation = 0.1f;
-        lightData.lights[0].quadraticAttenuation = 0.0f;
-
-        glNamedBufferSubData(g_lightUniformBuffer, 0, sizeof(lightData), &lightData);
+        m_light.update(m_camera, g_lightUniformBuffer);
 	}
 
 	void updateHUD()
 	{
 		ImGui_ImplGlfwGL3_NewFrame();
 	}
-
-    void _initActiveUniformBlock(const ProgramShader& program) noexcept
-    {
-        GLint numUniformBlock = 0;
-        GLint maxUniformBlockLength = 0;
-        GLint maxUniformLength = 0;
-
-        GLuint _program = program.getShaderID();
-        glGetProgramiv(_program, GL_ACTIVE_UNIFORM_BLOCKS, &numUniformBlock);
-        glGetProgramiv(_program, GL_ACTIVE_UNIFORM_BLOCK_MAX_NAME_LENGTH, &maxUniformBlockLength);
-        glGetProgramiv(_program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &maxUniformLength);
-
-        if(numUniformBlock == 0)
-            return;
-
-        auto nameUniformBlock = std::make_unique<GLchar[]>(maxUniformBlockLength + 1);
-        nameUniformBlock[maxUniformBlockLength] = 0;
-
-        for (GLint i = 0; i < numUniformBlock; ++i)
-        {
-            GLsizei lengthUniformBlock = 0;
-            glGetActiveUniformBlockName(_program, (GLuint)i, maxUniformBlockLength, &lengthUniformBlock, nameUniformBlock.get());
-            if (lengthUniformBlock == 0)
-                continue;
-
-            GLuint location = glGetUniformBlockIndex(_program, nameUniformBlock.get());
-            if (location == GL_INVALID_INDEX)
-                continue;
-
-            glUniformBlockBinding(_program, location, i);
-
-            GLint count = 0;
-            glGetActiveUniformBlockiv(_program, location, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &count);
-            if (count == 0)
-                continue;
-
-            GLint size = 0;
-            std::vector<GLint> indices(count);
-            std::vector<GLint> offset((std::size_t)count);
-            std::vector<GLint> type((std::size_t)count);
-            std::vector<GLint> datasize((std::size_t)count);
-            std::vector<GLchar> name(maxUniformLength);
-
-            glGetActiveUniformBlockiv(_program, location, GL_UNIFORM_BLOCK_DATA_SIZE, &size);
-            glGetActiveUniformBlockiv(_program, location, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, indices.data());
-            glGetActiveUniformsiv(_program, count, (GLuint*)&indices[0], GL_UNIFORM_OFFSET, &offset[0]);
-            glGetActiveUniformsiv(_program, count, (GLuint*)&indices[0], GL_UNIFORM_TYPE, &type[0]);
-            glGetActiveUniformsiv(_program, count, (GLuint*)&indices[0], GL_UNIFORM_SIZE, &datasize[0]);
-
-        #if 0
-            auto uniformblock = std::make_shared<OGLGraphicsUniformBlock>();
-            uniformblock->setName(nameUniformBlock.get());
-            uniformblock->setBindingPoint(location);
-            uniformblock->setBlockSize(size);
-            uniformblock->setType(GraphicsUniformType::GraphicsUniformTypeUniformBuffer);
-            uniformblock->setShaderStageFlags(GraphicsShaderStageFlagBits::GraphicsShaderStageAll);
-
-            for (GLint j = 0; j < count; j++)
-            {
-                GLsizei length = 0;
-                glGetActiveUniformName(_program, indices[j], maxUniformLength, &length, name.data());
-
-                auto uniform = std::make_shared<OGLGraphicsUniform>();
-                uniform->setName(std::string(name.data(), length));
-                uniform->setBindingPoint(indices[j]);
-                uniform->setOffset(offset[j]);
-                uniform->setType(toGraphicsUniformType(uniform->getName(), type[j]));
-
-                uniformblock->addGraphicsUniform(uniform);
-            }
-
-            _activeParams.push_back(uniformblock);
-        #endif
-        }
-    }
 
     void render()
     {    
@@ -485,13 +529,13 @@ namespace {
         glViewport(0, 0, display_w, display_h);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glm::mat4 projection = camera.getProjectionMatrix();
-        glm::mat4 view = camera.getViewMatrix();
-        glm::vec4 mat_ambient = glm::vec4(glm::vec3(0.5f), 1.f);
-        glm::vec4 mat_diffuse = glm::vec4(glm::vec3(0.5f), 1.f);
-        glm::vec4 mat_specular = glm::vec4(glm::vec3(0.5f), 1.f);;
+        glm::mat4 projection = m_camera.getProjectionMatrix();
+        glm::mat4 view = m_camera.getViewMatrix();
+        glm::vec4 mat_ambient = glm::vec4(glm::vec3(0.1f), 1.f);
+        glm::vec4 mat_diffuse = glm::vec4(glm::vec3(0.8f), 1.f);
+        glm::vec4 mat_specular = glm::vec4(glm::vec3(0.8f), 1.f);;
         glm::vec4 mat_emissive = glm::vec4(0.0f);
-        float mat_shininess = 8.0;
+        float mat_shininess = 10.0;
 
         // Bind the buffer object to the uniform block
         glBindBufferBase(GL_UNIFORM_BUFFER, g_lightBlockPoint, g_lightUniformBuffer);
@@ -506,39 +550,49 @@ namespace {
         m_shader.setUniform("mat_emissive", mat_emissive);
         m_shader.setUniform("mat_shininess", mat_shininess);
 
-        glm::mat4 model = glm::mat4(1.f);
-        model = glm::translate(model, glm::vec3(3.0f, -3.5f, 0.0));
-        model = glm::scale(model, glm::vec3(0.5f));
-        m_shader.setUniform("model", model);
-        m_plane.draw();
+        m_shader.setUniform("mat_ambient", mat_ambient);
+        m_shader.setUniform("mat_diffuse", mat_diffuse);
+        m_shader.setUniform("mat_specular", mat_specular);
 
+        // plane
+        {
+            glm::mat4 model = glm::mat4(1.f);
+            model = glm::translate(model, glm::vec3(3.0f, -3.5f, 0.0));
+            model = glm::scale(model, glm::vec3(0.5f));
+            m_shader.setUniform("model", model);
+            m_plane.draw();
+        }
         // cubes
-        model = glm::mat4(1.f);
-        model = glm::translate(model, glm::vec3(4.0f, -3.5f, 0.0));
-        model = glm::scale(model, glm::vec3(0.5f));
-        m_shader.setUniform("model", model);
-        m_cube.draw();
-        model = glm::mat4(1.f);
-        model = glm::translate(model, glm::vec3(2.0f, 3.0f, 1.0));
-        model = glm::scale(model, glm::vec3(0.75f));
-        m_shader.setUniform("model", model);
-        m_cube.draw();
-        model = glm::mat4(1.f);
-        model = glm::translate(model, glm::vec3(-3.0f, -1.0f, 0.0));
-        model = glm::scale(model, glm::vec3(0.5f));
-        m_shader.setUniform("model", model);
-        m_cube.draw();
-        model = glm::mat4(1.f);
-        model = glm::translate(model, glm::vec3(-1.5f, 1.0f, 1.5));
-        model = glm::scale(model, glm::vec3(0.5f));
-        m_shader.setUniform("model", model);
-        m_cube.draw();
-        model = glm::mat4(1.f);
-        model = glm::translate(model, glm::vec3(-1.5f, 2.0f, -3.0));
-        model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
-        model = glm::scale(model, glm::vec3(0.75f));
-        m_shader.setUniform("model", model);
-        m_cube.draw();
+        {
+            glm::mat4 model = glm::mat4(1.f);
+            model = glm::mat4(1.f);
+            model = glm::translate(model, glm::vec3(4.0f, -3.5f, 0.0));
+            model = glm::scale(model, glm::vec3(0.5f));
+            m_shader.setUniform("model", model);
+            m_cube.draw();
+            model = glm::mat4(1.f);
+            model = glm::translate(model, glm::vec3(2.0f, 3.0f, 1.0));
+            model = glm::scale(model, glm::vec3(0.75f));
+            m_shader.setUniform("model", model);
+            m_cube.draw();
+            model = glm::mat4(1.f);
+            model = glm::translate(model, glm::vec3(-3.0f, -1.0f, 0.0));
+            model = glm::scale(model, glm::vec3(0.5f));
+            m_shader.setUniform("model", model);
+            m_cube.draw();
+            model = glm::mat4(1.f);
+            model = glm::translate(model, glm::vec3(-1.5f, 1.0f, 1.5));
+            model = glm::scale(model, glm::vec3(0.5f));
+            m_shader.setUniform("model", model);
+            m_cube.draw();
+            model = glm::mat4(1.f);
+            model = glm::translate(model, glm::vec3(-1.5f, 2.0f, -3.0));
+            model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
+            model = glm::scale(model, glm::vec3(0.75f));
+            m_shader.setUniform("model", model);
+            m_cube.draw();
+        }
+        m_light.draw(m_camera);
     }
 
 	void renderHUD()
@@ -550,12 +604,16 @@ namespace {
 
 	void prepareRender()
     {
+        light::initialize();
+
+        m_light.setType(1.0);
+        m_light.setPosition(glm::vec3(0, -1, 0));
+        m_light.setRotation(glm::angleAxis(glm::pi<float>(), glm::vec3(1, 0, 0)));
+
         m_shader.initalize();
         m_shader.addShader(GL_VERTEX_SHADER, "AreaShadow.Vertex");
         m_shader.addShader(GL_FRAGMENT_SHADER, "AreaShadow.Fragment");
         m_shader.link();
-
-        _initActiveUniformBlock(m_shader);
 
 		m_cube.init();
         m_plane.init();
@@ -565,7 +623,7 @@ namespace {
 
         //Setup our Uniform Buffers
         glCreateBuffers(1, &g_lightUniformBuffer);
-        glNamedBufferStorage(g_lightUniformBuffer, sizeof(LightBlock), nullptr, GL_DYNAMIC_STORAGE_BIT);
+        glNamedBufferStorage(g_lightUniformBuffer, sizeof(light::LightBlock), nullptr, GL_DYNAMIC_STORAGE_BIT);
     }
 
     void glfw_keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods) 
@@ -591,7 +649,12 @@ namespace {
 					}
 					break;
 
-				case GLFW_KEY_R:
+				case GLFW_KEY_U:
+                    // lightPos.y += 0.1f;
+					break;
+
+				case GLFW_KEY_D:
+                    // lightPos.y -= 0.1f;
 					break;
 
 				default:
@@ -605,19 +668,19 @@ namespace {
         switch (key)
         {
 		case GLFW_KEY_UP:
-			camera.keyboardHandler( MOVE_FORWARD, isPressed);
+			m_camera.keyboardHandler( MOVE_FORWARD, isPressed);
 			break;
 
 		case GLFW_KEY_DOWN:
-			camera.keyboardHandler( MOVE_BACKWARD, isPressed);
+			m_camera.keyboardHandler( MOVE_BACKWARD, isPressed);
 			break;
 
 		case GLFW_KEY_LEFT:
-			camera.keyboardHandler( MOVE_LEFT, isPressed);
+			m_camera.keyboardHandler( MOVE_LEFT, isPressed);
 			break;
 
 		case GLFW_KEY_RIGHT:
-			camera.keyboardHandler( MOVE_RIGHT, isPressed);
+			m_camera.keyboardHandler( MOVE_RIGHT, isPressed);
 			break;
         }
     }
@@ -627,7 +690,7 @@ namespace {
 		int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
 		const bool bPressed = (state == GLFW_PRESS);
 		const bool mouseOverGui = ImGui::MouseOverArea();
-		if (!mouseOverGui && bPressed) camera.motionHandler( int(xpos), int(ypos), false);    
+		if (!mouseOverGui && bPressed) m_camera.motionHandler( int(xpos), int(ypos), false);    
     }  
 
     void glfw_mouse_callback(GLFWwindow* window, int button, int action, int mods)
@@ -639,7 +702,7 @@ namespace {
 			glfwGetCursorPos(window, &xpos, &ypos);
 			const bool mouseOverGui = ImGui::MouseOverArea();
 			if (!mouseOverGui)
-				camera.motionHandler( int(xpos), int(ypos), true); 
+				m_camera.motionHandler( int(xpos), int(ypos), true); 
 		}    
     }
 
