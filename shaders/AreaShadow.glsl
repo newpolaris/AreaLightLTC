@@ -6,8 +6,8 @@ layout (location = 2) in vec2 aTexCoords;
 
 out VS_OUT {
     vec3 FragPos;
-    vec3 NormalV;
-    vec4 PositionV;
+    vec3 NormalW;
+    vec4 PositionW;
 } vs_out;
 
 uniform mat4 projection;
@@ -17,8 +17,8 @@ uniform mat4 model;
 void main()
 {
     vs_out.FragPos = vec3(model * vec4(aPos, 1.0));
-    vs_out.NormalV = mat3(view*model) * aNormal;
-    vs_out.PositionV = view * model * vec4(aPos, 1.0);
+    vs_out.NormalW = mat3(model) * aNormal;
+    vs_out.PositionW = model * vec4(aPos, 1.0);
     gl_Position = projection * view * model * vec4(aPos, 1.0);
 }
 
@@ -28,6 +28,7 @@ struct lightData
 {
     float enabled;
     float type; // 0 = pointlight 1 = directionlight
+    float a, b;
     vec4 ambient;
     vec4 position; // where are we
     vec4 diffuse; // how diffuse
@@ -36,24 +37,28 @@ struct lightData
     float constantAttenuation;
     float linearAttenuation;
     float quadraticAttenuation;
+    float c;
     // spot and area
     vec3 spotDirection;
+    float d;
     // only for area
     float width;
     float height;
+    float e, f;
     vec3 right;
+    float g;
     vec3 up;
+    float h;
 };
 
 out vec4 FragColor;
 
 in VS_OUT {
     vec3 FragPos;
-    vec3 NormalV;
-    vec4 PositionV;
+    vec3 NormalW;
+    vec4 PositionW;
 } fs_in;
 
-const int numberOfLights = 1;
 uniform Light
 {
     lightData lights;
@@ -66,43 +71,7 @@ uniform vec4 mat_specular;
 uniform vec4 mat_emissive;
 uniform float mat_shininess;
 
-void pointLight( in lightData light, in vec3 normal, in vec3 ecPosition3, inout vec3 ambient, inout vec3 diffuse, inout vec3 specular )
-{ 
-    float nDotVP;       // normal . light direction
-    float nDotHV;       // normal . light half vector
-    float pf;           // power factor
-    float attenuation;  // computed attenuation factor
-    float d;            // distance from surface to light source
-    vec3  VP;           // direction from surface to light position
-    vec3  halfVector;   // direction of maximum highlights
-    vec3  eye = -ecPosition3;
-
-    // Compute vector from surface to light position
-    VP = vec3(light.position.xyz) - ecPosition3;
-
-    // Compute distance between surface and light position
-    d = length(VP);
-
-    // Compute attenuation
-    attenuation = 1.0 / (light.constantAttenuation + light.linearAttenuation * d + light.quadraticAttenuation * d * d);
-
-    // Normalize the vector from surface to light position
-    VP = normalize(VP);
-    halfVector = normalize(VP + eye);
-    nDotHV = max(0.0, dot(normal, halfVector));
-    nDotVP = max(0.0, dot(normal, VP));
-
-    ambient += light.ambient.rgb * attenuation;
-    diffuse += light.diffuse.rgb * nDotVP * attenuation;
-
-    // fresnel factor
-    // http://en.wikibooks.org/wiki/GLSL_Programming/Unity/Specular_Highlights_at_Silhouettes
-    float w = pow(1.0 - max(0.0, dot(halfVector, VP)), 5.0);
-    vec3 specularReflection = attenuation * vec3(light.specular.rgb)
-        * mix(vec3(mat_specular.rgb), vec3(1.0), w)
-        * pow(nDotHV, mat_shininess);
-    specular += mix(vec3(0.0), specularReflection, step(0.0000001, nDotVP));
-}
+uniform vec3 uCameraPos; // world
 
 vec3 projection(in vec3 p, in vec3 p0, in vec3 normal)
 {
@@ -119,44 +88,57 @@ vec3 linePlaneIntersect(in vec3 lp, in vec3 lv, in vec3 pc, in vec3 pn)
     return lp + lv * dot(pn, pc - lp)/dot(pn, lv);
 }
 
-void areaLight( in lightData light, in vec3 normal, in vec3 ecPosition3, inout vec3 ambient, inout vec3 diffuse, inout vec3 specular )
+vec2 project2D(vec3 dir, vec3 right, vec3 up)
+{
+    return vec2(dot(dir, right), dot(dir, up));
+}
+
+vec2 nearest2D(vec2 dir, vec2 x, vec2 y)
+{
+    return vec2(clamp(dir.x, x.r, x.g), clamp(dir.y, y.r, y.g));
+}
+
+void areaLight( in lightData light, in vec3 normalW, in vec3 positionW, inout vec3 ambient, inout vec3 diffuse, inout vec3 specular )
 {
     vec3 lightPos = light.position.xyz;
     vec3 right = light.right;
-    // plane normal, front direction
-    vec3 planeNormal = light.spotDirection;
+    // light plane normal, front direction
+    vec3 direction = light.spotDirection;
     vec3 up = light.up;
 
     float width = light.width * 0.5;
     float height = light.height * 0.5;
 
     // project onto plane and calculate direction from center to the projection.
-    vec3 projection = projectOnPlane(ecPosition3, lightPos, planeNormal);
-    vec3 dir = projection - lightPos;
+    vec3 projection = projectOnPlane(positionW, lightPos, direction);
+    vec3 dirDiff = projection - lightPos;
 
-    // calculate distance from area:
-    vec2 diagonal = vec2(dot(dir, right), dot(dir, up));
-    vec2 nearest2D = vec2(clamp(diagonal.x, -width, width), clamp( diagonal.y, -height, height));
-    vec3 nearestPointInside = lightPos + right*nearest2D.x + up*nearest2D.y;
-    float dist = distance(ecPosition3, nearestPointInside); // real distance to area rectangle
-
-    vec3 lightDir = normalize(nearestPointInside - ecPosition3);
+    // project onto 2D areaLight plane to compare with width/height
+    vec2 dirDiff2D = project2D(dirDiff, right, up);
+    vec2 nearestDiff2D = nearest2D(dirDiff2D, vec2(-width, width), vec2(-height, height));
+    vec3 nearestPointInside = lightPos + right * nearestDiff2D.x + up * nearestDiff2D.y;
+    float dist = distance(positionW, nearestPointInside); // real distance to area rectangle
+    vec3 diffuseDir = normalize(nearestPointInside - positionW);
     float attenuation = 1.0 / (light.constantAttenuation + light.linearAttenuation * dist + light.quadraticAttenuation * dist * dist);
 
-    float ndotl = max(dot(planeNormal, -lightDir), 0.0);
-    float ndotl2 = max(dot(normal, lightDir), 0.0);
+    float ndotl = max(dot(direction, -diffuseDir), 0.0);
+    float ndotl2 = max(dot(normalW, diffuseDir), 0.0);
     if (ndotl * ndotl2 > 0.0)
     {
         float diffuseFactor = sqrt(ndotl * ndotl2);
-        vec3 r = reflect(normalize(-ecPosition3), normal);
-        vec3 e = linePlaneIntersect(ecPosition3, r, lightPos, planeNormal);
-        float specAngle = dot(r, planeNormal);
+
+        // find point e that intersect with reflect vector in light area
+        vec3 r = reflect(normalize(uCameraPos - positionW), normalW);
+        vec3 e = linePlaneIntersect(positionW, r, lightPos, direction);
+        float specAngle = dot(r, direction);
         if (specAngle > 0.0)
         {
             vec3 dirSpec = e - lightPos;
-            vec2 dirSpec2D = vec2(dot(dirSpec, right), dot(dirSpec, up));
-            vec2 nearestSpec2D = vec2(clamp(dirSpec2D.x, -width, width), clamp(dirSpec2D.y, -height, height));
-            float specFactor = 1.0 - clamp(length(nearestSpec2D - dirSpec2D) * 0.05 * mat_shininess, 0.0, 1.0);
+            vec2 dirSpec2D = project2D(dirSpec, right, up);
+            vec2 nearestSpec2D = nearest2D(dirSpec2D, vec2(-width, width), vec2(-height, height));
+            // to get sharp edge line
+            float edgeFactor = 5.0;
+            float specFactor = 1.0 - clamp(length(nearestSpec2D - dirSpec2D) * edgeFactor * mat_shininess, 0, 1);
             specular += light.specular.rgb * specFactor * specAngle * diffuseFactor * attenuation;
         }
         diffuse += light.diffuse.rgb * diffuseFactor * attenuation;
@@ -170,13 +152,10 @@ void main()
     vec3 diffuse = vec3(0.0, 0.0, 0.0);
     vec3 specular = vec3(0.0, 0.0, 0.0);
 
-    vec3 v_transformedNormal = fs_in.NormalV;
-    vec3 v_eyePosition = vec3(fs_in.PositionV);
+    vec3 w_transformedNormal = normalize(fs_in.NormalW);
+    vec3 w_Position = vec3(fs_in.PositionW);
 
-    if (lights.type < 0.5)
-        pointLight(lights, v_transformedNormal, v_eyePosition, ambient, diffuse, specular);
-    else if (lights.type < 1.5)
-        areaLight(lights, v_transformedNormal, v_eyePosition, ambient, diffuse, specular);
+    areaLight(lights, w_transformedNormal, w_Position, ambient, diffuse, specular);
 
     vec4 localColor = vec4(ambient, 1.0) * mat_ambient + vec4(diffuse, 1.0) * mat_diffuse + vec4(specular, 1.0) * mat_specular + mat_emissive;
     FragColor = localColor;

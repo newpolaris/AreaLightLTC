@@ -87,10 +87,11 @@ namespace light
         // only for area
         float width;
         float height;
+        float pad3[2];
         glm::vec3 right;
-        float pad3;
-        glm::vec3 up;
         float pad4;
+        glm::vec3 up;
+        float pad5;
     };
 
     class Light
@@ -162,8 +163,8 @@ namespace light
     void Light::update(const TCamera& camera, GLuint bufferID)
     {
         const auto makeYaxisFoward = glm::angleAxis(-glm::half_pi<float>(), glm::vec3(1, 0, 0));
-        auto rotation = glm::mat3(camera.getViewMatrix() * glm::toMat4(m_rotation * makeYaxisFoward));
-        auto lightEyePosition = camera.getViewMatrix() * glm::vec4(m_position, 1.0f);
+        auto rotation = glm::toMat3(m_rotation * makeYaxisFoward);
+        auto lightEyePosition = glm::vec4(m_position, 1.0f);
 
         LightBlock light = { 0, };
         light.enabled = true;
@@ -234,7 +235,7 @@ namespace
 	bool bCloseApp = false;
 	GLFWwindow* window = nullptr;  
     CubeMesh m_cube;
-    PlaneMesh m_plane;
+    PlaneMesh m_plane(500.f);
     light::Light m_light;
     ProgramShader m_shader;
 
@@ -563,6 +564,7 @@ namespace {
         glBindBufferBase(GL_UNIFORM_BUFFER, g_lightBlockPoint, g_lightUniformBuffer);
 
         m_shader.bind();
+        m_shader.setUniform("uCameraPos", m_camera.getPosition());
         m_shader.setUniform("projection", projection);
         m_shader.setUniform("view", view);
         // set lighting uniforms
@@ -627,10 +629,14 @@ namespace {
     {
         light::initialize();
 
+        // rotate toward ground and tilt slightly
+        auto rot = glm::angleAxis(glm::pi<float>(), glm::vec3(1, 0, 0));
+        rot = glm::angleAxis(glm::pi<float>()*0.25f, glm::vec3(0, 0, 1)) * rot;
+
         m_light.setType(1.0);
-        m_light.setPosition(glm::vec3(0, -1, 0));
-        m_light.setRotation(glm::angleAxis(glm::pi<float>(), glm::vec3(1, 0, 0)));
-        m_light.setAttenuation(glm::vec3(1.f, 1e-4f, 1e-4f));
+        m_light.setPosition(glm::vec3(0, -1, 2));
+        m_light.setRotation(rot);
+        m_light.setAttenuation(glm::vec3(0.8f, 1e-2f, 1e-1f));
 
         m_shader.initalize();
         m_shader.addShader(GL_VERTEX_SHADER, "AreaShadow.Vertex");
