@@ -28,7 +28,6 @@ struct lightData
 {
     float enabled;
     float type; // 0 = pointlight 1 = directionlight
-    float a, b;
     vec4 ambient;
     vec4 position; // where are we
     vec4 diffuse; // how diffuse
@@ -37,18 +36,14 @@ struct lightData
     float constantAttenuation;
     float linearAttenuation;
     float quadraticAttenuation;
-    float c;
     // spot and area
     vec3 spotDirection;
-    float d;
+    float pad;
     // only for area
     float width;
     float height;
-    float e,f;
     vec3 right;
-    float g;
     vec3 up;
-    float h;
 };
 
 out vec4 FragColor;

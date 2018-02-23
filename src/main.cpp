@@ -87,11 +87,11 @@ namespace light
         // only for area
         float width;
         float height;
-        float pad5[2];
+        float pad3[2];
         glm::vec3 right;
-        float pad3;
-        glm::vec3 up;
         float pad4;
+        glm::vec3 up;
+        float pad5;
     };
 
     class Light
@@ -628,10 +628,14 @@ namespace {
     {
         light::initialize();
 
+        // rotate toward ground and tilt slightly
+        auto rot = glm::angleAxis(glm::pi<float>(), glm::vec3(1, 0, 0));
+        rot = glm::angleAxis(glm::pi<float>()*0.15f, glm::vec3(0, 0, 1)) * rot;
+
         m_light.setType(1.0);
         m_light.setPosition(glm::vec3(0, -1, 0));
-        m_light.setRotation(glm::angleAxis(glm::pi<float>(), glm::vec3(1, 0, 0)));
-        m_light.setAttenuation(glm::vec3(1.f, 1e-4f, 1e-4f));
+        m_light.setRotation(rot);
+        m_light.setAttenuation(glm::vec3(0.8f, 1e-2f, 1e-2f));
 
         m_shader.initalize();
         m_shader.addShader(GL_VERTEX_SHADER, "AreaShadow.Vertex");
