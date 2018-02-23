@@ -87,6 +87,7 @@ namespace light
         // only for area
         float width;
         float height;
+        float pad5[2];
         glm::vec3 right;
         float pad3;
         glm::vec3 up;

@@ -28,6 +28,7 @@ struct lightData
 {
     float enabled;
     float type; // 0 = pointlight 1 = directionlight
+    float a, b;
     vec4 ambient;
     vec4 position; // where are we
     vec4 diffuse; // how diffuse
@@ -36,13 +37,18 @@ struct lightData
     float constantAttenuation;
     float linearAttenuation;
     float quadraticAttenuation;
+    float c;
     // spot and area
     vec3 spotDirection;
+    float d;
     // only for area
     float width;
     float height;
+    float e,f;
     vec3 right;
+    float g;
     vec3 up;
+    float h;
 };
 
 out vec4 FragColor;
@@ -156,7 +162,7 @@ void areaLight( in lightData light, in vec3 normal, in vec3 ecPosition3, inout v
             vec3 dirSpec = e - lightPos;
             vec2 dirSpec2D = vec2(dot(dirSpec, right), dot(dirSpec, up));
             vec2 nearestSpec2D = vec2(clamp(dirSpec2D.x, -width, width), clamp(dirSpec2D.y, -height, height));
-            float specFactor = 1.0 - clamp(length(nearestSpec2D - dirSpec2D) * 0.05 * mat_shininess, 0.0, 1.0);
+            float specFactor = 1.0 - clamp(length(nearestSpec2D - dirSpec2D) * 0.5 * mat_shininess, 0.0, 1.0);
             specular += light.specular.rgb * specFactor * specAngle * diffuseFactor * attenuation;
         }
         diffuse += light.diffuse.rgb * diffuseFactor * attenuation;
