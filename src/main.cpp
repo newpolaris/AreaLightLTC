@@ -104,12 +104,16 @@ namespace light
 
         const glm::vec3& getPosition() noexcept;
         void setPosition(const glm::vec3& position) noexcept;
+        const glm::quat& getRotation() noexcept;
         void setRotation(const glm::quat& quaternion) noexcept;
         float getType() noexcept;
         void setType(float type) noexcept;
+        void setAttenuation(const glm::vec3& attenuation) noexcept;
+        const glm::vec3& getAttenuation() noexcept;
 
         glm::vec3 m_position;
-        glm::mat4 m_rotation;
+        glm::vec3 m_attenuation;
+        glm::quat m_rotation;
         float m_type;
         float m_width;
         float m_height;
@@ -117,7 +121,8 @@ namespace light
 
     Light::Light() :
         m_position(glm::vec3(0.f)),
-        m_rotation(glm::mat4(1.f)),
+        m_rotation(1, 0, 0, 0),
+        m_attenuation(glm::vec3(1.f, 0.f, 0.f)),
         m_type(0.f),
         m_width(5.f),
         m_height(5.f)
@@ -133,7 +138,7 @@ namespace light
 
         glm::mat4 model = glm::mat4(1.f);
         model = glm::translate(model, glm::vec3(m_position));
-        model = model * m_rotation;
+        model = model * glm::toMat4(m_rotation);
 
         if (m_type == 0.f)
             model = glm::scale(model, glm::vec3(1.f));
@@ -156,6 +161,8 @@ namespace light
 
     void Light::update(const TCamera& camera, GLuint bufferID)
     {
+        const auto makeYaxisFoward = glm::angleAxis(-glm::half_pi<float>(), glm::vec3(1, 0, 0));
+        auto rotation = glm::mat3(camera.getViewMatrix() * glm::toMat4(m_rotation * makeYaxisFoward));
         auto lightEyePosition = camera.getViewMatrix() * glm::vec4(m_position, 1.0f);
 
         LightBlock light = { 0, };
@@ -165,14 +172,14 @@ namespace light
         light.ambient = glm::vec4(glm::vec3(0.1f), 1.0f);
         light.diffuse = glm::vec4(1.0f);
         light.specular = glm::vec4(1.0f);
-        light.constantAttenuation = 1.0f;
-        light.linearAttenuation = 0.0001f;
-        light.quadraticAttenuation = 0.0001f;
+        light.constantAttenuation = m_attenuation.x;
+        light.linearAttenuation = m_attenuation.y;
+        light.quadraticAttenuation = m_attenuation.z;
         light.width = m_width;
         light.height = m_height;
-        light.spotDirection = glm::vec3(m_rotation[1]);
-        light.up = glm::vec3(m_rotation[2]);
-        light.right = glm::vec3(m_rotation[0]);
+        light.right = rotation[0];
+        light.up = rotation[1];
+        light.spotDirection = rotation[2];
         glNamedBufferSubData(bufferID, 0, sizeof(light), &light);
     }
 
@@ -184,6 +191,11 @@ namespace light
     void Light::setPosition(const glm::vec3& position) noexcept
     {
         m_position = position;
+    }
+
+    const glm::quat& Light::getRotation() noexcept
+    {
+        return m_rotation;
     }
 
     void Light::setRotation(const glm::quat& quaternion) noexcept
@@ -199,6 +211,16 @@ namespace light
     void Light::setType(float type) noexcept
     {
         m_type = type;
+    }
+
+    void Light::setAttenuation(const glm::vec3& attenuation) noexcept
+    {
+        m_attenuation = attenuation;
+    }
+
+    const glm::vec3& Light::getAttenuation() noexcept
+    {
+        return m_attenuation;
     }
 }
 
@@ -558,7 +580,6 @@ namespace {
         {
             glm::mat4 model = glm::mat4(1.f);
             model = glm::translate(model, glm::vec3(3.0f, -3.5f, 0.0));
-            model = glm::scale(model, glm::vec3(0.5f));
             m_shader.setUniform("model", model);
             m_plane.draw();
         }
@@ -609,6 +630,7 @@ namespace {
         m_light.setType(1.0);
         m_light.setPosition(glm::vec3(0, -1, 0));
         m_light.setRotation(glm::angleAxis(glm::pi<float>(), glm::vec3(1, 0, 0)));
+        m_light.setAttenuation(glm::vec3(1.f, 1e-4f, 1e-4f));
 
         m_shader.initalize();
         m_shader.addShader(GL_VERTEX_SHADER, "AreaShadow.Vertex");
