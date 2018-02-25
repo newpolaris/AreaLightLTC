@@ -85,10 +85,18 @@ namespace nv_helpers_gl
     inline std::string markerString(int line, std::string const & filename, int fileid)
     {
         if(GLEW_ARB_shading_language_include){
+	#if __APPLE__
+            return format("//#line %d \"", line) + fixFilename(filename) + std::string("\"\n");
+	#else
             return format("#line %d \"", line) + fixFilename(filename) + std::string("\"\n");
+	#endif
         }
         else{
+	#if __APPLE__
+            return format("//#line %d %d\n", line, fileid);
+	#else
             return format("#line %d %d\n", line, fileid);
+	#endif
         }
     }
 

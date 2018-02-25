@@ -368,7 +368,11 @@ namespace {
 		// GLSW : shader file manager
 		glswInit();
 		glswSetPath("./shaders/", ".glsl");
-		glswAddDirectiveToken("*", "#version 440 core");
+	#ifdef __APPLE__
+		glswAddDirectiveToken("*", "#version 330 core");
+	#else
+		glswAddDirectiveToken("*", "#version 430 core");
+	#endif
 
         Timer::getInstance().start();
 
@@ -395,8 +399,9 @@ namespace {
 
         fprintf( stderr, "GLEW version : %s\n", glewGetString(GLEW_VERSION));
 
+	#ifndef __APPLE__
         assert(GLEW_ARB_direct_state_access);
-        assert(GLEW_ARB_shading_language_include);
+	#endif
 	}
 
 	void initGL()
@@ -455,7 +460,11 @@ namespace {
         glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
     #endif
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	#ifdef __APPLE__
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+	#else
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	#endif
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		
