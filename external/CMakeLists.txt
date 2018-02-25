@@ -57,61 +57,6 @@ target_link_libraries(GLEW_1130
 
 ### ANTTWEAKBAR ###
 
-set(ANTTWEAKBAR_SOURCE
-	AntTweakBar-1.16/src/LoadOGL.cpp
-	AntTweakBar-1.16/src/LoadOGLCore.cpp
-	AntTweakBar-1.16/src/TwColors.cpp
-	AntTweakBar-1.16/src/TwBar.cpp
-	AntTweakBar-1.16/src/TwEventGLFW.c
-	AntTweakBar-1.16/src/TwFonts.cpp
-	AntTweakBar-1.16/src/TwMgr.cpp
-	AntTweakBar-1.16/src/TwOpenGL.cpp
-	AntTweakBar-1.16/src/TwOpenGLCore.cpp
-	AntTweakBar-1.16/src/TwPrecomp.cpp
-)
-
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") # If on Xcode, rename files to .mm
-file(COPY ${ANTTWEAKBAR_SOURCE} DESTINATION AntTweakBar-ObjectiveC/)
-file(RENAME ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/LoadOGL.cpp      ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/LoadOGL.mm     )
-file(RENAME ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/LoadOGLCore.cpp  ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/LoadOGLCore.mm )
-file(RENAME ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwColors.cpp     ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwColors.mm    )
-file(RENAME ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwBar.cpp        ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwBar.mm       )
-file(RENAME ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwEventGLFW.c    ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwEventGLFW.m  )
-file(RENAME ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwFonts.cpp      ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwFonts.mm     )
-file(RENAME ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwMgr.cpp        ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwMgr.mm       )
-file(RENAME ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwOpenGL.cpp     ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwOpenGL.mm    )
-file(RENAME ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwOpenGLCore.cpp ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwOpenGLCore.mm)
-file(RENAME ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwPrecomp.cpp    ${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwPrecomp.mm   )
-
-set(ANTTWEAKBAR_SOURCE
-	${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/LoadOGL.mm
-	${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/LoadOGLCore.mm
-	${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwColors.mm
-	${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwBar.mm
-	${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwEventGLFW.m
-	${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwFonts.mm
-	${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwMgr.mm
-	${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwOpenGL.mm
-	${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwOpenGLCore.mm
-	${CMAKE_BINARY_DIR}/external/AntTweakBar-ObjectiveC/TwPrecomp.mm
-)
-include_directories(
-	${CMAKE_SOURCE_DIR}/external/AntTweakBar-1.16/src/
-)
-add_definitions(
-	-D_MACOSX
-)
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-add_definitions(
-	-D_UNIX
-)
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-add_definitions(
-	-D_WINDOWS
-)
-
-endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-
 if(UseAntTweakBar)
 	set(ANTTWEAKBAR_HEADERS
 		AntTweakBar-1.16/src/AntPerfTimer.h

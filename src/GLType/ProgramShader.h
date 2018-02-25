@@ -58,24 +58,24 @@ protected:
     GLuint m_id;
 };
 
-inline void ProgramShader::Dispatch( size_t GroupCountX, size_t GroupCountY, size_t GroupCountZ )
+inline void ProgramShader::Dispatch( GLuint GroupCountX, GLuint GroupCountY, GLuint GroupCountZ )
 {
     glDispatchCompute(GroupCountX, GroupCountY, GroupCountZ);
 }
 
-inline void ProgramShader::Dispatch1D( size_t ThreadCountX, size_t GroupSizeX )
+inline void ProgramShader::Dispatch1D( GLuint ThreadCountX, GLuint GroupSizeX )
 {
     Dispatch( Math::DivideByMultiple(ThreadCountX, GroupSizeX), 1, 1 );
 }
 
-inline void ProgramShader::Dispatch2D( size_t ThreadCountX, size_t ThreadCountY, size_t GroupSizeX, size_t GroupSizeY )
+inline void ProgramShader::Dispatch2D( GLuint ThreadCountX, GLuint ThreadCountY, GLuint GroupSizeX, GLuint GroupSizeY )
 {
     Dispatch(
         Math::DivideByMultiple(ThreadCountX, GroupSizeX),
         Math::DivideByMultiple(ThreadCountY, GroupSizeY), 1);
 }
 
-inline void ProgramShader::Dispatch3D( size_t ThreadCountX, size_t ThreadCountY, size_t ThreadCountZ, size_t GroupSizeX, size_t GroupSizeY, size_t GroupSizeZ )
+inline void ProgramShader::Dispatch3D( GLuint ThreadCountX, GLuint ThreadCountY, GLuint ThreadCountZ, GLuint GroupSizeX, GLuint GroupSizeY, GLuint GroupSizeZ )
 {
     Dispatch(
         Math::DivideByMultiple(ThreadCountX, GroupSizeX),

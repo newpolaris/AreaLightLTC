@@ -13,9 +13,8 @@
 
 #pragma once
 
-#include <intrin.h>
-
-#define INLINE __forceinline
+// #include <intrin.h>
+#define __forceinline inline 
 
 namespace Math
 {
