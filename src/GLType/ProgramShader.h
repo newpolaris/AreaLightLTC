@@ -6,15 +6,16 @@
 #include <string>
 #include <GraphicsTypes.h>
 #include <vector>
+#include <map>
 
 class ProgramShader
 {
 public:
-    ProgramShader() : m_id(0u) {}
-    virtual ~ProgramShader() {destroy();}
+    ProgramShader() noexcept;
+    virtual ~ProgramShader() noexcept;
     
     /** Generate the program id */
-    void initalize();
+    bool initialize() noexcept;
     
     /** Destroy the program id */
     void destroy();        
@@ -26,12 +27,16 @@ public:
     
     bool link(); //static (with param)?
     
-    void bind() const { glUseProgram( m_id ); }
+    void bind() const { glUseProgram( m_ShaderID ); }
     void unbind() const { glUseProgram( 0u ); }
     
     /** Return the program id */
-    GLuint getShaderID() const { return m_id; }
+    GLuint getShaderID() const { return m_ShaderID; }
     
+    bool initBlockBinding(const std::string& name);
+
+    void setDevice(const GraphicsDevicePtr& device);
+
     bool setUniform(const std::string &name, GLint v) const;
     bool setUniform(const std::string &name, GLfloat v) const;
     bool setUniform(const std::string &name, const glm::vec3 &v) const;
@@ -39,6 +44,7 @@ public:
     bool setUniform(const std::string &name, const glm::mat3 &v) const;
     bool setUniform(const std::string &name, const glm::mat4 &v) const;
     bool bindTexture(const std::string &name, const BaseTexturePtr& texture, GLint unit);
+    bool bindBuffer(const std::string &name, const GraphicsDataPtr& data);
 
     // Compute
     bool bindImage(const std::string &name, const BaseTexturePtr &texture, GLint unit, GLint level, GLboolean layered, GLint layer, GLenum access);
@@ -55,7 +61,10 @@ protected:
 
     static std::vector<std::string> directory;
 
-    GLuint m_id;
+    GLuint m_ShaderID;
+    GLuint m_BlockPointCounter;
+    GraphicsDeviceWeakPtr m_Device;
+    std::map<std::string, GLuint> m_BlockPoints;
 };
 
 inline void ProgramShader::Dispatch( GLuint GroupCountX, GLuint GroupCountY, GLuint GroupCountZ )

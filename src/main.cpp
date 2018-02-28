@@ -33,6 +33,7 @@
 #include <tools/gltools.hpp>
 #include <tools/SimpleProfile.h>
 
+#include <GraphicsTypes.h>
 #include <GLType/ProgramShader.h>
 #include <GLType/BaseTexture.h>
 #include <GLType/Framebuffer.h>
@@ -44,6 +45,26 @@
 #include <vector>
 #include <algorithm>
 
+#include <GLType/GraphicsDevice.h>
+#include <GLType/OGLDevice.h>
+#include <GLType/OGLGraphicsData.h>
+#include <GLType/OGLCoreGraphicsData.h>
+
+GraphicsDevicePtr createDevice(const GraphicsDeviceDesc& desc) noexcept
+{
+	GraphicsDeviceType deviceType = desc.getDeviceType();
+
+	if (deviceType == GraphicsDeviceType::GraphicsDeviceTypeOpenGL ||
+		deviceType == GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore)
+    {
+        auto device = std::make_shared<OGLDevice>();
+        if (device->create(desc))
+            return device;
+        return nullptr;
+    }
+    return nullptr;
+}
+
 namespace light
 {
     SphereMesh m_sphereMesh(16);
@@ -52,7 +73,7 @@ namespace light
 
     void initialize()
     {
-        m_shaderFlat.initalize();
+        m_shaderFlat.initialize();
         m_shaderFlat.addShader(GL_VERTEX_SHADER, "Flat.Vertex");
         m_shaderFlat.addShader(GL_FRAGMENT_SHADER, "Flat.Fragment");
         m_shaderFlat.link();
@@ -101,7 +122,7 @@ namespace light
         Light();
 
         void draw(const TCamera& camera);
-        void update(const TCamera& camera, GLuint bufferID);
+        void update(GraphicsDataPtr buffer);
 
         const glm::vec3& getPosition() noexcept;
         void setPosition(const glm::vec3& position) noexcept;
@@ -160,7 +181,7 @@ namespace light
         glEnable(GL_CULL_FACE);
     }
 
-    void Light::update(const TCamera& camera, GLuint bufferID)
+    void Light::update(GraphicsDataPtr buffer)
     {
         const auto makeYaxisFoward = glm::angleAxis(-glm::half_pi<float>(), glm::vec3(1, 0, 0));
         auto rotation = glm::toMat3(m_rotation * makeYaxisFoward);
@@ -181,7 +202,8 @@ namespace light
         light.right = rotation[0];
         light.up = rotation[1];
         light.spotDirection = rotation[2];
-        glNamedBufferSubData(bufferID, 0, sizeof(light), &light);
+
+        buffer->update(0, sizeof(light), &light);
     }
 
     const glm::vec3& Light::getPosition() noexcept
@@ -238,8 +260,9 @@ namespace
     PlaneMesh m_plane(500.f);
     light::Light m_light;
     ProgramShader m_shader;
+    GraphicsDevicePtr m_Device;
+    GraphicsDataPtr m_LightUniformBuffer;
 
-    GLuint g_lightUniformBuffer = GL_NONE;
     const int g_lightBlockPoint = 0;
 
     //?
@@ -371,7 +394,7 @@ namespace {
 	#ifdef __APPLE__
 		glswAddDirectiveToken("*", "#version 330 core");
 	#else
-		glswAddDirectiveToken("*", "#version 430 core");
+		glswAddDirectiveToken("*", "#version 450 core");
 	#endif
 
         Timer::getInstance().start();
@@ -455,16 +478,18 @@ namespace {
 			exit( EXIT_FAILURE );
 		}
         
+	#ifdef __APPLE__
+        GLuint minor = 1;
+    #else
+        GLuint minor = 5;
+    #endif
+
         glfwWindowHint(GLFW_SAMPLES, 4);
     #ifdef _DEBUG
         glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
     #endif
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	#ifdef __APPLE__
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-	#else
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	#endif
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, minor);
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		
@@ -538,8 +563,7 @@ namespace {
         auto pos = m_light.getPosition();
         pos.z = sin(static_cast<float>(glfwGetTime()) * 0.5f) * 3.0f;
         m_light.setPosition(pos);
-
-        m_light.update(m_camera, g_lightUniformBuffer);
+        m_light.update(m_LightUniformBuffer);
 	}
 
 	void updateHUD()
@@ -569,10 +593,8 @@ namespace {
         glm::vec4 mat_emissive = glm::vec4(0.0f);
         float mat_shininess = 10.0;
 
-        // Bind the buffer object to the uniform block
-        glBindBufferBase(GL_UNIFORM_BUFFER, g_lightBlockPoint, g_lightUniformBuffer);
-
         m_shader.bind();
+        m_shader.bindBuffer("Light", m_LightUniformBuffer);
         m_shader.setUniform("uCameraPos", m_camera.getPosition());
         m_shader.setUniform("projection", projection);
         m_shader.setUniform("view", view);
@@ -636,6 +658,15 @@ namespace {
 
 	void prepareRender()
     {
+        GraphicsDeviceDesc deviceDesc;
+    #if !__APPLE__
+        deviceDesc.setDeviceType(GraphicsDeviceType::GraphicsDeviceTypeOpenGL);
+    #else
+        deviceDesc.setDeviceType(GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore);
+    #endif
+        m_Device = createDevice(deviceDesc);
+        assert(m_Device);
+
         light::initialize();
 
         // rotate toward ground and tilt slightly
@@ -647,7 +678,8 @@ namespace {
         m_light.setRotation(rot);
         m_light.setAttenuation(glm::vec3(0.8f, 1e-2f, 1e-1f));
 
-        m_shader.initalize();
+        m_shader.setDevice(m_Device);
+        m_shader.initialize();
         m_shader.addShader(GL_VERTEX_SHADER, "AreaShadow.Vertex");
         m_shader.addShader(GL_FRAGMENT_SHADER, "AreaShadow.Fragment");
         m_shader.link();
@@ -655,12 +687,10 @@ namespace {
 		m_cube.init();
         m_plane.init();
 
-        GLuint lightBlock = glGetUniformBlockIndex(m_shader.getShaderID(), "Light");
-        glUniformBlockBinding(m_shader.getShaderID(), lightBlock, g_lightBlockPoint);
+        m_shader.initBlockBinding("Light");
 
-        //Setup our Uniform Buffers
-        glCreateBuffers(1, &g_lightUniformBuffer);
-        glNamedBufferStorage(g_lightUniformBuffer, sizeof(light::LightBlock), nullptr, GL_DYNAMIC_STORAGE_BIT);
+        GraphicsDataDesc dataDesc(GraphicsDataType::UniformBuffer, GraphicsUsageFlagDynamicStorageBit, nullptr, sizeof(light::LightBlock));
+        m_LightUniformBuffer = m_Device->createGraphicsData(dataDesc);
     }
 
     void glfw_keyboard_callback(GLFWwindow* window, int key, int scancode, int action, int mods) 

@@ -16,35 +16,52 @@
 #include <tools/Logger.hpp>
 #include <GLType/BaseTexture.h>
 #include <GLType/ProgramManager.h>
+#include <GLType/GraphicsDevice.h>
+#include <GLType/OGLGraphicsData.h>
+#include <GLType/OGLCoreGraphicsData.h>
 
 #include "ProgramShader.h"
 
 static std::vector<std::string> directory = { ".", "./shaders" };
 
-void ProgramShader::initalize()
+ProgramShader::ProgramShader() noexcept
+    : m_ShaderID(0u)
+    , m_BlockPointCounter(0u)
 {
-    if (!m_id) {
-        m_id = glCreateProgram();
-    }
+}
+
+ProgramShader::~ProgramShader() noexcept
+{
+    destroy(); 
+}
+
+bool ProgramShader::initialize() noexcept
+{
+    assert(m_ShaderID == GL_NONE);
+    if (m_ShaderID != GL_NONE)
+        return false;
+
+    m_ShaderID = glCreateProgram();
 
 #ifdef GL_ARB_separate_shader_objects
-    glProgramParameteri(m_id, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_FALSE);
-    glProgramParameteri(m_id, GL_PROGRAM_SEPARABLE, GL_FALSE);
+    glProgramParameteri(m_ShaderID, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_FALSE);
+    glProgramParameteri(m_ShaderID, GL_PROGRAM_SEPARABLE, GL_FALSE);
 #endif
+    return true;
 }
 
 void ProgramShader::destroy()
 {
-    if(m_id) {
-        glDeleteProgram(m_id);
-        m_id = 0;
+    if (m_ShaderID) {
+        glDeleteProgram(m_ShaderID);
+        m_ShaderID = 0;
     }
 }
 
 void ProgramShader::addShader(GLenum shaderType, const std::string &tag)
 {
     // require initialization
-    assert(m_id > 0);
+    assert(m_ShaderID > 0);
 
     if (glswGetError() != 0) {
         fprintf(stderr, "GLSW : %s", glswGetError());
@@ -85,7 +102,7 @@ void ProgramShader::addShader(GLenum shaderType, const std::string &tag)
     //Logger::getInstance().write( "%s compiled.\n", cTag);
     fprintf(stderr, "%s compiled.\n", cTag);
 
-    glAttachShader(m_id, shader);
+    glAttachShader(m_ShaderID, shader);
     glDeleteShader(shader);     //flag for deletion
 }
 
@@ -93,11 +110,11 @@ void ProgramShader::addShader(GLenum shaderType, const std::string &tag)
 
 bool ProgramShader::link()
 {
-    glLinkProgram(m_id);
+    glLinkProgram(m_ShaderID);
 
     // Test linking
     GLint status = 0;
-    glGetProgramiv(m_id, GL_LINK_STATUS, &status);
+    glGetProgramiv(m_ShaderID, GL_LINK_STATUS, &status);
 
     if(status != GL_TRUE)
     {
@@ -108,11 +125,29 @@ bool ProgramShader::link()
     return true;
 }
 
+bool ProgramShader::initBlockBinding(const std::string& name)
+{
+    GLint block = glGetUniformBlockIndex(m_ShaderID, name.c_str());
+    if (-1 == block)
+    {
+        printf("ProgramShader : can't find uniform \"%s\".\n", name.c_str());
+        return false;
+    }
 
+    glUniformBlockBinding(m_ShaderID, block, m_BlockPointCounter);
+    m_BlockPoints.insert({name, m_BlockPointCounter});
+    m_BlockPointCounter++;
+    return true;
+}
+
+void ProgramShader::setDevice(const GraphicsDevicePtr& device)
+{
+    m_Device = device;
+}
 
 bool ProgramShader::setUniform(const std::string &name, GLint v) const
 {
-    GLint loc = glGetUniformLocation(m_id, name.c_str());
+    GLint loc = glGetUniformLocation(m_ShaderID, name.c_str());
 
     if(-1 == loc)
     {
@@ -127,7 +162,7 @@ bool ProgramShader::setUniform(const std::string &name, GLint v) const
 
 bool ProgramShader::setUniform(const std::string &name, GLfloat v) const
 {
-    GLint loc = glGetUniformLocation(m_id, name.c_str());
+    GLint loc = glGetUniformLocation(m_ShaderID, name.c_str());
 
     if(-1 == loc)
     {
@@ -141,7 +176,7 @@ bool ProgramShader::setUniform(const std::string &name, GLfloat v) const
 
 bool ProgramShader::setUniform(const std::string &name, const glm::vec3 &v) const
 {
-    GLint loc = glGetUniformLocation(m_id, name.c_str());
+    GLint loc = glGetUniformLocation(m_ShaderID, name.c_str());
 
     if(-1 == loc)
     {
@@ -155,7 +190,7 @@ bool ProgramShader::setUniform(const std::string &name, const glm::vec3 &v) cons
 
 bool ProgramShader::setUniform(const std::string &name, const glm::vec4 &v) const
 {
-    GLint loc = glGetUniformLocation(m_id, name.c_str());
+    GLint loc = glGetUniformLocation(m_ShaderID, name.c_str());
 
     if(-1 == loc)
     {
@@ -169,7 +204,7 @@ bool ProgramShader::setUniform(const std::string &name, const glm::vec4 &v) cons
 
 bool ProgramShader::setUniform(const std::string &name, const glm::mat3 &v) const
 {
-    GLint loc = glGetUniformLocation(m_id, name.c_str());
+    GLint loc = glGetUniformLocation(m_ShaderID, name.c_str());
 
     if(-1 == loc)
     {
@@ -183,7 +218,7 @@ bool ProgramShader::setUniform(const std::string &name, const glm::mat3 &v) cons
 
 bool ProgramShader::setUniform(const std::string &name, const glm::mat4 &v) const
 {
-    GLint loc = glGetUniformLocation(m_id, name.c_str());
+    GLint loc = glGetUniformLocation(m_ShaderID, name.c_str());
 
     if(-1 == loc)
     {
@@ -197,7 +232,7 @@ bool ProgramShader::setUniform(const std::string &name, const glm::mat4 &v) cons
 
 bool ProgramShader::bindTexture(const std::string &name, const BaseTexturePtr& texture, GLint unit)
 {
-    GLint loc = glGetUniformLocation(m_id, name.c_str());
+    GLint loc = glGetUniformLocation(m_ShaderID, name.c_str());
 
     if (-1 == loc)
     {
@@ -211,12 +246,39 @@ bool ProgramShader::bindTexture(const std::string &name, const BaseTexturePtr& t
     return true;
 }
 
+bool ProgramShader::bindBuffer(const std::string& name, const GraphicsDataPtr& data)
+{
+    auto device = m_Device.lock();
+    if (!device) return false;
+    auto it = m_BlockPoints.find(name);
+    if (it == m_BlockPoints.end())
+        return false;
+
+    auto blockPoint = it->second;
+    auto type = device->getGraphicsDeviceDesc().getDeviceType();
+
+    // Bind the buffer object to the uniform block
+    if (type == GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore)
+    {
+        auto ubo = data->downcast_pointer<OGLCoreGraphicsData>();
+        glBindBufferBase(GL_UNIFORM_BUFFER, blockPoint, ubo->getInstanceID());
+        return true;
+    }
+    else if (type == GraphicsDeviceType::GraphicsDeviceTypeOpenGL)
+    {
+        auto ubo = data->downcast_pointer<OGLGraphicsData>();
+        glBindBufferBase(GL_UNIFORM_BUFFER, blockPoint, ubo->getInstanceID());
+        return true;
+    }
+    return false;
+}
+
 bool ProgramShader::bindImage(const std::string &name, const BaseTexturePtr &texture,
     GLint unit, GLint level, GLboolean layered, GLint layer, GLenum access)
 {
-    GLint loc = glGetUniformLocation(m_id, name.c_str());
+    GLint loc = glGetUniformLocation(m_ShaderID, name.c_str());
 
-    if(-1 == loc)
+    if (-1 == loc)
     {
         printf("ProgramShader : can't find image \"%s\".\n", name.c_str());
         return false;

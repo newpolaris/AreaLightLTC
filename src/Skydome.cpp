@@ -39,7 +39,7 @@ void Skydome::initialize()
 
 	// Create & load the CubeMap program
 	m_Program = new ProgramShader();  
-	m_Program->initalize();
+	m_Program->initialize();
 	m_Program->addShader( GL_VERTEX_SHADER, "Skydome.Vertex" );
 	m_Program->addShader( GL_FRAGMENT_SHADER, "Skydome.Fragment" );
 	m_Program->link();
