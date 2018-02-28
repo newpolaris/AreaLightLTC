@@ -54,6 +54,10 @@ GraphicsDevicePtr createDevice(const GraphicsDeviceDesc& desc) noexcept
 {
 	GraphicsDeviceType deviceType = desc.getDeviceType();
 
+#if __APPLE__
+	assert(deviceType != GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore);
+#endif
+
 	if (deviceType == GraphicsDeviceType::GraphicsDeviceTypeOpenGL ||
 		deviceType == GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore)
     {
@@ -659,7 +663,7 @@ namespace {
 	void prepareRender()
     {
         GraphicsDeviceDesc deviceDesc;
-    #if !__APPLE__
+    #if __APPLE__
         deviceDesc.setDeviceType(GraphicsDeviceType::GraphicsDeviceTypeOpenGL);
     #else
         deviceDesc.setDeviceType(GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore);
