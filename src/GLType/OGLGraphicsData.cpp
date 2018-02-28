@@ -34,10 +34,15 @@ bool OGLGraphicsData::create(const GraphicsDataDesc& desc) noexcept
         return false;
     }
 
-    // TODO: Need to check flag options
+    // https://stackoverflow.com/a/8281825/1890382
+    GLenum flag = GL_STATIC_DRAW;
+    auto usage = desc.getUsage();
+    if (usage & GraphicsUsageFlagWriteBit)
+        flag = GL_DYNAMIC_DRAW;
+
 	glGenBuffers(1, &m_BufferID);
 	glBindBuffer(m_Target, m_BufferID);
-	glBufferData(m_Target, desc.getStreamSize(), desc.getStream(), GL_DYNAMIC_DRAW);
+	glBufferData(m_Target, desc.getStreamSize(), desc.getStream(), flag);
 
 	if (m_BufferID == GL_NONE)
 	{
@@ -62,10 +67,7 @@ void OGLGraphicsData::destroy() noexcept
 bool OGLGraphicsData::map(std::ptrdiff_t offset, std::ptrdiff_t count, void** data, GraphicsUsageFlags flags) noexcept
 {
 	assert(data);
-    // Check if flags match with creation usages
-    assert(false);
 	glBindBuffer(m_Target, m_BufferID);
-    // TODO: Check flag options, just copied from OGLCore
 	*data = glMapBufferRange(m_Target, offset, count, GetOGLUsageFlag(flags));
 	return *data ? true : false;
 }
