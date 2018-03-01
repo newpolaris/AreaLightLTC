@@ -9,7 +9,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <tools/TCamera.hpp>
+#include <tools/TCamera.h>
 #include <tools/gltools.hpp>
 #include <tools/Timer.hpp>
 #include <GLType/ProgramShader.h>

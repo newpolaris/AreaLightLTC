@@ -44,7 +44,7 @@ public:
 	virtual void render() noexcept;
 
 	virtual void keyboardCallback(uint32_t c, bool bPressed) noexcept;
-	virtual void reshapeCallback(uint32_t width, uint32_t height) noexcept;
+	virtual void framesizeCallback(int32_t width, int32_t height) noexcept;
 	virtual void motionCallback(float xpos, float ypos, bool bPressed) noexcept;
 	virtual void mouseCallback(float xpos, float ypos, bool bPressed) noexcept;
 
@@ -133,7 +133,7 @@ void RectLight::update() noexcept
 void RectLight::render() noexcept
 {
 	// Rendering
-	glViewport(0, 0, GetWindowWidth(), GetWindowHeight());
+	glViewport(0, 0, GetFrameWidth(), GetFrameHeight());
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClearDepthf(1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -225,7 +225,7 @@ void RectLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
 	}
 }
 
-void RectLight::reshapeCallback(uint32_t width, uint32_t height) noexcept
+void RectLight::framesizeCallback(int32_t width, int32_t height) noexcept
 {
 	float aspectRatio = (float)width/height;
 	m_Camera.setProjectionParams(45.0f, aspectRatio, 0.1f, 100.0f);

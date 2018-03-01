@@ -15,7 +15,7 @@
 #include <tools/Logger.hpp>
 #include <tools/Timer.hpp>
 #include <tools/imgui.h>
-#include <tools/TCamera.hpp>
+#include <tools/TCamera.h>
 
 #include <imgui/imgui_impl_glfw_gl3.h>
 
@@ -49,77 +49,21 @@ namespace gamecore {
     void glfw_motion_callback(GLFWwindow* window, double xpos, double ypos);
 	void glfw_char_callback(GLFWwindow* window, unsigned int c);
 	void glfw_scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+	void glfw_framesize_callback(GLFWwindow* window, int width, int height);
 
     const uint32_t SHADOW_WIDTH = 1024;
     const uint32_t WINDOW_WIDTH = 1280;
     const uint32_t WINDOW_HEIGHT = 720;
 
-	uint32_t m_WindowWidth = 0;
-	uint32_t m_WindowHeight = 0;
+	int32_t m_WindowWidth = 0;
+	int32_t m_WindowHeight = 0;
+	int32_t m_FrameWidth = 0;
+	int32_t m_FrameHeight = 0;
 
     bool m_bWireframe = false;
 	bool m_bCloseApp = false;
 
 	GLFWwindow* m_Window = nullptr;  
-
-	void APIENTRY OpenglCallbackFunction(GLenum source,
-		GLenum type,
-		GLuint id,
-		GLenum severity,
-		GLsizei length,
-		const GLchar* message,
-		const void* userParam)
-	{
-		using namespace std;
-
-		// ignore these non-significant error codes
-		if (id == 131169 || id == 131185 || id == 131218 || id == 131204 || id == 131184) 
-			return;
-
-		cout << "---------------------opengl-callback-start------------" << endl;
-		cout << "message: " << message << endl;
-		cout << "type: ";
-		switch(type) {
-		case GL_DEBUG_TYPE_ERROR:
-			cout << "ERROR";
-			break;
-		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-			cout << "DEPRECATED_BEHAVIOR";
-			break;
-		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-			cout << "UNDEFINED_BEHAVIOR";
-			break;
-		case GL_DEBUG_TYPE_PORTABILITY:
-			cout << "PORTABILITY";
-			break;
-		case GL_DEBUG_TYPE_PERFORMANCE:
-			cout << "PERFORMANCE";
-			break;
-		case GL_DEBUG_TYPE_OTHER:
-			cout << "OTHER";
-			break;
-		}
-		cout << endl;
-
-		cout << "id: " << id << endl;
-		cout << "severity: ";
-		switch(severity){
-		case GL_DEBUG_SEVERITY_LOW:
-			cout << "LOW";
-			break;
-		case GL_DEBUG_SEVERITY_MEDIUM:
-			cout << "MEDIUM";
-			break;
-		case GL_DEBUG_SEVERITY_HIGH:
-			cout << "HIGH";
-			break;
-		}
-		cout << endl;
-		cout << "---------------------opengl-callback-end--------------" << endl;
-		if (type == GL_DEBUG_TYPE_ERROR)
-			DEBUG_BREAK;
-	}
-
 
 	void initialize(IGameApp& app, const std::string& name)
 	{
@@ -192,13 +136,13 @@ namespace gamecore {
 		glEnable(GL_DEBUG_OUTPUT);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 		if (glDebugMessageCallback) {
-			std::cout << "Register OpenGL debug callback " << std::endl;
+			cout << "Register OpenGL debug callback " << endl;
 			glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);
 			glDebugMessageCallback(OpenglCallbackFunction, nullptr);
 		}
 		else
 		{
-			std::cout << "glDebugMessageCallback not available" << std::endl;
+			cout << "glDebugMessageCallback not available" << endl;
 		}
 #endif
 
@@ -252,7 +196,6 @@ namespace gamecore {
 
 		glfwSetWindowUserPointer(window, &app);
 		glfwMakeContextCurrent(window);
-		glfw_reshape_callback(window, WINDOW_WIDTH, WINDOW_HEIGHT);
 
 		// GLFW Events' Callback
 		glfwSetWindowSizeCallback(window, glfw_reshape_callback);
@@ -261,8 +204,71 @@ namespace gamecore {
 		glfwSetCursorPosCallback(window, glfw_motion_callback);
 		glfwSetCharCallback(window, glfw_char_callback);
 		glfwSetScrollCallback(window, glfw_scroll_callback);
+		glfwSetFramebufferSizeCallback(window, glfw_framesize_callback);
 
 		m_Window = window;
+
+		glfwGetFramebufferSize(m_Window, &m_FrameWidth, &m_FrameHeight);
+		glfw_framesize_callback(m_Window, m_FrameWidth, m_FrameHeight);
+		glfw_reshape_callback(m_Window, WINDOW_WIDTH, WINDOW_HEIGHT);
+	}
+
+	void APIENTRY OpenglCallbackFunction(GLenum source,
+		GLenum type,
+		GLuint id,
+		GLenum severity,
+		GLsizei length,
+		const GLchar* message,
+		const void* userParam)
+	{
+		using namespace std;
+
+		// ignore these non-significant error codes
+		if (id == 131169 || id == 131185 || id == 131218 || id == 131204 || id == 131184) 
+			return;
+
+		cout << "---------------------opengl-callback-start------------" << endl;
+		cout << "message: " << message << endl;
+		cout << "type: ";
+		switch(type) {
+		case GL_DEBUG_TYPE_ERROR:
+			cout << "ERROR";
+			break;
+		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+			cout << "DEPRECATED_BEHAVIOR";
+			break;
+		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+			cout << "UNDEFINED_BEHAVIOR";
+			break;
+		case GL_DEBUG_TYPE_PORTABILITY:
+			cout << "PORTABILITY";
+			break;
+		case GL_DEBUG_TYPE_PERFORMANCE:
+			cout << "PERFORMANCE";
+			break;
+		case GL_DEBUG_TYPE_OTHER:
+			cout << "OTHER";
+			break;
+		}
+		cout << endl;
+
+		cout << "id: " << id << endl;
+		cout << "severity: ";
+		switch(severity){
+		case GL_DEBUG_SEVERITY_LOW:
+			cout << "LOW";
+			break;
+		case GL_DEBUG_SEVERITY_MEDIUM:
+			cout << "MEDIUM";
+			break;
+		case GL_DEBUG_SEVERITY_HIGH:
+			cout << "HIGH";
+			break;
+		}
+		cout << endl;
+		cout << "---------------------opengl-callback-end--------------" << endl;
+		if (type == GL_DEBUG_TYPE_ERROR)
+			DEBUG_BREAK;
 	}
 
 	// GLFW Callbacks_________________________________________________  
@@ -273,8 +279,8 @@ namespace gamecore {
 
 	void glfw_reshape_callback(GLFWwindow* window, int width, int height)
 	{
-		m_WindowWidth = (uint32_t)width;
-		m_WindowHeight = (uint32_t)height;
+		m_WindowWidth = (int32_t)width;
+		m_WindowHeight = (int32_t)height;
 
 		auto app = static_cast<IGameApp*>(glfwGetWindowUserPointer(window));
 		if (app == nullptr) return;
@@ -351,6 +357,16 @@ namespace gamecore {
 	{
 		ImGui_ImplGlfwGL3_ScrollCallback(windows, xoffset, yoffset);
 	}
+
+	void glfw_framesize_callback(GLFWwindow* window, int width, int height)
+	{
+		m_FrameWidth = (int32_t)width;
+		m_FrameHeight = (int32_t)height;
+
+		auto app = static_cast<IGameApp*>(glfwGetWindowUserPointer(window));
+		if (app == nullptr) return;
+		app->framesizeCallback(width, height);
+	}
 }
 
 IGameApp::IGameApp() noexcept
@@ -369,7 +385,7 @@ void IGameApp::keyboardCallback(uint32_t c, bool bPressed) noexcept
 {
 }
 
-void IGameApp::reshapeCallback(uint32_t width, uint32_t height) noexcept
+void IGameApp::reshapeCallback(int32_t width, int32_t height) noexcept
 {
 }
 
@@ -378,6 +394,10 @@ void IGameApp::motionCallback(float xpos, float ypos, bool bPressed) noexcept
 }
 
 void IGameApp::mouseCallback(float xpos, float ypos, bool bPressed) noexcept
+{
+}
+
+void IGameApp::framesizeCallback(int32_t width, int32_t height) noexcept
 {
 }
 
@@ -407,14 +427,24 @@ bool IGameApp::isWireframe() const noexcept
 	return m_bWireframe;
 }
 
-uint32_t IGameApp::GetWindowWidth() const noexcept
+int32_t IGameApp::GetWindowWidth() const noexcept
 {
 	return m_WindowWidth;
 }
 
-uint32_t IGameApp::GetWindowHeight() const noexcept
+int32_t IGameApp::GetWindowHeight() const noexcept
 {
 	return m_WindowHeight;
+}
+
+int32_t IGameApp::GetFrameWidth() const noexcept
+{
+	return m_FrameWidth;
+}
+
+int32_t IGameApp::GetFrameHeight() const noexcept
+{
+	return m_FrameHeight;
 }
 
 void gamecore::update(IGameApp& app)
@@ -433,9 +463,6 @@ bool gamecore::updateApplication(IGameApp& app)
 {
 	app.update();
 	updateHUD(app);
-
-    int display_w, display_h;
-    glfwGetFramebufferSize(m_Window, &display_w, &display_h);
 	app.render();
 	app.renderHUD();
 	renderHUD(app);
@@ -456,6 +483,7 @@ void gamecore::runApplication(IGameApp& app, std::string name)
 	initialize(app, name);
 
 	app.startup();
+
 	do {
 	}
 	while (updateApplication(app));

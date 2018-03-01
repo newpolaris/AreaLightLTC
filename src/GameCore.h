@@ -23,14 +23,17 @@ namespace gamecore
 		virtual bool isDone() const noexcept;
 		virtual bool isWireframe() const noexcept;
 
-		uint32_t GetWindowWidth() const noexcept;
-		uint32_t GetWindowHeight() const noexcept;
+		int32_t GetWindowWidth() const noexcept;
+		int32_t GetWindowHeight() const noexcept;
+		int32_t GetFrameWidth() const noexcept;
+		int32_t GetFrameHeight() const noexcept;
 
 		virtual void charCallback(uint32_t c) noexcept;
 		virtual void keyboardCallback(uint32_t c, bool bPressed) noexcept;
-		virtual void reshapeCallback(uint32_t width, uint32_t height) noexcept;
+		virtual void reshapeCallback(int32_t width, int32_t height) noexcept;
 		virtual void motionCallback(float xpos, float ypos, bool bPressed) noexcept;
 		virtual void mouseCallback(float xpos, float ypos, bool bPressed) noexcept;
+		virtual void framesizeCallback(int32_t width, int32_t height) noexcept;
 	};
 
 	bool updateApplication(IGameApp& app);
