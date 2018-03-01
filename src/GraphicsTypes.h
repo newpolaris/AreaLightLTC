@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <memory>
-#include <tools/rtti.h>
+#include <tools/Rtti.h>
 
 class GraphicsDeviceDesc;
 class GraphicsDataDesc;

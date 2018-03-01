@@ -1,6 +1,6 @@
 #pragma once
 
-#include <GL/Glew.h>
+#include <GL/glew.h>
 #include <GLType/GraphicsData.h>
 
 class OGLGraphicsData final : public GraphicsData

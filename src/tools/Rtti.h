@@ -34,6 +34,8 @@
 // | (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // | OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // +----------------------------------------------------------------------
+#pragma once
+
 #include <tools/RttiMacros.h>
 #include <memory>
 #include <string>
@@ -43,7 +45,7 @@ namespace rtti
 {
 	typedef std::shared_ptr<class Interface> InterfacePtr;
 
-    class Rtti
+    class Rtti final
     {
 	public:
 		typedef Interface*(*RttiConstruct)();
