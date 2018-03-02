@@ -7,7 +7,8 @@ GraphicsTextureDesc::GraphicsTextureDesc() noexcept
     , m_Height(1)
     , m_Depth(1)
     , m_Levels(1)
-    , m_Target(GraphicsTarget2D)
+    , m_Target(gli::TARGET_2D)
+    , m_Format(gli::FORMAT_UNDEFINED)
     , m_Data(nullptr)
 	, m_DataSize(0)
 {
@@ -67,6 +68,16 @@ void GraphicsTextureDesc::setDepth(int32_t depth) noexcept
     m_Depth = depth;
 }
 
+int32_t GraphicsTextureDesc::getLevels() const noexcept
+{
+    return m_Levels;
+}
+
+void GraphicsTextureDesc::setLevels(int32_t levels) noexcept
+{
+    m_Levels = levels;
+}
+
 std::uint8_t* GraphicsTextureDesc::getStream() const noexcept
 {
     return m_Data;
@@ -85,6 +96,26 @@ std::uint32_t GraphicsTextureDesc::getStreamSize() const noexcept
 void GraphicsTextureDesc::setStreamSize(std::uint32_t size) noexcept
 {
     m_DataSize = size;
+}
+
+GraphicsTarget GraphicsTextureDesc::getTarget() const noexcept
+{
+    return m_Target;
+}
+
+void GraphicsTextureDesc::setTarget(GraphicsTarget target) noexcept
+{
+    m_Target = target;
+}
+
+GraphicsFormat GraphicsTextureDesc::getFormat() const noexcept
+{
+    return m_Format;
+}
+
+void GraphicsTextureDesc::setFormat(GraphicsFormat format) noexcept
+{
+    m_Format = format;
 }
 
 GraphicsTexture::GraphicsTexture() noexcept

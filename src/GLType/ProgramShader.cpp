@@ -14,11 +14,12 @@
 
 #include <tools/gltools.hpp>
 #include <tools/Logger.hpp>
-#include <GLType/OGLCoreTexture.h>
 #include <GLType/ProgramManager.h>
 #include <GLType/GraphicsDevice.h>
 #include <GLType/OGLGraphicsData.h>
 #include <GLType/OGLCoreGraphicsData.h>
+#include <GLType/OGLTexture.h>
+#include <GLType/OGLCoreTexture.h>
 
 #include "ProgramShader.h"
 
@@ -230,7 +231,7 @@ bool ProgramShader::setUniform(const std::string &name, const glm::mat4 &v) cons
     return true;
 }
 
-bool ProgramShader::bindTexture(const std::string &name, const OGLCoreTexturePtr& texture, GLint unit)
+bool ProgramShader::bindTexture(const std::string& name, const GraphicsTexturePtr& texture, GLint unit)
 {
     GLint loc = glGetUniformLocation(m_ShaderID, name.c_str());
 
@@ -240,10 +241,26 @@ bool ProgramShader::bindTexture(const std::string &name, const OGLCoreTexturePtr
         return false;
     }
 
-    texture->bind(unit);
-    glUniform1i(loc, unit);
+    auto device = m_Device.lock();
+    if (!device) return false;
+    auto type = device->getGraphicsDeviceDesc().getDeviceType();
 
-    return true;
+    // Bind the buffer object to the uniform block
+    if (type == GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore)
+    {
+        auto tex = texture->downcast_pointer<OGLCoreTexture>();
+        tex->bind(unit);
+        glUniform1i(loc, unit);
+        return true;
+    }
+    else if (type == GraphicsDeviceType::GraphicsDeviceTypeOpenGL)
+    {
+        auto tex = texture->downcast_pointer<OGLTexture>();
+        tex->bind(unit);
+        glUniform1i(loc, unit);
+        return true;
+    }
+    return false;
 }
 
 bool ProgramShader::bindBuffer(const std::string& name, const GraphicsDataPtr& data)

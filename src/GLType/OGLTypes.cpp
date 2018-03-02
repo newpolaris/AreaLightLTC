@@ -22,6 +22,22 @@ namespace OGLTypes
         return flags;
     }
 
+#ifndef TEST
+    GLenum translate(GraphicsTarget target)
+    {
+        gli::gl GL(gli::gl::PROFILE_GL33);
+        return GL.translate(target);
+    }
+
+    GLenum translate(GraphicsFormat format)
+    {
+        using namespace gli;
+        gli::gl GL(gli::gl::PROFILE_GL33);
+        gli::swizzles swizzle(gl::SWIZZLE_RED, gl::SWIZZLE_GREEN, gl::SWIZZLE_BLUE, gl::SWIZZLE_ALPHA);
+        auto Format = GL.translate(format, swizzle);
+        return Format.External;
+    }
+#else
     GLenum translate(GraphicsTarget target)
     {
 		static GLenum const Table[] =
@@ -40,4 +56,57 @@ namespace OGLTypes
 
 		return Table[target];
 	}
+#endif
+
+    GLenum getComponent(int Components)
+    {
+        switch (Components)
+        {
+        case 1u:
+            return GL_RED;
+        case 2u:
+            return GL_RG;
+        case 3u:
+            return GL_RGB;
+        case 4u:
+            return GL_RGBA;
+        default:
+            assert(false);
+        };
+        return 0;
+    }
+
+    GLenum getInternalComponent(int Components, bool bFloat)
+    {
+        GLenum Base = getComponent(Components);
+        if (bFloat)
+        {
+            switch (Base)
+            {
+            case GL_RED:
+                return GL_R16F;
+            case GL_RG:
+                return GL_RG16F;
+            case GL_RGB:
+                return GL_RGB16F;
+            case GL_RGBA:
+                return GL_RGBA16F;
+            }
+        }
+        else
+        {
+            switch (Base)
+            {
+            case GL_RED:
+                return GL_R8;
+            case GL_RG:
+                return GL_RG8;
+            case GL_RGB:
+                return GL_RGB8;
+            case GL_RGBA:
+                return GL_RGBA8;
+            }
+        }
+        return Base;
+    }
 }

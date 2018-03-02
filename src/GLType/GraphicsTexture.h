@@ -26,11 +26,20 @@ public:
     int32_t getDepth() const noexcept;
     void setDepth(int32_t depth) noexcept;
 
+    int32_t getLevels() const noexcept;
+    void setLevels(int32_t levels) noexcept;
+
 	std::uint8_t* getStream() const noexcept;
 	void setStream(std::uint8_t* data) noexcept;
 
 	std::uint32_t getStreamSize() const noexcept;
 	void setStreamSize(std::uint32_t size) noexcept;
+
+    GraphicsTarget getTarget() const noexcept;
+    void setTarget(GraphicsTarget target) noexcept;
+
+    GraphicsFormat getFormat() const noexcept;
+    void setFormat(GraphicsFormat format) noexcept;
 
 private:
 

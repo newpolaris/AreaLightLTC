@@ -52,7 +52,7 @@ private:
     FullscreenTriangleMesh m_ScreenTraingle;
     ProgramShader m_Shader;
     GraphicsDevicePtr m_Device;
-    OGLCoreTexturePtr m_Texture;
+    GraphicsTexturePtr m_Texture;
 };
 
 CREATE_APPLICATION(AreaLight);
@@ -87,7 +87,10 @@ void AreaLight::startup() noexcept
 	m_Shader.link();
 
     m_ScreenTraingle.create();
-    m_Texture = OGLCoreTexture::Create("resources/wood.png");
+
+    GraphicsTextureDesc desc;
+    desc.setFilename("resources/wood.png");
+    m_Texture = m_Device->createTexture(desc);
 }
 
 void AreaLight::closeup() noexcept

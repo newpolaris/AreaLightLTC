@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <tools/Rtti.h>
+#include <gli/gli.hpp>
 
 class GraphicsDeviceDesc;
 class GraphicsDataDesc;
@@ -63,6 +64,10 @@ enum GraphicsUsageFlagBits
 
 typedef std::uint32_t GraphicsUsageFlags;
 
+#ifndef _TEST
+typedef gli::target GraphicsTarget;
+typedef gli::format GraphicsFormat;
+#else
 enum GraphicsTarget
 {
     GraphicsTarget1D = 0, GraphicsTargetFirst = GraphicsTarget1D,
@@ -84,3 +89,4 @@ enum
 enum GraphicsFormat
 {
 };
+#endif

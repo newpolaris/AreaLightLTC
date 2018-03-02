@@ -1,77 +1,21 @@
 #include <gli/gli.hpp>
 #include <tools/stb_image.h>
+#include <tools/string.h>
+#include <GLType/OGLTypes.h>
 #include <GLType/OGLTexture.h>
-
-namespace {
-    std::string GetFileExtension(const std::string& filename)
-    {
-        return filename.substr(filename.find_last_of(".") + 1);
-    }
-
-    bool Stricompare(const std::string& str1, const std::string& str2) {
-        std::string str1Cpy(str1);
-        std::string str2Cpy(str2);
-        std::transform(str1Cpy.begin(), str1Cpy.end(), str1Cpy.begin(), ::tolower);
-        std::transform(str2Cpy.begin(), str2Cpy.end(), str2Cpy.begin(), ::tolower);
-        return (str1Cpy == str2Cpy);
-    }
-
-    GLenum GetComponent(int Components)
-    {
-        switch (Components)
-        {
-        case 1u:
-            return GL_RED;
-        case 2u:
-            return GL_RG;
-        case 3u:
-            return GL_RGB;
-        case 4u:
-            return GL_RGBA;
-        default:
-            assert(false);
-        };
-        return 0;
-    }
-
-    GLenum GetInternalComponent(int Components, bool bFloat)
-    {
-        GLenum Base = GetComponent(Components);
-        if (bFloat)
-        {
-            switch (Base)
-            {
-            case GL_RED:
-                return GL_R16F;
-            case GL_RG:
-                return GL_RG16F;
-            case GL_RGB:
-                return GL_RGB16F;
-            case GL_RGBA:
-                return GL_RGBA16F;
-            }
-        }
-        else
-        {
-            switch (Base)
-            {
-            case GL_RED:
-                return GL_R8;
-            case GL_RG:
-                return GL_RG8;
-            case GL_RGB:
-                return GL_RGB8;
-            case GL_RGBA:
-                return GL_RGBA8;
-            }
-        }
-        return Base;
-    }
-}
 
 bool OGLTexture::create(const GraphicsTextureDesc& desc)
 {
-    return false;
+    auto filename = desc.getFileName();
+    if (!filename.empty())
+        return create(filename);
+
+    auto width = desc.getWidth();
+    auto height = desc.getHeight();
+    auto levels = desc.getLevels();
+    auto target = OGLTypes::translate(desc.getTarget());
+    auto format = OGLTypes::translate(desc.getFormat());
+    return create(width, height, target, format, levels);
 }
 
 GraphicsTexturePtr OGLTexture::Create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels)
@@ -128,8 +72,8 @@ bool OGLTexture::create(GLint width, GLint height, GLenum target, GLenum format,
 bool OGLTexture::create(const std::string& filename)
 {
     if (filename.empty()) return false;
-    std::string ext = GetFileExtension(filename);
-    if (Stricompare(ext, "DDX") || Stricompare(ext, "DDS"))
+    std::string ext = util::getFileExtension(filename);
+    if (util::stricmp(ext, "DDX") || util::stricmp(ext, "DDS"))
         return createFromFileGLI(filename);
     return createFromFileSTB(filename);
 } 
@@ -273,8 +217,8 @@ bool OGLTexture::createFromFileSTB(const std::string& filename)
     GLenum Type = GL_UNSIGNED_BYTE;
     int Width = 0, Height = 0, nrComponents = 0;
     void* Data = nullptr;
-    std::string Ext = GetFileExtension(filename);
-    if (Stricompare(Ext, "HDR"))
+    std::string Ext = util::getFileExtension(filename);
+    if (util::stricmp(Ext, "HDR"))
     {
         Type = GL_FLOAT;
         Data = stbi_loadf(filename.c_str(), &Width, &Height, &nrComponents, 0);
@@ -285,8 +229,8 @@ bool OGLTexture::createFromFileSTB(const std::string& filename)
     }
     if (!Data) return false;
 
-    GLenum Format = GetComponent(nrComponents);
-    GLenum InternalFormat = GetInternalComponent(nrComponents, Type == GL_FLOAT);
+    GLenum Format = OGLTypes::getComponent(nrComponents);
+    GLenum InternalFormat = OGLTypes::getInternalComponent(nrComponents, Type == GL_FLOAT);
 
 	GLuint TextureName = 0;
 	glGenTextures(1, &TextureName);

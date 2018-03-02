@@ -37,14 +37,14 @@ public:
 
     void setDevice(const GraphicsDevicePtr& device);
 
-    bool setUniform(const std::string &name, GLint v) const;
-    bool setUniform(const std::string &name, GLfloat v) const;
-    bool setUniform(const std::string &name, const glm::vec3 &v) const;
-    bool setUniform(const std::string &name, const glm::vec4 &v) const;
-    bool setUniform(const std::string &name, const glm::mat3 &v) const;
-    bool setUniform(const std::string &name, const glm::mat4 &v) const;
-    bool bindTexture(const std::string &name, const OGLCoreTexturePtr& texture, GLint unit);
-    bool bindBuffer(const std::string &name, const GraphicsDataPtr& data);
+    bool setUniform(const std::string& name, GLint v) const;
+    bool setUniform(const std::string& name, GLfloat v) const;
+    bool setUniform(const std::string& name, const glm::vec3 &v) const;
+    bool setUniform(const std::string& name, const glm::vec4 &v) const;
+    bool setUniform(const std::string& name, const glm::mat3 &v) const;
+    bool setUniform(const std::string& name, const glm::mat4 &v) const;
+    bool bindTexture(const std::string& name, const GraphicsTexturePtr& texture, GLint unit);
+    bool bindBuffer(const std::string& name, const GraphicsDataPtr& data);
 
     // Compute
     bool bindImage(const std::string &name, const OGLCoreTexturePtr &texture, GLint unit, GLint level, GLboolean layered, GLint layer, GLenum access);
