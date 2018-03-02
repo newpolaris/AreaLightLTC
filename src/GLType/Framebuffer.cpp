@@ -1,6 +1,6 @@
 #include "Framebuffer.h"
 #include <GL/glew.h>
-#include <GLType/BaseTexture.h>
+#include <GLType/OGLCoreTexture.h>
 #include <cassert>
 
 FramebufferPtr Framebuffer::Create(const FramebufferDesc& desc) noexcept
@@ -76,7 +76,7 @@ const AttachmentBindings& FramebufferDesc::getComponents() const noexcept
     return m_Bindings;
 }
 
-AttachmentBinding::AttachmentBinding(const BaseTexturePtr& texture, std::uint32_t attachment, std::uint32_t mipLevel, std::uint32_t layer) noexcept :
+AttachmentBinding::AttachmentBinding(const OGLCoreTexturePtr& texture, std::uint32_t attachment, std::uint32_t mipLevel, std::uint32_t layer) noexcept :
     m_Texture(texture),
     m_Attachment(attachment),
     m_MipLevel(mipLevel),

@@ -15,7 +15,7 @@
 #include <tools/gltools.hpp>
 #include <tools/Timer.hpp>
 #include <GLType/ProgramShader.h>
-#include <GLType/BaseTexture.h>
+#include <GLType/OGLCoreTexture.h>
 #include "Mesh.h"
 #include "Skydome.h"
 
@@ -105,11 +105,11 @@ void Skydome::setTexture( const std::string &name )
 {
 	assert( m_bInitialized );
 
-	m_texture = std::make_shared<BaseTexture>();
+	m_texture = std::make_shared<OGLCoreTexture>();
 	m_texture->create( name );  
 }
 
-void Skydome::setTexture( std::shared_ptr<BaseTexture>& texture )
+void Skydome::setTexture( std::shared_ptr<OGLCoreTexture>& texture )
 {
 	m_texture = texture;
 }

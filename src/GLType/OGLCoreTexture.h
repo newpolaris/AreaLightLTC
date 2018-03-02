@@ -3,16 +3,19 @@
 #include <GL/glew.h>
 #include <string>
 #include <GraphicsTypes.h>
+#include <tools/Rtti.h>
+#include <GLType/GraphicsTexture.h>
 
-class BaseTexture
+class OGLCoreTexture final : public GraphicsTexture
 {
+	__DeclareSubInterface(OGLCoreTexture, GraphicsTexture)
 public:
 
-	BaseTexture();
-    virtual ~BaseTexture();
+	OGLCoreTexture();
+    virtual ~OGLCoreTexture();
 
-    static BaseTexturePtr Create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels);
-    static BaseTexturePtr Create(const std::string& filename);
+    static OGLCoreTexturePtr Create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels);
+    static OGLCoreTexturePtr Create(const std::string& filename);
 
 	bool create(const std::string& filename);
 	bool create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels);

@@ -6,10 +6,12 @@
 
 class GraphicsDeviceDesc;
 class GraphicsDataDesc;
+class GraphicsTextureDesc;
 
 typedef std::shared_ptr<class GraphicsDevice> GraphicsDevicePtr;
 typedef std::shared_ptr<class GraphicsData> GraphicsDataPtr;
-typedef std::shared_ptr<class BaseTexture> BaseTexturePtr;
+typedef std::shared_ptr<class GraphicsTexture> GraphicsTexturePtr;
+typedef std::shared_ptr<class OGLCoreTexture> OGLCoreTexturePtr;
 typedef std::shared_ptr<class Framebuffer> FramebufferPtr;
 
 typedef std::weak_ptr<class GraphicsDevice> GraphicsDeviceWeakPtr;

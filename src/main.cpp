@@ -14,7 +14,7 @@
 #include <GLType/GraphicsData.h>
 #include <GLType/OGLDevice.h>
 #include <GLType/ProgramShader.h>
-#include <GLType/BaseTexture.h>
+#include <GLType/OGLCoreTexture.h>
 #include <GLType/Framebuffer.h>
 
 #include <GraphicsTypes.h>

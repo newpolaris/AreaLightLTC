@@ -26,7 +26,7 @@ class SkyBox
     ProgramShader *m_Program;
     CubeMesh *m_CubeMesh;
     
-    std::vector<std::shared_ptr<class BaseTexture>> m_cubemaps;
+    std::vector<std::shared_ptr<class OGLCoreTexture>> m_cubemaps;
     size_t m_curIdx;
     
     //-------------------------------------------------

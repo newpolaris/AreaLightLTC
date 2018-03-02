@@ -1,6 +1,6 @@
 #include <gli/gli.hpp>
 #include <tools/stb_image.h>
-#include "BaseTexture.h"
+#include <GLType/OGLCoreTexture.h>
 
 namespace {
     std::string GetFileExtension(const std::string& filename)
@@ -69,18 +69,20 @@ namespace {
     }
 }
 
-BaseTexturePtr BaseTexture::Create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels)
+__ImplementSubInterface(OGLCoreTexture, GraphicsTexture, "OGLCoreTexture")
+
+OGLCoreTexturePtr OGLCoreTexture::Create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels)
 {
     assert(levels > 0);
-    auto tex = std::make_shared<BaseTexture>();
+    auto tex = std::make_shared<OGLCoreTexture>();
     if (tex->create(width, height, target, format, levels))
         return tex;
     return nullptr;
 }
 
-BaseTexturePtr BaseTexture::Create(const std::string& filename)
+OGLCoreTexturePtr OGLCoreTexture::Create(const std::string& filename)
 {
-    auto tex = std::make_shared<BaseTexture>();
+    auto tex = std::make_shared<OGLCoreTexture>();
     if (tex->create(filename))
         return tex;
     // failed to load image
@@ -88,7 +90,7 @@ BaseTexturePtr BaseTexture::Create(const std::string& filename)
     return nullptr;
 }
 
-BaseTexture::BaseTexture() :
+OGLCoreTexture::OGLCoreTexture() :
 	m_TextureID(0),
 	m_Target(GL_INVALID_ENUM),
 	m_Format(GL_INVALID_ENUM),
@@ -99,12 +101,12 @@ BaseTexture::BaseTexture() :
 {
 }
 
-BaseTexture::~BaseTexture()
+OGLCoreTexture::~OGLCoreTexture()
 {
 	destroy();
 }
 
-bool BaseTexture::create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels)
+bool OGLCoreTexture::create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels)
 {
 	GLuint TextureID = 0;
 	glCreateTextures(target, 1, &TextureID);
@@ -121,7 +123,7 @@ bool BaseTexture::create(GLint width, GLint height, GLenum target, GLenum format
 	return true;
 }
 
-bool BaseTexture::create(const std::string& filename)
+bool OGLCoreTexture::create(const std::string& filename)
 {
     if (filename.empty()) return false;
     std::string ext = GetFileExtension(filename);
@@ -131,7 +133,7 @@ bool BaseTexture::create(const std::string& filename)
 } 
 
 // filename can be KTX or DDS files
-bool BaseTexture::createFromFileGLI(const std::string& filename)
+bool OGLCoreTexture::createFromFileGLI(const std::string& filename)
 {
 	gli::texture Texture = gli::load(filename);
 	if(Texture.empty())
@@ -260,7 +262,7 @@ bool BaseTexture::createFromFileGLI(const std::string& filename)
 }
 
 // filename can be JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC files
-bool BaseTexture::createFromFileSTB(const std::string& filename)
+bool OGLCoreTexture::createFromFileSTB(const std::string& filename)
 {
     stbi_set_flip_vertically_on_load(true);
 
@@ -303,12 +305,12 @@ bool BaseTexture::createFromFileSTB(const std::string& filename)
 	return true;
 }
 
-GLuint BaseTexture::getTextureID() const noexcept
+GLuint OGLCoreTexture::getTextureID() const noexcept
 {
     return m_TextureID;
 }
 
-void BaseTexture::destroy()
+void OGLCoreTexture::destroy()
 {
 	if (!m_TextureID)
 	{
@@ -324,18 +326,18 @@ void BaseTexture::destroy()
 	m_Target = GL_INVALID_ENUM;
 }
 
-void BaseTexture::bind(GLuint unit) const
+void OGLCoreTexture::bind(GLuint unit) const
 {
 	assert( 0u != m_TextureID );  
     glBindTextureUnit(unit, m_TextureID);
 }
 
-void BaseTexture::unbind(GLuint unit) const
+void OGLCoreTexture::unbind(GLuint unit) const
 {
     glBindTextureUnit(unit, 0);
 }
 
-void BaseTexture::generateMipmap()
+void OGLCoreTexture::generateMipmap()
 {
 	assert(m_Target != GL_INVALID_ENUM);
 	assert(m_TextureID != 0);
@@ -343,7 +345,7 @@ void BaseTexture::generateMipmap()
 	glGenerateTextureMipmap(m_TextureID);
 }
 
-void BaseTexture::parameter(GLenum pname, GLint param)
+void OGLCoreTexture::parameter(GLenum pname, GLint param)
 {
 	assert(m_Target != GL_INVALID_ENUM);
 	assert(m_TextureID != 0);

@@ -13,7 +13,7 @@
 #include <tools/gltools.hpp>
 #include <tools/Timer.hpp>
 #include <GLType/ProgramShader.h>
-#include <GLType/BaseTexture.h>
+#include <GLType/OGLCoreTexture.h>
 #include "Mesh.h"
 #include "SkyBox.h"
 
@@ -111,7 +111,7 @@ void SkyBox::addCubemap( const std::string &name )
 {
   assert( m_bInitialized );
   
-  auto cubemap = std::make_shared<BaseTexture>();
+  auto cubemap = std::make_shared<OGLCoreTexture>();
   cubemap->create( name );  
   m_cubemaps.push_back( cubemap );
 }

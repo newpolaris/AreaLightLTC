@@ -6,10 +6,10 @@ class AttachmentBinding final
 {
 public:
 
-    AttachmentBinding(const BaseTexturePtr& texture, std::uint32_t attachment, std::uint32_t mipLevel = 0, std::uint32_t layer = 0) noexcept;
+    AttachmentBinding(const OGLCoreTexturePtr& texture, std::uint32_t attachment, std::uint32_t mipLevel = 0, std::uint32_t layer = 0) noexcept;
     ~AttachmentBinding() noexcept;
 
-    BaseTexturePtr m_Texture;
+    OGLCoreTexturePtr m_Texture;
     std::uint32_t m_Attachment;
     std::uint32_t m_MipLevel;
     std::uint32_t m_Layer;

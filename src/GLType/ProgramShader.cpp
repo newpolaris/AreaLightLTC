@@ -14,7 +14,7 @@
 
 #include <tools/gltools.hpp>
 #include <tools/Logger.hpp>
-#include <GLType/BaseTexture.h>
+#include <GLType/OGLCoreTexture.h>
 #include <GLType/ProgramManager.h>
 #include <GLType/GraphicsDevice.h>
 #include <GLType/OGLGraphicsData.h>
@@ -230,7 +230,7 @@ bool ProgramShader::setUniform(const std::string &name, const glm::mat4 &v) cons
     return true;
 }
 
-bool ProgramShader::bindTexture(const std::string &name, const BaseTexturePtr& texture, GLint unit)
+bool ProgramShader::bindTexture(const std::string &name, const OGLCoreTexturePtr& texture, GLint unit)
 {
     GLint loc = glGetUniformLocation(m_ShaderID, name.c_str());
 
@@ -273,7 +273,7 @@ bool ProgramShader::bindBuffer(const std::string& name, const GraphicsDataPtr& d
     return false;
 }
 
-bool ProgramShader::bindImage(const std::string &name, const BaseTexturePtr &texture,
+bool ProgramShader::bindImage(const std::string &name, const OGLCoreTexturePtr &texture,
     GLint unit, GLint level, GLboolean layered, GLint layer, GLenum access)
 {
     GLint loc = glGetUniformLocation(m_ShaderID, name.c_str());
