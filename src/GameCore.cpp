@@ -65,6 +65,65 @@ namespace gamecore {
 
 	GLFWwindow* m_Window = nullptr;  
 
+	void APIENTRY OpenglCallbackFunction(GLenum source,
+		GLenum type,
+		GLuint id,
+		GLenum severity,
+		GLsizei length,
+		const GLchar* message,
+		const void* userParam)
+	{
+		using namespace std;
+
+		// ignore these non-significant error codes
+		if (id == 131169 || id == 131185 || id == 131218 || id == 131204 || id == 131184) 
+			return;
+
+		cout << "---------------------opengl-callback-start------------" << endl;
+		cout << "message: " << message << endl;
+		cout << "type: ";
+		switch(type) {
+		case GL_DEBUG_TYPE_ERROR:
+			cout << "ERROR";
+			break;
+		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+			cout << "DEPRECATED_BEHAVIOR";
+			break;
+		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+			cout << "UNDEFINED_BEHAVIOR";
+			break;
+		case GL_DEBUG_TYPE_PORTABILITY:
+			cout << "PORTABILITY";
+			break;
+		case GL_DEBUG_TYPE_PERFORMANCE:
+			cout << "PERFORMANCE";
+			break;
+		case GL_DEBUG_TYPE_OTHER:
+			cout << "OTHER";
+			break;
+		}
+		cout << endl;
+
+		cout << "id: " << id << endl;
+		cout << "severity: ";
+		switch(severity){
+		case GL_DEBUG_SEVERITY_LOW:
+			cout << "LOW";
+			break;
+		case GL_DEBUG_SEVERITY_MEDIUM:
+			cout << "MEDIUM";
+			break;
+		case GL_DEBUG_SEVERITY_HIGH:
+			cout << "HIGH";
+			break;
+		}
+		cout << endl;
+		cout << "---------------------opengl-callback-end--------------" << endl;
+		if (type == GL_DEBUG_TYPE_ERROR)
+			DEBUG_BREAK;
+	}
+
+
 	void initialize(IGameApp& app, const std::string& name)
 	{
 		// window maanger
@@ -136,13 +195,13 @@ namespace gamecore {
 		glEnable(GL_DEBUG_OUTPUT);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 		if (glDebugMessageCallback) {
-			cout << "Register OpenGL debug callback " << endl;
+			std::cout << "Register OpenGL debug callback " << std::endl;
 			glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);
 			glDebugMessageCallback(OpenglCallbackFunction, nullptr);
 		}
 		else
 		{
-			cout << "glDebugMessageCallback not available" << endl;
+			std::cout << "glDebugMessageCallback not available" << std::endl;
 		}
 #endif
 
@@ -211,64 +270,6 @@ namespace gamecore {
 		glfwGetFramebufferSize(m_Window, &m_FrameWidth, &m_FrameHeight);
 		glfw_framesize_callback(m_Window, m_FrameWidth, m_FrameHeight);
 		glfw_reshape_callback(m_Window, WINDOW_WIDTH, WINDOW_HEIGHT);
-	}
-
-	void APIENTRY OpenglCallbackFunction(GLenum source,
-		GLenum type,
-		GLuint id,
-		GLenum severity,
-		GLsizei length,
-		const GLchar* message,
-		const void* userParam)
-	{
-		using namespace std;
-
-		// ignore these non-significant error codes
-		if (id == 131169 || id == 131185 || id == 131218 || id == 131204 || id == 131184) 
-			return;
-
-		cout << "---------------------opengl-callback-start------------" << endl;
-		cout << "message: " << message << endl;
-		cout << "type: ";
-		switch(type) {
-		case GL_DEBUG_TYPE_ERROR:
-			cout << "ERROR";
-			break;
-		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-			cout << "DEPRECATED_BEHAVIOR";
-			break;
-		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-			cout << "UNDEFINED_BEHAVIOR";
-			break;
-		case GL_DEBUG_TYPE_PORTABILITY:
-			cout << "PORTABILITY";
-			break;
-		case GL_DEBUG_TYPE_PERFORMANCE:
-			cout << "PERFORMANCE";
-			break;
-		case GL_DEBUG_TYPE_OTHER:
-			cout << "OTHER";
-			break;
-		}
-		cout << endl;
-
-		cout << "id: " << id << endl;
-		cout << "severity: ";
-		switch(severity){
-		case GL_DEBUG_SEVERITY_LOW:
-			cout << "LOW";
-			break;
-		case GL_DEBUG_SEVERITY_MEDIUM:
-			cout << "MEDIUM";
-			break;
-		case GL_DEBUG_SEVERITY_HIGH:
-			cout << "HIGH";
-			break;
-		}
-		cout << endl;
-		cout << "---------------------opengl-callback-end--------------" << endl;
-		if (type == GL_DEBUG_TYPE_ERROR)
-			DEBUG_BREAK;
 	}
 
 	// GLFW Callbacks_________________________________________________  

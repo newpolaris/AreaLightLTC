@@ -32,11 +32,11 @@ namespace {
 	const int g_lightBlockPoint = 0;
 }
 
-class RectLight final : public gamecore::IGameApp
+class AreaLight final : public gamecore::IGameApp
 {
 public:
-	RectLight() noexcept;
-	virtual ~RectLight() noexcept;
+	AreaLight() noexcept;
+	virtual ~AreaLight() noexcept;
 
 	virtual void startup() noexcept;
 	virtual void closeup() noexcept;
@@ -61,17 +61,17 @@ private:
     GraphicsDataPtr m_LightUniformBuffer;
 };
 
-CREATE_APPLICATION(RectLight);
+CREATE_APPLICATION(AreaLight);
 
-RectLight::RectLight() noexcept
+AreaLight::AreaLight() noexcept
 {
 }
 
-RectLight::~RectLight() noexcept
+AreaLight::~AreaLight() noexcept
 {
 }
 
-void RectLight::startup() noexcept
+void AreaLight::startup() noexcept
 {
 	// App Objects
 	m_Camera.setViewParams( glm::vec3( 0.0f, 0.0f, 3.0f), glm::vec3( 0.0f, 0.0f, 0.0f) );
@@ -112,14 +112,14 @@ void RectLight::startup() noexcept
 	m_LightUniformBuffer = m_Device->createGraphicsData(dataDesc);
 }
 
-void RectLight::closeup() noexcept
+void AreaLight::closeup() noexcept
 {
 	light::shutdown();
 	m_Cube.destroy();
 	m_Plane.destroy();
 }
 
-void RectLight::update() noexcept
+void AreaLight::update() noexcept
 {
 	m_Camera.update();
 
@@ -130,7 +130,7 @@ void RectLight::update() noexcept
 	m_Light.update(m_LightUniformBuffer);
 }
 
-void RectLight::render() noexcept
+void AreaLight::render() noexcept
 {
 	// Rendering
 	glViewport(0, 0, GetFrameWidth(), GetFrameHeight());
@@ -203,7 +203,7 @@ void RectLight::render() noexcept
 	m_Light.draw(m_Camera);
 }
 
-void RectLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
+void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
 {
 	switch (key)
 	{
@@ -225,25 +225,25 @@ void RectLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
 	}
 }
 
-void RectLight::framesizeCallback(int32_t width, int32_t height) noexcept
+void AreaLight::framesizeCallback(int32_t width, int32_t height) noexcept
 {
 	float aspectRatio = (float)width/height;
 	m_Camera.setProjectionParams(45.0f, aspectRatio, 0.1f, 100.0f);
 }
 
-void RectLight::motionCallback(float xpos, float ypos, bool bPressed) noexcept
+void AreaLight::motionCallback(float xpos, float ypos, bool bPressed) noexcept
 {
 	const bool mouseOverGui = ImGui::MouseOverArea();
 	if (!mouseOverGui && bPressed) m_Camera.motionHandler( int(xpos), int(ypos), false);    
 }
 
-void RectLight::mouseCallback(float xpos, float ypos, bool bPressed) noexcept
+void AreaLight::mouseCallback(float xpos, float ypos, bool bPressed) noexcept
 {
 	const bool mouseOverGui = ImGui::MouseOverArea();
 	if (!mouseOverGui && bPressed) m_Camera.motionHandler( int(xpos), int(ypos), true); 
 }
 
-GraphicsDevicePtr RectLight::createDevice(const GraphicsDeviceDesc& desc) noexcept
+GraphicsDevicePtr AreaLight::createDevice(const GraphicsDeviceDesc& desc) noexcept
 {
 	GraphicsDeviceType deviceType = desc.getDeviceType();
 
