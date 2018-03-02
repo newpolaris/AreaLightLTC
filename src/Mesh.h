@@ -54,7 +54,7 @@ class Mesh
     
     virtual ~Mesh() { destroy(); }
     
-    virtual void init() {}
+    virtual void create() {}
     virtual void draw() const {}
 	virtual void destroy();
     
@@ -79,7 +79,7 @@ class PlaneMesh : public Mesh
         m_size(size)
     {}
     
-    void init();
+    void create() override;
     void draw() const;
 };
 
@@ -99,7 +99,7 @@ class SphereMesh : public Mesh
         m_radius(radius)
     {}
     
-    void init();
+    void create() override;
     void draw() const;
 };
 
@@ -113,7 +113,7 @@ class ConeMesh : public Mesh
       : Mesh()
     {}
     
-    void init();
+    void create() override;
     void draw() const;
 };
 
@@ -127,7 +127,7 @@ class CubeMesh : public Mesh
       : Mesh()
     {}
     
-    void init();
+    void create() override;
     void draw() const;
 };
 
@@ -140,8 +140,8 @@ class FullscreenTriangleMesh : public Mesh
 	    : Mesh()
 		{}
 
-		void init();
-		void draw() const;
+    void create() override;
+    void draw() const;
 };
 
 #endif //MESH_HPP

@@ -46,7 +46,7 @@ void Skydome::initialize()
 
 	// Create the cube mesh
 	m_SphereMesh = new SphereMesh(32, 10);
-	m_SphereMesh->init();
+	m_SphereMesh->create();
 
 	m_bInitialized = true;
 }

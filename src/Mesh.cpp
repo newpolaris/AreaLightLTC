@@ -24,7 +24,7 @@ void Mesh::destroy()
 
 /** PLANE MESH ----------------------------------------- */
 
-void PlaneMesh::init()
+void PlaneMesh::create()
 {
   /**
    *  todo : use indexed tristrip instead
@@ -109,7 +109,7 @@ void PlaneMesh::draw() const
 
 /** SPHERE MESH ----------------------------------------- */
 
-void SphereMesh::init()
+void SphereMesh::create()
 {
 	assert( !m_bInitialized );
 	m_bInitialized = true;
@@ -218,7 +218,7 @@ void SphereMesh::draw() const
 
 /** CONE MESH ----------------------------------------- */
 
-void ConeMesh::init()
+void ConeMesh::create()
 {
   assert( !m_bInitialized );
   m_bInitialized = true;
@@ -331,7 +331,7 @@ void ConeMesh::draw() const
 
 /** CUBE MESH ----------------------------------------- */
 
-void CubeMesh::init()
+void CubeMesh::create()
 {
   /// not optimized at all, better with indices
   
@@ -441,7 +441,7 @@ void CubeMesh::draw() const
 
 /** FULL SCREEN TRIANGLE MESH -------------------------- */
 
-void FullscreenTriangleMesh::init()
+void FullscreenTriangleMesh::create()
 {
   assert( !m_bInitialized );
   m_bInitialized = true;

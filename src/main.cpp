@@ -9,6 +9,7 @@
 #include <tools/gltools.hpp>
 #include <tools/SimpleProfile.h>
 #include <tools/imgui.h>
+#include <tools/TCamera.h>
 
 #include <GLType/GraphicsDevice.h>
 #include <GLType/GraphicsData.h>
@@ -25,12 +26,7 @@
 #include <memory>
 #include <vector>
 #include <algorithm>
-#include <Light.h>
 #include <GameCore.h>
-
-namespace {
-	const int g_lightBlockPoint = 0;
-}
 
 class AreaLight final : public gamecore::IGameApp
 {
@@ -53,12 +49,10 @@ public:
 private:
 
     TCamera m_Camera;
-    CubeMesh m_Cube;
-    PlaneMesh m_Plane;
-    light::Light m_Light;
+    FullscreenTriangleMesh m_ScreenTraingle;
     ProgramShader m_Shader;
     GraphicsDevicePtr m_Device;
-    GraphicsDataPtr m_LightUniformBuffer;
+    OGLCoreTexturePtr m_Texture;
 };
 
 CREATE_APPLICATION(AreaLight);
@@ -74,7 +68,7 @@ AreaLight::~AreaLight() noexcept
 void AreaLight::startup() noexcept
 {
 	// App Objects
-	m_Camera.setViewParams( glm::vec3( 0.0f, 0.0f, 3.0f), glm::vec3( 0.0f, 0.0f, 0.0f) );
+	m_Camera.setViewParams(glm::vec3( 0.0f, 0.0f, 3.0f), glm::vec3( 0.0f, 0.0f, 0.0f));
 	m_Camera.setMoveCoefficient(0.35f);
 
 	GraphicsDeviceDesc deviceDesc;
@@ -86,48 +80,24 @@ void AreaLight::startup() noexcept
 	m_Device = createDevice(deviceDesc);
 	assert(m_Device);
 
-	light::initialize();
-
-	// rotate toward ground and tilt slightly
-	auto rot = glm::angleAxis(glm::pi<float>(), glm::vec3(1, 0, 0));
-	rot = glm::angleAxis(glm::pi<float>()*0.25f, glm::vec3(0, 0, 1)) * rot;
-
-	m_Light.setType(1.0);
-	m_Light.setPosition(glm::vec3(0, -1, 2));
-	m_Light.setRotation(rot);
-	m_Light.setAttenuation(glm::vec3(0.8f, 1e-2f, 1e-1f));
-
 	m_Shader.setDevice(m_Device);
 	m_Shader.initialize();
-	m_Shader.addShader(GL_VERTEX_SHADER, "AreaShadow.Vertex");
-	m_Shader.addShader(GL_FRAGMENT_SHADER, "AreaShadow.Fragment");
+	m_Shader.addShader(GL_VERTEX_SHADER, "BlitTexture.Vertex");
+	m_Shader.addShader(GL_FRAGMENT_SHADER, "BlitTexture.Fragment");
 	m_Shader.link();
 
-	m_Cube.init();
-	m_Plane.init();
-
-	m_Shader.initBlockBinding("Light");
-
-	GraphicsDataDesc dataDesc(GraphicsDataType::UniformBuffer, GraphicsUsageFlagDynamicStorageBit, nullptr, sizeof(light::LightBlock));
-	m_LightUniformBuffer = m_Device->createGraphicsData(dataDesc);
+    m_ScreenTraingle.create();
+    m_Texture = OGLCoreTexture::Create("resources/wood.png");
 }
 
 void AreaLight::closeup() noexcept
 {
-	light::shutdown();
-	m_Cube.destroy();
-	m_Plane.destroy();
+    m_ScreenTraingle.destroy();
 }
 
 void AreaLight::update() noexcept
 {
 	m_Camera.update();
-
-	// move light position over time
-	auto pos = m_Light.getPosition();
-	pos.z = sin(static_cast<float>(glfwGetTime()) * 0.5f) * 3.0f;
-	m_Light.setPosition(pos);
-	m_Light.update(m_LightUniformBuffer);
 }
 
 void AreaLight::render() noexcept
@@ -148,59 +118,8 @@ void AreaLight::render() noexcept
 	float mat_shininess = 10.0;
 
 	m_Shader.bind();
-	m_Shader.bindBuffer("Light", m_LightUniformBuffer);
-	m_Shader.setUniform("uCameraPos", m_Camera.getPosition());
-	m_Shader.setUniform("projection", projection);
-	m_Shader.setUniform("view", view);
-	// set lighting uniforms
-	m_Shader.setUniform("mat_ambient", mat_ambient);
-	m_Shader.setUniform("mat_diffuse", mat_diffuse);
-	m_Shader.setUniform("mat_specular", mat_specular);
-	m_Shader.setUniform("mat_emissive", mat_emissive);
-	m_Shader.setUniform("mat_shininess", mat_shininess);
-
-	m_Shader.setUniform("mat_ambient", mat_ambient);
-	m_Shader.setUniform("mat_diffuse", mat_diffuse);
-	m_Shader.setUniform("mat_specular", mat_specular);
-
-	// plane
-	{
-		glm::mat4 model = glm::mat4(1.f);
-		model = glm::translate(model, glm::vec3(3.0f, -3.5f, 0.0));
-		m_Shader.setUniform("model", model);
-		m_Plane.draw();
-	}
-	// cubes
-	{
-		glm::mat4 model = glm::mat4(1.f);
-		model = glm::mat4(1.f);
-		model = glm::translate(model, glm::vec3(4.0f, -3.5f, 0.0));
-		model = glm::scale(model, glm::vec3(0.5f));
-		m_Shader.setUniform("model", model);
-		m_Cube.draw();
-		model = glm::mat4(1.f);
-		model = glm::translate(model, glm::vec3(2.0f, 3.0f, 1.0));
-		model = glm::scale(model, glm::vec3(0.75f));
-		m_Shader.setUniform("model", model);
-		m_Cube.draw();
-		model = glm::mat4(1.f);
-		model = glm::translate(model, glm::vec3(-3.0f, -1.0f, 0.0));
-		model = glm::scale(model, glm::vec3(0.5f));
-		m_Shader.setUniform("model", model);
-		m_Cube.draw();
-		model = glm::mat4(1.f);
-		model = glm::translate(model, glm::vec3(-1.5f, 1.0f, 1.5));
-		model = glm::scale(model, glm::vec3(0.5f));
-		m_Shader.setUniform("model", model);
-		m_Cube.draw();
-		model = glm::mat4(1.f);
-		model = glm::translate(model, glm::vec3(-1.5f, 2.0f, -3.0));
-		model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
-		model = glm::scale(model, glm::vec3(0.75f));
-		m_Shader.setUniform("model", model);
-		m_Cube.draw();
-	}
-	m_Light.draw(m_Camera);
+    m_Shader.bindTexture("uTexSource", m_Texture, 0);
+    m_ScreenTraingle.draw();
 }
 
 void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
