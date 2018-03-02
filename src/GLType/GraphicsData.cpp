@@ -1,6 +1,6 @@
 #include <GLType/GraphicsData.h>
 
-__ImplementSubInterface(GraphicsData, rtti::Interface, "GraphicsData")
+__ImplementSubInterface(GraphicsData, rtti::Interface)
 
 GraphicsDataDesc::GraphicsDataDesc() noexcept
 	: m_Data(nullptr)

@@ -30,7 +30,7 @@
 
 using namespace gamecore;
 
-__ImplementSubInterface(IGameApp, rtti::Interface, "IGameApp")
+__ImplementSubInterface(IGameApp, rtti::Interface)
 
 namespace gamecore {
 	void initialize(IGameApp& app, const std::string& name);

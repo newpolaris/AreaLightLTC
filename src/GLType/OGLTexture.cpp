@@ -1,6 +1,6 @@
 #include <gli/gli.hpp>
 #include <tools/stb_image.h>
-#include <GLType/OGLCoreTexture.h>
+#include <GLType/OGLTexture.h>
 
 namespace {
     std::string GetFileExtension(const std::string& filename)
@@ -69,28 +69,28 @@ namespace {
     }
 }
 
-__ImplementSubInterface(OGLCoreTexture, GraphicsTexture)
-
-OGLCoreTexturePtr OGLCoreTexture::Create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels)
+bool OGLTexture::create(const GraphicsTextureDesc& desc)
 {
-    assert(levels > 0);
-    auto tex = std::make_shared<OGLCoreTexture>();
+    return false;
+}
+
+GraphicsTexturePtr OGLTexture::Create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels)
+{
+    auto tex = std::make_shared<OGLTexture>();
     if (tex->create(width, height, target, format, levels))
         return tex;
     return nullptr;
 }
 
-OGLCoreTexturePtr OGLCoreTexture::Create(const std::string& filename)
+GraphicsTexturePtr OGLTexture::Create(const std::string& filename)
 {
-    auto tex = std::make_shared<OGLCoreTexture>();
+    auto tex = std::make_shared<OGLTexture>();
     if (tex->create(filename))
         return tex;
-    // failed to load image
-    assert(false);
     return nullptr;
 }
 
-OGLCoreTexture::OGLCoreTexture() :
+OGLTexture::OGLTexture() :
 	m_TextureID(0),
 	m_Target(GL_INVALID_ENUM),
 	m_Format(GL_INVALID_ENUM),
@@ -101,19 +101,21 @@ OGLCoreTexture::OGLCoreTexture() :
 {
 }
 
-OGLCoreTexture::~OGLCoreTexture()
+OGLTexture::~OGLTexture()
 {
 	destroy();
 }
 
-bool OGLCoreTexture::create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels)
+bool OGLTexture::create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels)
 {
-	GLuint TextureID = 0;
-	glCreateTextures(target, 1, &TextureID);
-	glTextureStorage2D(TextureID, levels, format, width, height);
+	GLuint TextureName = 0;
+	glGenTextures(1, &TextureName);
+	glBindTexture(target, TextureName);
+	glTexStorage2D(target, levels, format, width, height);
+	glBindTexture(target, 0);
 
 	m_Target = target;
-	m_TextureID = TextureID;
+	m_TextureID = TextureName;
 	m_Format = format;
 	m_Width = width;
 	m_Height = height;
@@ -123,12 +125,7 @@ bool OGLCoreTexture::create(GLint width, GLint height, GLenum target, GLenum for
 	return true;
 }
 
-bool OGLCoreTexture::create(const GraphicsTextureDesc& desc)
-{
-    return false;
-}
-
-bool OGLCoreTexture::create(const std::string& filename)
+bool OGLTexture::create(const std::string& filename)
 {
     if (filename.empty()) return false;
     std::string ext = GetFileExtension(filename);
@@ -138,7 +135,7 @@ bool OGLCoreTexture::create(const std::string& filename)
 } 
 
 // filename can be KTX or DDS files
-bool OGLCoreTexture::createFromFileGLI(const std::string& filename)
+bool OGLTexture::createFromFileGLI(const std::string& filename)
 {
 	gli::texture Texture = gli::load(filename);
 	if(Texture.empty())
@@ -148,14 +145,15 @@ bool OGLCoreTexture::createFromFileGLI(const std::string& filename)
 	gli::gl::format const Format = GL.translate(Texture.format(), Texture.swizzles());
 	GLenum Target = GL.translate(Texture.target());
 
-	GLuint TextureID = 0;
-	glCreateTextures(Target, 1, &TextureID);
-	glTextureParameteri(TextureID, GL_TEXTURE_BASE_LEVEL, 0);
-	glTextureParameteri(TextureID, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(Texture.levels() - 1));
-	glTextureParameteri(TextureID, GL_TEXTURE_SWIZZLE_R, Format.Swizzles[0]);
-	glTextureParameteri(TextureID, GL_TEXTURE_SWIZZLE_G, Format.Swizzles[1]);
-	glTextureParameteri(TextureID, GL_TEXTURE_SWIZZLE_B, Format.Swizzles[2]);
-	glTextureParameteri(TextureID, GL_TEXTURE_SWIZZLE_A, Format.Swizzles[3]);
+	GLuint TextureName = 0;
+	glGenTextures(1, &TextureName);
+	glBindTexture(Target, TextureName);
+	glTexParameteri(Target, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(Target, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(Texture.levels() - 1));
+	glTexParameteri(Target, GL_TEXTURE_SWIZZLE_R, Format.Swizzles[0]);
+	glTexParameteri(Target, GL_TEXTURE_SWIZZLE_G, Format.Swizzles[1]);
+	glTexParameteri(Target, GL_TEXTURE_SWIZZLE_B, Format.Swizzles[2]);
+	glTexParameteri(Target, GL_TEXTURE_SWIZZLE_A, Format.Swizzles[3]);
 
 	glm::tvec3<GLsizei> const Extent(Texture.extent());
 	GLsizei const FaceTotal = static_cast<GLsizei>(Texture.layers() * Texture.faces());
@@ -163,21 +161,21 @@ bool OGLCoreTexture::createFromFileGLI(const std::string& filename)
 	switch(Texture.target())
 	{
 	case gli::TARGET_1D:
-		glTextureStorage1D(
-			TextureID, static_cast<GLint>(Texture.levels()), Format.Internal, Extent.x);
+		glTexStorage1D(
+			Target, static_cast<GLint>(Texture.levels()), Format.Internal, Extent.x);
 		break;
 	case gli::TARGET_1D_ARRAY:
 	case gli::TARGET_2D:
 	case gli::TARGET_CUBE:
-		glTextureStorage2D(
-			TextureID, static_cast<GLint>(Texture.levels()), Format.Internal,
+		glTexStorage2D(
+			Target, static_cast<GLint>(Texture.levels()), Format.Internal,
 			Extent.x, Extent.y);
 		break;
 	case gli::TARGET_2D_ARRAY:
 	case gli::TARGET_3D:
 	case gli::TARGET_CUBE_ARRAY:
-		glTextureStorage3D(
-			TextureID, static_cast<GLint>(Texture.levels()), Format.Internal,
+		glTexStorage3D(
+			Target, static_cast<GLint>(Texture.levels()), Format.Internal,
 			Extent.x, Extent.y,
 			Texture.target() == gli::TARGET_3D ? Extent.z : FaceTotal);
 		break;
@@ -200,13 +198,13 @@ bool OGLCoreTexture::createFromFileGLI(const std::string& filename)
 		{
 		case gli::TARGET_1D:
 			if(gli::is_compressed(Texture.format()))
-				glCompressedTextureSubImage1D(
-					TextureID, static_cast<GLint>(Level), 0, Extent.x,
+				glCompressedTexSubImage1D(
+					Target, static_cast<GLint>(Level), 0, Extent.x,
 					Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
 					Texture.data(Layer, Face, Level));
 			else
-				glTextureSubImage1D(
-					TextureID, static_cast<GLint>(Level), 0, Extent.x,
+				glTexSubImage1D(
+					Target, static_cast<GLint>(Level), 0, Extent.x,
 					Format.External, Format.Type,
 					Texture.data(Layer, Face, Level));
 			break;
@@ -214,16 +212,16 @@ bool OGLCoreTexture::createFromFileGLI(const std::string& filename)
 		case gli::TARGET_2D:
 		case gli::TARGET_CUBE:
 			if(gli::is_compressed(Texture.format()))
-				glCompressedTextureSubImage2D(
-					TextureID, static_cast<GLint>(Level),
+				glCompressedTexSubImage2D(
+					Target, static_cast<GLint>(Level),
 					0, 0,
 					Extent.x,
 					Texture.target() == gli::TARGET_1D_ARRAY ? LayerGL : Extent.y,
 					Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
 					Texture.data(Layer, Face, Level));
 			else
-				glTextureSubImage2D(
-					TextureID, static_cast<GLint>(Level),
+				glTexSubImage2D(
+					Target, static_cast<GLint>(Level),
 					0, 0,
 					Extent.x,
 					Texture.target() == gli::TARGET_1D_ARRAY ? LayerGL : Extent.y,
@@ -234,16 +232,16 @@ bool OGLCoreTexture::createFromFileGLI(const std::string& filename)
 		case gli::TARGET_3D:
 		case gli::TARGET_CUBE_ARRAY:
 			if(gli::is_compressed(Texture.format()))
-				glCompressedTextureSubImage3D(
-					TextureID, static_cast<GLint>(Level),
+				glCompressedTexSubImage3D(
+					Target, static_cast<GLint>(Level),
 					0, 0, 0,
 					Extent.x, Extent.y,
 					Texture.target() == gli::TARGET_3D ? Extent.z : LayerGL,
 					Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
 					Texture.data(Layer, Face, Level));
 			else
-				glTextureSubImage3D(
-					TextureID, static_cast<GLint>(Level),
+				glTexSubImage3D(
+					Target, static_cast<GLint>(Level),
 					0, 0, 0,
 					Extent.x, Extent.y,
 					Texture.target() == gli::TARGET_3D ? Extent.z : LayerGL,
@@ -256,18 +254,18 @@ bool OGLCoreTexture::createFromFileGLI(const std::string& filename)
 		}
 	}
 	m_Target = Target;
-	m_TextureID = TextureID;
+	m_TextureID = TextureName;
 	m_MipCount = static_cast<GLint>(Texture.levels());
 	m_Format = Format.Type;
 	m_Width = Extent.x;
 	m_Height = Extent.y;
 	m_Depth = Texture.target() == gli::TARGET_3D ? Extent.z : FaceTotal;
-
+	glBindTexture(Target, 0);
 	return true;
 }
 
 // filename can be JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC files
-bool OGLCoreTexture::createFromFileSTB(const std::string& filename)
+bool OGLTexture::createFromFileSTB(const std::string& filename)
 {
     stbi_set_flip_vertically_on_load(true);
 
@@ -290,85 +288,79 @@ bool OGLCoreTexture::createFromFileSTB(const std::string& filename)
     GLenum Format = GetComponent(nrComponents);
     GLenum InternalFormat = GetInternalComponent(nrComponents, Type == GL_FLOAT);
 
-	GLuint TextureID = 0;
-	glCreateTextures(Target, 1, &TextureID);
+	GLuint TextureName = 0;
+	glGenTextures(1, &TextureName);
+	glBindTexture(Target, TextureName);
 
 	// Use fixed storage
-    glTextureStorage2D(TextureID, 1, InternalFormat, Width, Height);
-    glTextureSubImage2D(TextureID, 0, 0, 0, Width, Height, Format, Type, Data);
+    glTexStorage2D(Target, 1, InternalFormat, Width, Height);
+    glTexSubImage2D(Target, 0, 0, 0, Width, Height, Format, Type, Data);
 
     stbi_image_free(Data);
 
 	m_Target = Target;
-	m_TextureID = TextureID;
+	m_TextureID = TextureName;
 	m_Format = Type;
 	m_Width = Width;
 	m_Height = Height;
 	m_Depth = 1;
 	m_MipCount = 1;
-
+	glBindTexture(Target, 0);
 	return true;
 }
 
-GLuint OGLCoreTexture::getTextureID() const noexcept
-{
-    return m_TextureID;
-}
-
-const GraphicsTextureDesc& OGLCoreTexture::getGraphicsTextureDesc() const noexcept
+const GraphicsTextureDesc& OGLTexture::getGraphicsTextureDesc() const noexcept
 {
     return m_TextureDesc;
 }
 
-void OGLCoreTexture::setDevice(const GraphicsDevicePtr& device) noexcept
+void OGLTexture::setDevice(const GraphicsDevicePtr& device) noexcept
 {
     m_Device = device;
 }
 
-GraphicsDevicePtr OGLCoreTexture::getDevice() noexcept
+GraphicsDevicePtr OGLTexture::getDevice() noexcept
 {
     return m_Device.lock();
 }
 
-void OGLCoreTexture::destroy()
+void OGLTexture::destroy()
 {
 	if (!m_TextureID)
 	{
-		glDeleteTextures(1, &m_TextureID);
+		glDeleteTextures( 1, &m_TextureID);
 		m_TextureID = 0;
-
-        m_Format = GL_INVALID_ENUM;
-        m_Width = 0;
-        m_Height = 0;
-        m_Depth = 0;
-        m_MipCount = 0;
 	}
 	m_Target = GL_INVALID_ENUM;
 }
 
-void OGLCoreTexture::bind(GLuint unit) const
+void OGLTexture::bind(GLuint unit) const
 {
 	assert( 0u != m_TextureID );  
-    glBindTextureUnit(unit, m_TextureID);
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(m_Target, m_TextureID);
 }
 
-void OGLCoreTexture::unbind(GLuint unit) const
+void OGLTexture::unbind(GLuint unit) const
 {
-    glBindTextureUnit(unit, 0);
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(m_Target, 0u);
 }
 
-void OGLCoreTexture::generateMipmap()
-{
-	assert(m_Target != GL_INVALID_ENUM);
-	assert(m_TextureID != 0);
-
-	glGenerateTextureMipmap(m_TextureID);
-}
-
-void OGLCoreTexture::parameter(GLenum pname, GLint param)
+void OGLTexture::generateMipmap()
 {
 	assert(m_Target != GL_INVALID_ENUM);
 	assert(m_TextureID != 0);
 
-    glTextureParameteri(m_TextureID, pname, param);
+	glBindTexture(m_Target, m_TextureID);
+	glGenerateMipmap(m_Target);
+}
+
+void OGLTexture::parameter(GLenum pname, GLint param)
+{
+	assert(m_Target != GL_INVALID_ENUM);
+	assert(m_TextureID != 0);
+
+	glBindTexture(m_Target, m_TextureID);
+    glTexParameteri(m_Target, pname, param);
 }

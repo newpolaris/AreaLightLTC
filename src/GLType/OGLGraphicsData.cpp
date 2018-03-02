@@ -1,8 +1,8 @@
 #include <GLType/OGLGraphicsData.h>
-#include <GLType/OGLUtil.h>
+#include <GLType/OGLTypes.h>
 #include <cassert>
 
-__ImplementSubInterface(OGLGraphicsData, GraphicsData, "OGLGraphicsData")
+__ImplementSubInterface(OGLGraphicsData, GraphicsData)
 
 OGLGraphicsData::OGLGraphicsData() noexcept
     : m_BufferID(GL_NONE)
@@ -68,7 +68,7 @@ bool OGLGraphicsData::map(std::ptrdiff_t offset, std::ptrdiff_t count, void** da
 {
 	assert(data);
 	glBindBuffer(m_Target, m_BufferID);
-	*data = glMapBufferRange(m_Target, offset, count, GetOGLUsageFlag(flags));
+	*data = glMapBufferRange(m_Target, offset, count, OGLTypes::translate(flags));
 	return *data ? true : false;
 }
 

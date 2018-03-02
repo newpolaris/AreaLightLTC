@@ -47,8 +47,8 @@ public:\
     virtual _NAME rtti::Rtti* rtti() const noexcept;\
 private:
 
-#define __ImplementSubInterface(Derived, Base, Name) \
-    _NAME rtti::Rtti Derived::RTTI = _NAME rtti::Rtti(Name, nullptr, Base::getRtti());\
+#define __ImplementSubInterface(Derived, Base) \
+    _NAME rtti::Rtti Derived::RTTI = _NAME rtti::Rtti(#Derived, nullptr, Base::getRtti());\
 	_NAME rtti::Rtti* Derived::rtti() const noexcept { return &RTTI; }\
 	_NAME rtti::Rtti* Derived::getRtti() noexcept { return &RTTI; }
 

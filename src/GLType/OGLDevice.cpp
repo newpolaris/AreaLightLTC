@@ -1,8 +1,10 @@
 #include <GLType/OGLDevice.h>
 #include <GLType/OGLGraphicsData.h>
 #include <GLType/OGLCoreGraphicsData.h>
+#include <GLType/OGLTexture.h>
+#include <GLType/OGLCoreTexture.h>
 
-__ImplementSubInterface(OGLDevice, GraphicsDevice, "OGLDevice")
+__ImplementSubInterface(OGLDevice, GraphicsDevice)
 
 OGLDevice::OGLDevice() noexcept
 {
@@ -40,6 +42,29 @@ GraphicsDataPtr OGLDevice::createGraphicsData(const GraphicsDataDesc& desc) noex
 		data->setDevice(this->downcast_pointer<OGLDevice>());
         if (data->create(desc))
             return data;
+        return nullptr;
+    }
+    return nullptr;
+}
+
+GraphicsTexturePtr OGLDevice::createTexture(const GraphicsTextureDesc& desc) noexcept
+{
+    if (m_Desc.getDeviceType() == GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore)
+    {
+        auto texture = std::make_shared<OGLCoreTexture>();
+        if (!texture) return nullptr;
+		texture->setDevice(this->downcast_pointer<OGLDevice>());
+        if (texture->create(desc))
+            return texture;
+        return nullptr;
+    }
+    else if (m_Desc.getDeviceType() == GraphicsDeviceType::GraphicsDeviceTypeOpenGL)
+    {
+        auto texture = std::make_shared<OGLTexture>();
+        if (!texture) return nullptr;
+		texture->setDevice(this->downcast_pointer<OGLDevice>());
+        if (texture->create(desc))
+            return texture;
         return nullptr;
     }
     return nullptr;

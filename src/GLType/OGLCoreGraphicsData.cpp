@@ -1,8 +1,8 @@
 #include <GLType/OGLCoreGraphicsData.h>
-#include <GLType/OGLUtil.h>
+#include <GLType/OGLTypes.h>
 #include <cassert>
 
-__ImplementSubInterface(OGLCoreGraphicsData, GraphicsData, "OGLCoreGraphicsData")
+__ImplementSubInterface(OGLCoreGraphicsData, GraphicsData)
 
 OGLCoreGraphicsData::OGLCoreGraphicsData() noexcept 
     : m_BufferID(GL_NONE)
@@ -26,7 +26,7 @@ bool OGLCoreGraphicsData::create(const GraphicsDataDesc& desc) noexcept
 		return false;
 	}
 
-    GLbitfield flags = GetOGLUsageFlag(desc.getUsage());
+    GLbitfield flags = OGLTypes::translate(desc.getUsage());
     glNamedBufferStorage(m_BufferID, desc.getStreamSize(), desc.getStream(), flags);
 
     // TODO: check bufer can handle vertex/index buffer without setting.
@@ -47,7 +47,7 @@ void OGLCoreGraphicsData::destroy() noexcept
 bool OGLCoreGraphicsData::map(std::ptrdiff_t offset, std::ptrdiff_t count, void** data, GraphicsUsageFlags flags) noexcept
 {
 	assert(data);
-	*data = glMapNamedBufferRange(m_BufferID, offset, count, GetOGLUsageFlag(flags));
+	*data = glMapNamedBufferRange(m_BufferID, offset, count, OGLTypes::translate(flags));
 	return *data ? true : false;
     return false;
 }

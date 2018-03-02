@@ -63,3 +63,24 @@ enum GraphicsUsageFlagBits
 
 typedef std::uint32_t GraphicsUsageFlags;
 
+enum GraphicsTarget
+{
+    GraphicsTarget1D = 0, GraphicsTargetFirst = GraphicsTarget1D,
+    GraphicsTarget1DArray,
+    GraphicsTarget2D,
+    GraphicsTarget2DArray,
+    GraphicsTarget3D,
+    GraphicsTargetRect,
+    GraphicsTargetRectArray,
+    GraphicsTargetCube,
+    GraphicsTargetCubeArray, GraphicsTargetLast = GraphicsTargetCubeArray
+};
+
+enum
+{
+    GraphicsTargetCount = GraphicsTargetLast - GraphicsTargetFirst + 1,
+};
+
+enum GraphicsFormat
+{
+};

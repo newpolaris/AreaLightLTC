@@ -14,6 +14,7 @@ public:
     void destoy() noexcept;
 
     GraphicsDataPtr createGraphicsData(const GraphicsDataDesc& desc) noexcept;
+    GraphicsTexturePtr createTexture(const GraphicsTextureDesc& desc) noexcept;
 
 	const GraphicsDeviceDesc& getGraphicsDeviceDesc() const noexcept;
 

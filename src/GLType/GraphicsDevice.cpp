@@ -1,6 +1,6 @@
 #include <GLType/GraphicsDevice.h>
 
-__ImplementSubInterface(GraphicsDevice, rtti::Interface, "GraphicsDevice")
+__ImplementSubInterface(GraphicsDevice, rtti::Interface)
 
 GraphicsDevice::GraphicsDevice() noexcept
 {
