@@ -292,7 +292,7 @@ namespace gamecore {
 	{
 		ImGui_ImplGlfwGL3_KeyCallback(window, key, scancode, action, mods);
 
-		bool bPressed = action == GLFW_PRESS;
+		bool bPressed = action != GLFW_RELEASE;
 		if (bPressed) 
 		{
 			switch (key)
@@ -428,22 +428,22 @@ bool IGameApp::isWireframe() const noexcept
 	return m_bWireframe;
 }
 
-int32_t IGameApp::GetWindowWidth() const noexcept
+int32_t IGameApp::getWindowWidth() const noexcept
 {
 	return m_WindowWidth;
 }
 
-int32_t IGameApp::GetWindowHeight() const noexcept
+int32_t IGameApp::getWindowHeight() const noexcept
 {
 	return m_WindowHeight;
 }
 
-int32_t IGameApp::GetFrameWidth() const noexcept
+int32_t IGameApp::getFrameWidth() const noexcept
 {
 	return m_FrameWidth;
 }
 
-int32_t IGameApp::GetFrameHeight() const noexcept
+int32_t IGameApp::getFrameHeight() const noexcept
 {
 	return m_FrameHeight;
 }

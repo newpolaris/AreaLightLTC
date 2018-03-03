@@ -175,6 +175,20 @@ bool ProgramShader::setUniform(const std::string &name, GLfloat v) const
     return true;
 }
 
+bool ProgramShader::setUniform(const std::string& name, const glm::vec2& v) const
+{
+    GLint loc = glGetUniformLocation(m_ShaderID, name.c_str());
+
+    if(-1 == loc)
+    {
+        printf("ProgramShader : can't find uniform \"%s\".\n", name.c_str());
+        return false;
+    }
+
+    glUniform2fv(loc, 1, glm::value_ptr(v));
+    return true;
+}
+
 bool ProgramShader::setUniform(const std::string &name, const glm::vec3 &v) const
 {
     GLint loc = glGetUniformLocation(m_ShaderID, name.c_str());

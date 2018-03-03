@@ -52,7 +52,6 @@ private:
     FullscreenTriangleMesh m_ScreenTraingle;
     ProgramShader m_Shader;
     GraphicsDevicePtr m_Device;
-    GraphicsTexturePtr m_Texture;
 };
 
 CREATE_APPLICATION(AreaLight);
@@ -68,8 +67,8 @@ AreaLight::~AreaLight() noexcept
 void AreaLight::startup() noexcept
 {
 	// App Objects
-	m_Camera.setViewParams(glm::vec3( 0.0f, 0.0f, 3.0f), glm::vec3( 0.0f, 0.0f, 0.0f));
-	m_Camera.setMoveCoefficient(0.35f);
+	m_Camera.setViewParams(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3( 0.0f, 0.0f, 0.0f));
+	m_Camera.setMoveCoefficient(0.10f);
 
 	GraphicsDeviceDesc deviceDesc;
 #if __APPLE__
@@ -82,15 +81,11 @@ void AreaLight::startup() noexcept
 
 	m_Shader.setDevice(m_Device);
 	m_Shader.initialize();
-	m_Shader.addShader(GL_VERTEX_SHADER, "BlitTexture.Vertex");
-	m_Shader.addShader(GL_FRAGMENT_SHADER, "BlitTexture.Fragment");
+	m_Shader.addShader(GL_VERTEX_SHADER, "Ltc.Vertex");
+	m_Shader.addShader(GL_FRAGMENT_SHADER, "Ltc.Fragment");
 	m_Shader.link();
 
     m_ScreenTraingle.create();
-
-    GraphicsTextureDesc desc;
-    desc.setFilename("resources/wood.png");
-    m_Texture = m_Device->createTexture(desc);
 }
 
 void AreaLight::closeup() noexcept
@@ -106,12 +101,13 @@ void AreaLight::update() noexcept
 void AreaLight::render() noexcept
 {
 	// Rendering
-	glViewport(0, 0, GetFrameWidth(), GetFrameHeight());
+	glViewport(0, 0, getFrameWidth(), getFrameHeight());
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClearDepthf(1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glPolygonMode(GL_FRONT_AND_BACK, isWireframe() ? GL_LINE : GL_FILL);
 
+    glm::vec2 resolution = glm::vec2((float)getFrameWidth(), (float)getFrameHeight());
 	glm::mat4 projection = m_Camera.getProjectionMatrix();
 	glm::mat4 view = m_Camera.getViewMatrix();
 	glm::vec4 mat_ambient = glm::vec4(glm::vec3(0.1f), 1.f);
@@ -121,7 +117,9 @@ void AreaLight::render() noexcept
 	float mat_shininess = 10.0;
 
 	m_Shader.bind();
-    m_Shader.bindTexture("uTexSource", m_Texture, 0);
+    m_Shader.setUniform("uIntensity", 4.f);
+    m_Shader.setUniform("uView", view);
+    m_Shader.setUniform("uResolution", resolution);
     m_ScreenTraingle.draw();
 }
 
@@ -130,19 +128,19 @@ void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
 	switch (key)
 	{
 	case GLFW_KEY_UP:
-		m_Camera.keyboardHandler( MOVE_FORWARD, isPressed);
+		m_Camera.keyboardHandler(MOVE_FORWARD, isPressed);
 		break;
 
 	case GLFW_KEY_DOWN:
-		m_Camera.keyboardHandler( MOVE_BACKWARD, isPressed);
+		m_Camera.keyboardHandler(MOVE_BACKWARD, isPressed);
 		break;
 
 	case GLFW_KEY_LEFT:
-		m_Camera.keyboardHandler( MOVE_LEFT, isPressed);
+		m_Camera.keyboardHandler(MOVE_LEFT, isPressed);
 		break;
 
 	case GLFW_KEY_RIGHT:
-		m_Camera.keyboardHandler( MOVE_RIGHT, isPressed);
+		m_Camera.keyboardHandler(MOVE_RIGHT, isPressed);
 		break;
 	}
 }

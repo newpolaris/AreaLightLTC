@@ -39,10 +39,11 @@ public:
 
     bool setUniform(const std::string& name, GLint v) const;
     bool setUniform(const std::string& name, GLfloat v) const;
-    bool setUniform(const std::string& name, const glm::vec3 &v) const;
-    bool setUniform(const std::string& name, const glm::vec4 &v) const;
-    bool setUniform(const std::string& name, const glm::mat3 &v) const;
-    bool setUniform(const std::string& name, const glm::mat4 &v) const;
+    bool setUniform(const std::string& name, const glm::vec2& v) const;
+    bool setUniform(const std::string& name, const glm::vec3& v) const;
+    bool setUniform(const std::string& name, const glm::vec4& v) const;
+    bool setUniform(const std::string& name, const glm::mat3& v) const;
+    bool setUniform(const std::string& name, const glm::mat4& v) const;
     bool bindTexture(const std::string& name, const GraphicsTexturePtr& texture, GLint unit);
     bool bindBuffer(const std::string& name, const GraphicsDataPtr& data);
 

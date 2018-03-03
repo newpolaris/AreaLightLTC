@@ -23,10 +23,10 @@ namespace gamecore
 		virtual bool isDone() const noexcept;
 		virtual bool isWireframe() const noexcept;
 
-		int32_t GetWindowWidth() const noexcept;
-		int32_t GetWindowHeight() const noexcept;
-		int32_t GetFrameWidth() const noexcept;
-		int32_t GetFrameHeight() const noexcept;
+		int32_t getWindowWidth() const noexcept;
+		int32_t getWindowHeight() const noexcept;
+		int32_t getFrameWidth() const noexcept;
+		int32_t getFrameHeight() const noexcept;
 
 		virtual void charCallback(uint32_t c) noexcept;
 		virtual void keyboardCallback(uint32_t c, bool bPressed) noexcept;
