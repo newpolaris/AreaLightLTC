@@ -27,6 +27,7 @@
 #include <vector>
 #include <algorithm>
 #include <GameCore.h>
+#include <LtcTables.h>
 
 class AreaLight final : public gamecore::IGameApp
 {
@@ -52,6 +53,8 @@ private:
     FullscreenTriangleMesh m_ScreenTraingle;
     ProgramShader m_Shader;
     GraphicsDevicePtr m_Device;
+    GraphicsTexturePtr m_LtcMatTex;
+    GraphicsTexturePtr m_LtcMagTex;
 };
 
 CREATE_APPLICATION(AreaLight);
@@ -86,6 +89,24 @@ void AreaLight::startup() noexcept
 	m_Shader.link();
 
     m_ScreenTraingle.create();
+
+    GraphicsTextureDesc ltcMatDesc;
+    ltcMatDesc.setTarget(gli::TARGET_2D);
+    ltcMatDesc.setFormat(gli::FORMAT_RGBA16_SFLOAT_PACK16);
+    ltcMatDesc.setWidth(64);
+    ltcMatDesc.setHeight(64);
+    ltcMatDesc.setStream((uint8_t*)g_ltc_mat);
+    ltcMatDesc.setStreamSize(sizeof(g_ltc_mat));
+    m_LtcMatTex = m_Device->createTexture(ltcMatDesc);
+
+    GraphicsTextureDesc ltcMagDesc;
+    ltcMagDesc.setTarget(gli::TARGET_2D);
+    ltcMagDesc.setFormat(gli::FORMAT_R16_SFLOAT_PACK16);
+    ltcMagDesc.setWidth(64);
+    ltcMagDesc.setHeight(64);
+    ltcMagDesc.setStream((uint8_t*)g_ltc_mag);
+    ltcMagDesc.setStreamSize(sizeof(g_ltc_mag));
+    m_LtcMagTex = m_Device->createTexture(ltcMagDesc);
 }
 
 void AreaLight::closeup() noexcept
@@ -116,10 +137,18 @@ void AreaLight::render() noexcept
 	glm::vec4 mat_emissive = glm::vec4(0.0f);
 	float mat_shininess = 10.0;
 
+    glm::vec3 dcolor = glm::vec3(1.f, 1.f, 1.f);
+    glm::vec3 scolor = glm::vec3(1.f, 1.f, 1.f);
+
 	m_Shader.bind();
+    m_Shader.setUniform("uTwoSided", false);
     m_Shader.setUniform("uIntensity", 4.f);
     m_Shader.setUniform("uView", view);
     m_Shader.setUniform("uResolution", resolution);
+    m_Shader.setUniform("uDcolor", dcolor);
+    m_Shader.setUniform("uScolor", scolor);
+    m_Shader.bindTexture("ltc_mat", m_LtcMatTex, 0);
+    m_Shader.bindTexture("ltc_mag", m_LtcMagTex, 1);
     m_ScreenTraingle.draw();
 }
 
