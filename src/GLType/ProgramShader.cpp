@@ -301,8 +301,25 @@ bool ProgramShader::bindImage(const std::string &name, const OGLCoreTexturePtr &
         return false;
     }
 
-    glBindImageTexture(unit, texture->m_TextureID, level, layered, layer, access, texture->m_Format);
-    glUniform1i(loc, unit);
+    auto device = m_Device.lock();
+    if (!device) return false;
+    auto type = device->getGraphicsDeviceDesc().getDeviceType();
+
+    // Bind the buffer object to the uniform block
+    if (type == GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore)
+    {
+        auto tex = texture->downcast_pointer<OGLCoreTexture>();
+        glBindImageTexture(unit, tex->getTextureID(), level, layered, layer, access, tex->getFormat());
+        glUniform1i(loc, unit);
+        return true;
+    }
+    else if (type == GraphicsDeviceType::GraphicsDeviceTypeOpenGL)
+    {
+        auto tex = texture->downcast_pointer<OGLTexture>();
+        glBindImageTexture(unit, tex->getTextureID(), level, layered, layer, access, tex->getFormat());
+        glUniform1i(loc, unit);
+        return true;
+    }
 
     return true;
 }

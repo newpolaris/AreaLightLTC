@@ -6,33 +6,10 @@
 
 __ImplementSubInterface(OGLCoreTexture, GraphicsTexture)
 
-OGLCoreTexturePtr OGLCoreTexture::Create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels)
-{
-    assert(levels > 0);
-    auto tex = std::make_shared<OGLCoreTexture>();
-    if (tex->create(width, height, target, format, levels))
-        return tex;
-    return nullptr;
-}
-
-OGLCoreTexturePtr OGLCoreTexture::Create(const std::string& filename)
-{
-    auto tex = std::make_shared<OGLCoreTexture>();
-    if (tex->create(filename))
-        return tex;
-    // failed to load image
-    assert(false);
-    return nullptr;
-}
-
 OGLCoreTexture::OGLCoreTexture() :
 	m_TextureID(0),
 	m_Target(GL_INVALID_ENUM),
-	m_Format(GL_INVALID_ENUM),
-	m_Width(0),
-	m_Height(0),
-	m_Depth(0),
-	m_MipCount(0)
+	m_Format(GL_INVALID_ENUM)
 {
 }
 
@@ -50,16 +27,14 @@ bool OGLCoreTexture::create(GLint width, GLint height, GLenum target, GLenum for
 	m_Target = target;
 	m_TextureID = TextureID;
 	m_Format = format;
-	m_Width = width;
-	m_Height = height;
-	m_Depth = 1;
-	m_MipCount = levels;
 
 	return true;
 }
 
 bool OGLCoreTexture::create(const GraphicsTextureDesc& desc)
 {
+    m_TextureDesc = desc;
+
     auto filename = desc.getFileName();
     if (!filename.empty())
         return create(filename);
@@ -201,11 +176,14 @@ bool OGLCoreTexture::createFromFileGLI(const std::string& filename)
 	}
 	m_Target = Target;
 	m_TextureID = TextureID;
-	m_MipCount = static_cast<GLint>(Texture.levels());
 	m_Format = Format.Type;
-	m_Width = Extent.x;
-	m_Height = Extent.y;
-	m_Depth = Texture.target() == gli::TARGET_3D ? Extent.z : FaceTotal;
+
+    m_TextureDesc.setTarget(Texture.target());
+    m_TextureDesc.setFormat(Texture.format());
+    m_TextureDesc.setWidth(Extent.x);
+    m_TextureDesc.setHeight(Extent.y);
+	m_TextureDesc.setDepth(Texture.target() == gli::TARGET_3D ? Extent.z : FaceTotal);
+    m_TextureDesc.setLevels((GLint)Texture.levels());
 
 	return true;
 }
@@ -246,10 +224,13 @@ bool OGLCoreTexture::createFromFileSTB(const std::string& filename)
 	m_Target = Target;
 	m_TextureID = TextureID;
 	m_Format = Type;
-	m_Width = Width;
-	m_Height = Height;
-	m_Depth = 1;
-	m_MipCount = 1;
+
+    m_TextureDesc.setTarget(gli::TARGET_2D);
+    m_TextureDesc.setFormat(gli::FORMAT_UNDEFINED);
+    m_TextureDesc.setWidth(Width);
+    m_TextureDesc.setHeight(Height);
+	m_TextureDesc.setDepth(1);
+    m_TextureDesc.setLevels(1);
 
 	return true;
 }
@@ -257,6 +238,11 @@ bool OGLCoreTexture::createFromFileSTB(const std::string& filename)
 GLuint OGLCoreTexture::getTextureID() const noexcept
 {
     return m_TextureID;
+}
+
+GLenum OGLCoreTexture::getFormat() const noexcept
+{
+    return m_Format;
 }
 
 const GraphicsTextureDesc& OGLCoreTexture::getGraphicsTextureDesc() const noexcept
@@ -282,10 +268,6 @@ void OGLCoreTexture::destroy()
 		m_TextureID = 0;
 
         m_Format = GL_INVALID_ENUM;
-        m_Width = 0;
-        m_Height = 0;
-        m_Depth = 0;
-        m_MipCount = 0;
 	}
 	m_Target = GL_INVALID_ENUM;
 }

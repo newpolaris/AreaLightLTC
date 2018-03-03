@@ -35,7 +35,7 @@ namespace OGLTypes
         gli::gl GL(gli::gl::PROFILE_GL33);
         gli::swizzles swizzle(gl::SWIZZLE_RED, gl::SWIZZLE_GREEN, gl::SWIZZLE_BLUE, gl::SWIZZLE_ALPHA);
         auto Format = GL.translate(format, swizzle);
-        return Format.External;
+        return gli::is_compressed(format) ? Format.Internal : Format.External;
     }
 #else
     GLenum translate(GraphicsTarget target)

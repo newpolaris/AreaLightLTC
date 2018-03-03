@@ -4,44 +4,12 @@
 #include <GLType/OGLTypes.h>
 #include <GLType/OGLTexture.h>
 
-bool OGLTexture::create(const GraphicsTextureDesc& desc)
-{
-    auto filename = desc.getFileName();
-    if (!filename.empty())
-        return create(filename);
+__ImplementSubInterface(OGLTexture, GraphicsTexture)
 
-    auto width = desc.getWidth();
-    auto height = desc.getHeight();
-    auto levels = desc.getLevels();
-    auto target = OGLTypes::translate(desc.getTarget());
-    auto format = OGLTypes::translate(desc.getFormat());
-    return create(width, height, target, format, levels);
-}
-
-GraphicsTexturePtr OGLTexture::Create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels)
-{
-    auto tex = std::make_shared<OGLTexture>();
-    if (tex->create(width, height, target, format, levels))
-        return tex;
-    return nullptr;
-}
-
-GraphicsTexturePtr OGLTexture::Create(const std::string& filename)
-{
-    auto tex = std::make_shared<OGLTexture>();
-    if (tex->create(filename))
-        return tex;
-    return nullptr;
-}
-
-OGLTexture::OGLTexture() :
-	m_TextureID(0),
-	m_Target(GL_INVALID_ENUM),
-	m_Format(GL_INVALID_ENUM),
-	m_Width(0),
-	m_Height(0),
-	m_Depth(0),
-	m_MipCount(0)
+OGLTexture::OGLTexture()
+    : m_TextureID(0)
+    , m_Target(GL_INVALID_ENUM)
+    , m_Format(GL_INVALID_ENUM)
 {
 }
 
@@ -61,12 +29,23 @@ bool OGLTexture::create(GLint width, GLint height, GLenum target, GLenum format,
 	m_Target = target;
 	m_TextureID = TextureName;
 	m_Format = format;
-	m_Width = width;
-	m_Height = height;
-	m_Depth = 1;
-	m_MipCount = levels;
 
 	return true;
+}
+bool OGLTexture::create(const GraphicsTextureDesc& desc)
+{
+    m_TextureDesc = desc;
+
+    auto filename = desc.getFileName();
+    if (!filename.empty())
+        return create(filename);
+
+    auto width = desc.getWidth();
+    auto height = desc.getHeight();
+    auto levels = desc.getLevels();
+    auto target = OGLTypes::translate(desc.getTarget());
+    auto format = OGLTypes::translate(desc.getFormat());
+    return create(width, height, target, format, levels);
 }
 
 bool OGLTexture::create(const std::string& filename)
@@ -89,9 +68,9 @@ bool OGLTexture::createFromFileGLI(const std::string& filename)
 	gli::gl::format const Format = GL.translate(Texture.format(), Texture.swizzles());
 	GLenum Target = GL.translate(Texture.target());
 
-	GLuint TextureName = 0;
-	glGenTextures(1, &TextureName);
-	glBindTexture(Target, TextureName);
+	GLuint TextureID = 0;
+	glGenTextures(1, &TextureID);
+	glBindTexture(Target, TextureID);
 	glTexParameteri(Target, GL_TEXTURE_BASE_LEVEL, 0);
 	glTexParameteri(Target, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(Texture.levels() - 1));
 	glTexParameteri(Target, GL_TEXTURE_SWIZZLE_R, Format.Swizzles[0]);
@@ -198,13 +177,16 @@ bool OGLTexture::createFromFileGLI(const std::string& filename)
 		}
 	}
 	m_Target = Target;
-	m_TextureID = TextureName;
-	m_MipCount = static_cast<GLint>(Texture.levels());
+	m_TextureID = TextureID;
 	m_Format = Format.Type;
-	m_Width = Extent.x;
-	m_Height = Extent.y;
-	m_Depth = Texture.target() == gli::TARGET_3D ? Extent.z : FaceTotal;
-	glBindTexture(Target, 0);
+
+    m_TextureDesc.setTarget(Texture.target());
+    m_TextureDesc.setFormat(Texture.format());
+    m_TextureDesc.setWidth(Extent.x);
+    m_TextureDesc.setHeight(Extent.y);
+	m_TextureDesc.setDepth(Texture.target() == gli::TARGET_3D ? Extent.z : FaceTotal);
+    m_TextureDesc.setLevels((GLint)Texture.levels());
+
 	return true;
 }
 
@@ -232,9 +214,9 @@ bool OGLTexture::createFromFileSTB(const std::string& filename)
     GLenum Format = OGLTypes::getComponent(nrComponents);
     GLenum InternalFormat = OGLTypes::getInternalComponent(nrComponents, Type == GL_FLOAT);
 
-	GLuint TextureName = 0;
-	glGenTextures(1, &TextureName);
-	glBindTexture(Target, TextureName);
+	GLuint TextureID = 0;
+	glGenTextures(1, &TextureID);
+	glBindTexture(Target, TextureID);
 
 	// Use fixed storage
     glTexStorage2D(Target, 1, InternalFormat, Width, Height);
@@ -243,14 +225,27 @@ bool OGLTexture::createFromFileSTB(const std::string& filename)
     stbi_image_free(Data);
 
 	m_Target = Target;
-	m_TextureID = TextureName;
+	m_TextureID = TextureID;
 	m_Format = Type;
-	m_Width = Width;
-	m_Height = Height;
-	m_Depth = 1;
-	m_MipCount = 1;
-	glBindTexture(Target, 0);
+
+    m_TextureDesc.setTarget(gli::TARGET_2D);
+    m_TextureDesc.setFormat(gli::FORMAT_UNDEFINED);
+    m_TextureDesc.setWidth(Width);
+    m_TextureDesc.setHeight(Height);
+	m_TextureDesc.setDepth(1);
+    m_TextureDesc.setLevels(1);
+
 	return true;
+}
+
+GLuint OGLTexture::getTextureID() const noexcept
+{
+    return m_TextureID;
+}
+
+GLenum OGLTexture::getFormat() const noexcept
+{
+    return m_Format;
 }
 
 const GraphicsTextureDesc& OGLTexture::getGraphicsTextureDesc() const noexcept
@@ -274,6 +269,7 @@ void OGLTexture::destroy()
 	{
 		glDeleteTextures( 1, &m_TextureID);
 		m_TextureID = 0;
+        m_Format = GL_INVALID_ENUM;
 	}
 	m_Target = GL_INVALID_ENUM;
 }

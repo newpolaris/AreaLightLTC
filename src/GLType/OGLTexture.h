@@ -3,17 +3,16 @@
 #include <GL/glew.h>
 #include <string>
 #include <GraphicsTypes.h>
+#include <tools/Rtti.h>
 #include <GLType/GraphicsTexture.h>
 
 class OGLTexture final : public GraphicsTexture
 {
+	__DeclareSubInterface(OGLTexture, GraphicsTexture)
 public:
 
 	OGLTexture();
     virtual ~OGLTexture();
-
-    static GraphicsTexturePtr Create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels);
-    static GraphicsTexturePtr Create(const std::string& filename);
 
     bool create(const GraphicsTextureDesc& desc);
 	bool create(const std::string& filename);
@@ -26,6 +25,9 @@ public:
 
     bool createFromFileGLI(const std::string& filename);
     bool createFromFileSTB(const std::string& filename);
+
+    GLuint getTextureID() const noexcept;
+    GLenum getFormat() const noexcept;
 
     const GraphicsTextureDesc& getGraphicsTextureDesc() const noexcept;
 
@@ -47,11 +49,6 @@ private:
 	GLuint m_TextureID;
 	GLenum m_Target;
 	GLenum m_Format;
-
-	GLint m_Width;
-	GLint m_Height;
-	GLint m_Depth;
-	GLint m_MipCount;
-    GraphicsDeviceWeakPtr m_Device;
+	GraphicsDeviceWeakPtr m_Device;
 };
 

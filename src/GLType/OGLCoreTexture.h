@@ -14,9 +14,6 @@ public:
 	OGLCoreTexture();
     virtual ~OGLCoreTexture();
 
-    static OGLCoreTexturePtr Create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels);
-    static OGLCoreTexturePtr Create(const std::string& filename);
-
     bool create(const GraphicsTextureDesc& desc);
 	bool create(const std::string& filename);
 	bool create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels);
@@ -30,6 +27,7 @@ public:
     bool createFromFileSTB(const std::string& filename);
 
     GLuint getTextureID() const noexcept;
+    GLenum getFormat() const noexcept;
 
     const GraphicsTextureDesc& getGraphicsTextureDesc() const noexcept;
 
@@ -44,18 +42,13 @@ private:
 	OGLCoreTexture(const OGLCoreTexture&) noexcept = delete;
 	OGLCoreTexture& operator=(const OGLCoreTexture&) noexcept = delete;
 
-// private:
-public:
+private:
 
     GraphicsTextureDesc m_TextureDesc;
 
 	GLuint m_TextureID;
 	GLenum m_Target;
 	GLenum m_Format;
-	GLint m_Width;
-	GLint m_Height;
-	GLint m_Depth;
-	GLint m_MipCount;
 	GraphicsDeviceWeakPtr m_Device;
 };
 
