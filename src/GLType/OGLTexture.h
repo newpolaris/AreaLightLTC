@@ -16,7 +16,7 @@ public:
 
     bool create(const GraphicsTextureDesc& desc);
 	bool create(const std::string& filename);
-	bool create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels);
+    bool create(GLint width, GLint height, GLenum target, GraphicsFormat format, GLuint levels, uint8_t* data, uint32_t size);
 	void destroy();
 	void bind(GLuint unit) const;
 	void unbind(GLuint unit) const;

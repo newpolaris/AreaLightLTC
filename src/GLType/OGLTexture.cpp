@@ -18,20 +18,32 @@ OGLTexture::~OGLTexture()
 	destroy();
 }
 
-bool OGLTexture::create(GLint width, GLint height, GLenum target, GLenum format, GLuint levels)
+bool OGLTexture::create(GLint width, GLint height, GLenum target, GraphicsFormat format, GLuint levels, uint8_t* data, uint32_t size)
 {
-	GLuint TextureName = 0;
-	glGenTextures(1, &TextureName);
-	glBindTexture(target, TextureName);
-	glTexStorage2D(target, levels, format, width, height);
-	glBindTexture(target, 0);
+    using namespace gli;
+
+    gl GL(gl::PROFILE_GL33);
+    swizzles swizzle(gl::SWIZZLE_RED, gl::SWIZZLE_GREEN, gl::SWIZZLE_BLUE, gl::SWIZZLE_ALPHA);
+    auto Format = GL.translate(format, swizzle);
+	GLuint TextureID = 0;
+	glGenTextures(1, &TextureID);
+	glBindTexture(target, TextureID);
+    glTexStorage2D(target, levels, Format.Internal, width, height);
+    if (data != nullptr && size != 0)
+    {
+        if (gli::is_compressed(format))
+            glCompressedTexSubImage2D(target, 0, 0, 0, width, height, Format.External, size, data);
+        else
+            glTexSubImage2D(target, 0, 0, 0, width, height, Format.External, Format.Type, data);
+	}
 
 	m_Target = target;
-	m_TextureID = TextureName;
+	m_TextureID = TextureID;
 	m_Format = format;
 
 	return true;
 }
+
 bool OGLTexture::create(const GraphicsTextureDesc& desc)
 {
     m_TextureDesc = desc;
@@ -43,9 +55,11 @@ bool OGLTexture::create(const GraphicsTextureDesc& desc)
     auto width = desc.getWidth();
     auto height = desc.getHeight();
     auto levels = desc.getLevels();
+    auto data = desc.getStream();
+    auto format = desc.getFormat();
     auto target = OGLTypes::translate(desc.getTarget());
-    auto format = OGLTypes::translate(desc.getFormat());
-    return create(width, height, target, format, levels);
+    auto size = desc.getStreamSize();
+    return create(width, height, target, format, levels, data, size);
 }
 
 bool OGLTexture::create(const std::string& filename)

@@ -33,10 +33,12 @@ uniform vec3 uScolor;
 uniform float uIntensity;
 uniform float uWidth;
 uniform float uHeight;
+uniform float uRotY;
+uniform float uRotZ;
 uniform bool uTwoSided;
 
-uniform sampler2D ltc_mat;
-uniform sampler2D ltc_mag;
+uniform sampler2D uLtcMat;
+uniform sampler2D uLtcMag;
 
 uniform mat4 uView;
 uniform vec2 uResolution;
@@ -337,13 +339,11 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSid
 
 void InitRect(out Rect rect)
 {
-	float width = 8.0;
-	float height = 8.0;
-	rect.dirx = vec3(1, 0, 0);
-	rect.diry = vec3(0, 1, 0);
+    rect.dirx = rotation_yz(vec3(1, 0, 0), uRotY*2.0*pi, uRotZ*2.0*pi);
+    rect.diry = rotation_yz(vec3(0, 1, 0), uRotY*2.0*pi, uRotZ*2.0*pi);
 	rect.center = vec3(0, 6, 32);
-	rect.halfx = 0.5*width;
-	rect.halfy = 0.5*height;
+	rect.halfx = 0.5*uWidth;
+	rect.halfy = 0.5*uHeight;
 
 	vec3 rectNormal = cross(rect.dirx, rect.diry);
 	rect.plane = vec4(rectNormal, -dot(rectNormal, rect.center));
@@ -408,7 +408,7 @@ void main()
         vec2 uv = vec2(uRoughness, theta/(0.5*pi));
         uv = uv*LUT_SCALE + LUT_BIAS;
 
-        vec4 t = texture2D(ltc_mat, uv);
+        vec4 t = texture2D(uLtcMat, uv);
         mat3 Minv = mat3(
             vec3(   1,   0, t.y),
             vec3(   0, t.z,   0),
@@ -416,7 +416,7 @@ void main()
         );
 
         vec3 spec = LTC_Evaluate(N, V, pos, Minv, points, uTwoSided);
-        spec *= texture2D(ltc_mag, uv).w;
+        spec *= texture2D(uLtcMag, uv).w;
         
         vec3 diff = LTC_Evaluate(N, V, pos, mat3(1), points, uTwoSided); 
         

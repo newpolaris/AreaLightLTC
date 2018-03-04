@@ -29,16 +29,32 @@
 #include <GameCore.h>
 #include <LtcTables.h>
 
+// #define DRAW_LTC_MAT
+
+struct Light
+{
+    float m_Width = 8.f;
+    float m_Height = 10.f;
+    float m_RotY = 0.f;
+    float m_RotZ = 0.f;
+    float m_Roughness = 0.25f;
+    glm::vec3 m_Diffuse = glm::vec3(1.f);
+    glm::vec3 m_Specular = glm::vec3(1.f);
+    float m_Intensity = 4.0f;
+    bool m_bTwoSided = false;
+};
+
 class AreaLight final : public gamecore::IGameApp
 {
 public:
 	AreaLight() noexcept;
 	virtual ~AreaLight() noexcept;
 
-	virtual void startup() noexcept;
-	virtual void closeup() noexcept;
-	virtual void update() noexcept;
-	virtual void render() noexcept;
+	virtual void startup() noexcept override;
+	virtual void closeup() noexcept override;
+	virtual void update() noexcept override;
+    virtual void updateHUD() noexcept override;
+	virtual void render() noexcept override;
 
 	virtual void keyboardCallback(uint32_t c, bool bPressed) noexcept;
 	virtual void framesizeCallback(int32_t width, int32_t height) noexcept;
@@ -50,12 +66,12 @@ public:
 private:
 
     int32_t m_RotX, m_RotY;
+    Light m_Light;
     glm::mat4 m_View;
     FullscreenTriangleMesh m_ScreenTraingle;
     ProgramShader m_Shader;
     ProgramShader m_BlitShader;
     GraphicsDevicePtr m_Device;
-    GraphicsTexturePtr m_WoodTex;
     GraphicsTexturePtr m_LtcMatTex;
     GraphicsTexturePtr m_LtcMagTex;
 };
@@ -73,8 +89,6 @@ AreaLight::~AreaLight() noexcept
 
 void AreaLight::startup() noexcept
 {
-	// App Objects
-
 	GraphicsDeviceDesc deviceDesc;
 #if __APPLE__
 	deviceDesc.setDeviceType(GraphicsDeviceType::GraphicsDeviceTypeOpenGL);
@@ -97,10 +111,6 @@ void AreaLight::startup() noexcept
 	m_BlitShader.link();
 
     m_ScreenTraingle.create();
-
-    GraphicsTextureDesc woodDesc;
-    woodDesc.setFilename("resources/wood.png");
-    m_WoodTex = m_Device->createTexture(woodDesc);
 
     GraphicsTextureDesc ltcMatDesc;
     ltcMatDesc.setTarget(gli::TARGET_2D);
@@ -135,6 +145,33 @@ void AreaLight::update() noexcept
     m_View = glm::rotate(m_View, float(m_RotX)/25, glm::vec3(0, 1, 0));
 }
 
+void AreaLight::updateHUD() noexcept
+{
+    float width = (float)getFrameWidth(), height = (float)getFrameHeight();
+
+    ImGui::SetNextWindowPos(
+        ImVec2(width - width / 4.f - 10.f, 10.f),
+        ImGuiSetCond_FirstUseEver);
+
+    ImGui::Begin("Settings",
+        NULL,
+        ImVec2(width / 4.0f, height - 20.0f),
+        ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::PushItemWidth(180.0f);
+    ImGui::Indent();
+        ImGui::SliderFloat("Roughness", &m_Light.m_Roughness, 0.01f, 1.f);
+        ImGui::ColorWheel("Diffuse Color:", glm::value_ptr(m_Light.m_Diffuse), 0.6f);
+        ImGui::ColorWheel("Specular Color:", glm::value_ptr(m_Light.m_Specular), 0.6f);
+        ImGui::SliderFloat("Intensity", &m_Light.m_Intensity, 0.f, 10.f);
+        ImGui::SliderFloat("Width", &m_Light.m_Width, 0.1f, 15.f);
+        ImGui::SliderFloat("Height", &m_Light.m_Height, 0.1f, 15.f);
+        ImGui::SliderFloat("Rotation Y", &m_Light.m_RotY, 0.f, 1.f);
+        ImGui::SliderFloat("Rotation Z", &m_Light.m_RotZ, 0.f, 1.f);
+        ImGui::Checkbox("Tow sided", &m_Light.m_bTwoSided);
+    ImGui::Unindent();
+    ImGui::End();
+}
+
 void AreaLight::render() noexcept
 {
 	// Rendering
@@ -154,20 +191,24 @@ void AreaLight::render() noexcept
     glm::vec3 dcolor = glm::vec3(1.f, 1.f, 1.f);
     glm::vec3 scolor = glm::vec3(1.f, 1.f, 1.f);
 
-#if 1
-	m_Shader.bind();
-    m_Shader.setUniform("uTwoSided", false);
-    m_Shader.setUniform("uIntensity", 4.f);
-    m_Shader.setUniform("uView", m_View);
-    m_Shader.setUniform("uResolution", resolution);
-    m_Shader.setUniform("uDcolor", dcolor);
-    m_Shader.setUniform("uScolor", scolor);
-    m_Shader.setUniform("uRoughness", 0.2f);
-    m_Shader.bindTexture("ltc_mat", m_LtcMatTex, 0);
-    m_Shader.bindTexture("ltc_mag", m_LtcMagTex, 1);
-#else
+#ifdef DRAW_LTC_MAT
     m_BlitShader.bind();
     m_BlitShader.bindTexture("uTexSource", m_LtcMatTex, 0);
+#else
+	m_Shader.bind();
+    m_Shader.setUniform("uTwoSided", m_Light.m_bTwoSided);
+    m_Shader.setUniform("uIntensity", m_Light.m_Intensity);
+    m_Shader.setUniform("uView", m_View);
+    m_Shader.setUniform("uResolution", resolution);
+    m_Shader.setUniform("uDcolor", m_Light.m_Diffuse);
+    m_Shader.setUniform("uScolor", m_Light.m_Specular);
+    m_Shader.setUniform("uWidth", m_Light.m_Width);
+    m_Shader.setUniform("uHeight", m_Light.m_Height);
+    m_Shader.setUniform("uRotY", m_Light.m_RotY);
+    m_Shader.setUniform("uRotZ", m_Light.m_RotZ);
+    m_Shader.setUniform("uRoughness", m_Light.m_Roughness);
+    m_Shader.bindTexture("uLtcMat", m_LtcMatTex, 0);
+    m_Shader.bindTexture("uLtcMag", m_LtcMagTex, 1);
 #endif
     m_ScreenTraingle.draw();
 }
