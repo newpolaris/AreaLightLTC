@@ -406,7 +406,7 @@ void main()
 
         float theta = acos(dot(N, V));
         vec2 uv = vec2(uRoughness, theta/(0.5*pi));
-        uv = uv*LUT_SCALE + LUT_BIAS;
+        // uv = uv*LUT_SCALE + LUT_BIAS;
 
         vec4 t = texture2D(uLtcMat, uv);
         mat3 Minv = mat3(

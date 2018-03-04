@@ -34,6 +34,7 @@ namespace gamecore
 		virtual void motionCallback(float xpos, float ypos, bool bPressed) noexcept;
 		virtual void mouseCallback(float xpos, float ypos, bool bPressed) noexcept;
 		virtual void framesizeCallback(int32_t width, int32_t height) noexcept;
+        virtual void scrollCallback(float xoffset, float yoffset) noexcept;
 	};
 
 	bool updateApplication(IGameApp& app);

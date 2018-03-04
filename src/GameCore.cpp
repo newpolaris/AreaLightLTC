@@ -354,9 +354,13 @@ namespace gamecore {
 		app->charCallback(c);
 	}
 
-	void glfw_scroll_callback(GLFWwindow* windows, double xoffset, double yoffset)
+	void glfw_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 	{
-		ImGui_ImplGlfwGL3_ScrollCallback(windows, xoffset, yoffset);
+		ImGui_ImplGlfwGL3_ScrollCallback(window, xoffset, yoffset);
+
+		auto app = static_cast<IGameApp*>(glfwGetWindowUserPointer(window));
+		if (app == nullptr) return;
+		app->scrollCallback((float)xoffset, (float)yoffset);
 	}
 
 	void glfw_framesize_callback(GLFWwindow* window, int width, int height)
@@ -399,6 +403,10 @@ void IGameApp::mouseCallback(float xpos, float ypos, bool bPressed) noexcept
 }
 
 void IGameApp::framesizeCallback(int32_t width, int32_t height) noexcept
+{
+}
+
+void IGameApp::scrollCallback(float xoffset, float yoffset) noexcept
 {
 }
 

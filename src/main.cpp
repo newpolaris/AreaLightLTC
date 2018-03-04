@@ -38,8 +38,8 @@ struct Light
     float m_RotY = 0.f;
     float m_RotZ = 0.f;
     float m_Roughness = 0.25f;
-    glm::vec3 m_Diffuse = glm::vec3(1.f);
-    glm::vec3 m_Specular = glm::vec3(1.f);
+    glm::vec4 m_Diffuse = glm::vec4(1.f);
+    glm::vec4 m_Specular = glm::vec4(1.f);
     float m_Intensity = 4.0f;
     bool m_bTwoSided = false;
 };
@@ -56,16 +56,18 @@ public:
     virtual void updateHUD() noexcept override;
 	virtual void render() noexcept override;
 
-	virtual void keyboardCallback(uint32_t c, bool bPressed) noexcept;
-	virtual void framesizeCallback(int32_t width, int32_t height) noexcept;
-	virtual void motionCallback(float xpos, float ypos, bool bPressed) noexcept;
-	virtual void mouseCallback(float xpos, float ypos, bool bPressed) noexcept;
+	virtual void keyboardCallback(uint32_t c, bool bPressed) noexcept override;
+	virtual void framesizeCallback(int32_t width, int32_t height) noexcept override;
+	virtual void motionCallback(float xpos, float ypos, bool bPressed) noexcept override;
+	virtual void mouseCallback(float xpos, float ypos, bool bPressed) noexcept override;
+    virtual void scrollCallback(float xoffset, float yoffset) noexcept override;
 
 	GraphicsDevicePtr createDevice(const GraphicsDeviceDesc& desc) noexcept;
 
 private:
 
     int32_t m_RotX, m_RotY;
+    float m_Zoom;
     Light m_Light;
     glm::mat4 m_View;
     FullscreenTriangleMesh m_ScreenTraingle;
@@ -79,7 +81,7 @@ private:
 CREATE_APPLICATION(AreaLight);
 
 AreaLight::AreaLight() noexcept
-    : m_RotX(0), m_RotY(0)
+    : m_RotX(0), m_RotY(0), m_Zoom(0.f)
 {
 }
 
@@ -140,9 +142,9 @@ void AreaLight::update() noexcept
 {
     // Add in camera controller's rotation
     m_View = glm::mat4(1.f);
-    m_View = glm::translate(m_View, glm::vec3(0, 6, 3));
-    m_View = glm::rotate(m_View, float(m_RotY)/25, glm::vec3(1, 0, 0));
-    m_View = glm::rotate(m_View, float(m_RotX)/25, glm::vec3(0, 1, 0));
+    m_View = glm::translate(m_View, glm::vec3(0, 6, 0.5f*m_Zoom - 0.5f));
+    m_View = glm::rotate(m_View, float(m_RotX + 10)/25, glm::vec3(1, 0, 0));
+    m_View = glm::rotate(m_View, float(m_RotY)/25, glm::vec3(0, 1, 0));
 }
 
 void AreaLight::updateHUD() noexcept
@@ -200,8 +202,8 @@ void AreaLight::render() noexcept
     m_Shader.setUniform("uIntensity", m_Light.m_Intensity);
     m_Shader.setUniform("uView", m_View);
     m_Shader.setUniform("uResolution", resolution);
-    m_Shader.setUniform("uDcolor", m_Light.m_Diffuse);
-    m_Shader.setUniform("uScolor", m_Light.m_Specular);
+    m_Shader.setUniform("uDcolor", glm::vec3(m_Light.m_Diffuse));
+    m_Shader.setUniform("uScolor", glm::vec3(m_Light.m_Specular));
     m_Shader.setUniform("uWidth", m_Light.m_Width);
     m_Shader.setUniform("uHeight", m_Light.m_Height);
     m_Shader.setUniform("uRotY", m_Light.m_RotY);
@@ -218,19 +220,19 @@ void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
 	switch (key)
 	{
 	case GLFW_KEY_UP:
-        m_RotY--;
-		break;
-
-	case GLFW_KEY_DOWN:
-        m_RotY++;
-		break;
-
-	case GLFW_KEY_LEFT:
         m_RotX--;
 		break;
 
-	case GLFW_KEY_RIGHT:
+	case GLFW_KEY_DOWN:
         m_RotX++;
+		break;
+
+	case GLFW_KEY_LEFT:
+        m_RotY--;
+		break;
+
+	case GLFW_KEY_RIGHT:
+        m_RotY++;
 		break;
 	}
 }
@@ -247,6 +249,11 @@ void AreaLight::motionCallback(float xpos, float ypos, bool bPressed) noexcept
 void AreaLight::mouseCallback(float xpos, float ypos, bool bPressed) noexcept
 {
 	const bool mouseOverGui = ImGui::MouseOverArea();
+}
+
+void AreaLight::scrollCallback(float xoffset, float yoffset) noexcept
+{
+    m_Zoom += yoffset;
 }
 
 GraphicsDevicePtr AreaLight::createDevice(const GraphicsDeviceDesc& desc) noexcept
