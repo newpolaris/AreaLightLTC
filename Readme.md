@@ -1,6 +1,3 @@
-https://www.gamedev.net/forums/topic/552315-glsl-area-light-implementation/
-https://github.com/openframeworks/openFrameworks/tree/master/examples/gl/areaLightExample
+https://eheitzresearch.wordpress.com/415-2/
 
-[![link text](./screenshots/arealight.jpg)](./screenshots/arealight.jpg)
-
-White plane for light source, Projection to light plane and Parameter tuning
+[![link text](./screenshots/Quad.jpg)](./screenshots/Quad.jpg)

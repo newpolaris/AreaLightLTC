@@ -15,6 +15,8 @@ void main()
 
 -- Fragment
 
+#include "ToneMappingUtility.glsli"
+
 // bind roughness   {label:"Roughness", default:0.25, min:0.01, max:1, step:0.001}
 // bind dcolor      {label:"Diffuse Color",  r:1.0, g:1.0, b:1.0}
 // bind scolor      {label:"Specular Color", r:1.0, g:1.0, b:1.0}
@@ -121,16 +123,6 @@ Ray GenerateCameraRay(float u1, float u2)
 	return ray;
 }
 
-vec3 mul(mat3 m, vec3 v)
-{
-    return m * v;
-}
-
-mat3 mul(mat3 m1, mat3 m2)
-{
-    return m1 * m2;
-}
-
 vec3 rotation_y(vec3 v, float a)
 {
     vec3 r;
@@ -152,16 +144,6 @@ vec3 rotation_z(vec3 v, float a)
 vec3 rotation_yz(vec3 v, float ay, float az)
 {
     return rotation_z(rotation_y(v, ay), az);
-}
-
-mat3 transpose(mat3 v)
-{
-    mat3 tmp;
-    tmp[0] = vec3(v[0].x, v[1].x, v[2].x);
-    tmp[1] = vec3(v[0].y, v[1].y, v[2].y);
-    tmp[2] = vec3(v[0].z, v[1].z, v[2].z);
-
-    return tmp;
 }
 
 // Linearly Transformed Cosines
@@ -287,7 +269,9 @@ void ClipQuadToHorizon(inout vec3 L[5], out int n)
         L[4] = L[0];
 }
 
-vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSided)
+
+vec3 LTC_Evaluate(
+    vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSided)
 {
     // construct orthonormal basis around N
     vec3 T1, T2;
@@ -360,19 +344,6 @@ void InitRectPoints(Rect rect, out vec3 points[4])
 	points[3] = rect.center - ex + ey;
 }
 
-// Misc. helpers
-////////////////
-
-float saturate(float v)
-{
-    return clamp(v, 0.0, 1.0);
-}
-
-vec3 PowVec3(vec3 v, float p)
-{
-    return vec3(pow(v.x, p), pow(v.y, p), pow(v.z, p));
-}
-
 const float gamma = 2.2;
 
 vec3 ToLinear(vec3 v) { return PowVec3(v,     gamma); }
@@ -416,7 +387,7 @@ void main()
         );
 
         vec3 spec = LTC_Evaluate(N, V, pos, Minv, points, uTwoSided);
-        spec *= texture2D(uLtcMag, uv).w;
+        spec *= texture2D(uLtcMag, uv).r;
         
         vec3 diff = LTC_Evaluate(N, V, pos, mat3(1), points, uTwoSided); 
         
@@ -428,6 +399,9 @@ void main()
 	if (RayRectIntersect(ray, rect, distToRect))
 		if ((distToRect < distToFloor) || !hitFloor)
 			col = lcol;
+
+	col = aces_fitted(col);
+	col = ToSRGB(col);
 
 	FragColor = vec4(col, 1.0);
 }

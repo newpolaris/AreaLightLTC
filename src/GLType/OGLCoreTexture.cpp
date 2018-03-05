@@ -126,7 +126,7 @@ bool OGLCoreTexture::createFromFileGLI(const std::string& filename)
 	{
 		GLsizei const LayerGL = static_cast<GLsizei>(Layer);
 		glm::tvec3<GLsizei> Extent(Texture.extent(Level));
-		GLenum Target = gli::is_target_cube(Texture.target())
+		GLenum _Target = gli::is_target_cube(Texture.target())
 			? static_cast<GLenum>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + Face)
 			: Target;
 

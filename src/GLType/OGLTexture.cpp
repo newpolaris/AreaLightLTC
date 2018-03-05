@@ -127,7 +127,7 @@ bool OGLTexture::createFromFileGLI(const std::string& filename)
 	{
 		GLsizei const LayerGL = static_cast<GLsizei>(Layer);
 		glm::tvec3<GLsizei> Extent(Texture.extent(Level));
-		GLenum Target = gli::is_target_cube(Texture.target())
+		GLenum _Target = gli::is_target_cube(Texture.target())
 			? static_cast<GLenum>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + Face)
 			: Target;
 
@@ -136,12 +136,12 @@ bool OGLTexture::createFromFileGLI(const std::string& filename)
 		case gli::TARGET_1D:
 			if(gli::is_compressed(Texture.format()))
 				glCompressedTexSubImage1D(
-					Target, static_cast<GLint>(Level), 0, Extent.x,
+					_Target, static_cast<GLint>(Level), 0, Extent.x,
 					Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
 					Texture.data(Layer, Face, Level));
 			else
 				glTexSubImage1D(
-					Target, static_cast<GLint>(Level), 0, Extent.x,
+					_Target, static_cast<GLint>(Level), 0, Extent.x,
 					Format.External, Format.Type,
 					Texture.data(Layer, Face, Level));
 			break;
@@ -150,7 +150,7 @@ bool OGLTexture::createFromFileGLI(const std::string& filename)
 		case gli::TARGET_CUBE:
 			if(gli::is_compressed(Texture.format()))
 				glCompressedTexSubImage2D(
-					Target, static_cast<GLint>(Level),
+					_Target, static_cast<GLint>(Level),
 					0, 0,
 					Extent.x,
 					Texture.target() == gli::TARGET_1D_ARRAY ? LayerGL : Extent.y,
@@ -158,7 +158,7 @@ bool OGLTexture::createFromFileGLI(const std::string& filename)
 					Texture.data(Layer, Face, Level));
 			else
 				glTexSubImage2D(
-					Target, static_cast<GLint>(Level),
+					_Target, static_cast<GLint>(Level),
 					0, 0,
 					Extent.x,
 					Texture.target() == gli::TARGET_1D_ARRAY ? LayerGL : Extent.y,
@@ -170,7 +170,7 @@ bool OGLTexture::createFromFileGLI(const std::string& filename)
 		case gli::TARGET_CUBE_ARRAY:
 			if(gli::is_compressed(Texture.format()))
 				glCompressedTexSubImage3D(
-					Target, static_cast<GLint>(Level),
+					_Target, static_cast<GLint>(Level),
 					0, 0, 0,
 					Extent.x, Extent.y,
 					Texture.target() == gli::TARGET_3D ? Extent.z : LayerGL,
@@ -178,7 +178,7 @@ bool OGLTexture::createFromFileGLI(const std::string& filename)
 					Texture.data(Layer, Face, Level));
 			else
 				glTexSubImage3D(
-					Target, static_cast<GLint>(Level),
+					_Target, static_cast<GLint>(Level),
 					0, 0, 0,
 					Extent.x, Extent.y,
 					Texture.target() == gli::TARGET_3D ? Extent.z : LayerGL,
