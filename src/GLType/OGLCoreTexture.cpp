@@ -75,8 +75,10 @@ bool OGLCoreTexture::create(const std::string& filename)
 bool OGLCoreTexture::createFromFileGLI(const std::string& filename)
 {
 	gli::texture Texture = gli::load(filename);
-	if(Texture.empty())
+	if (Texture.empty())
 		return false;
+
+    Texture = gli::flip(Texture);
 
 	gli::gl GL(gli::gl::PROFILE_GL33);
 	gli::gl::format const Format = GL.translate(Texture.format(), Texture.swizzles());

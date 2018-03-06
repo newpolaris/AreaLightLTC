@@ -56,10 +56,6 @@ GraphicsTexturePtr OGLDevice::createTexture(const GraphicsTextureDesc& desc) noe
 		texture->setDevice(this->downcast_pointer<OGLDevice>());
         if (texture->create(desc))
             return texture;
-        texture->parameter(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        texture->parameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        texture->parameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        texture->parameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         return nullptr;
     }
     else if (m_Desc.getDeviceType() == GraphicsDeviceType::GraphicsDeviceTypeOpenGL)

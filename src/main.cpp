@@ -15,10 +15,13 @@
 #include <GLType/GraphicsData.h>
 #include <GLType/OGLDevice.h>
 #include <GLType/ProgramShader.h>
-#include <GLType/OGLCoreTexture.h>
 #include <GLType/Framebuffer.h>
 
+#include <GLType/OGLTexture.h>
+#include <GLType/OGLCoreTexture.h>
+
 #include <GraphicsTypes.h>
+#include <Light.h>
 #include <SkyBox.h>
 #include <Mesh.h>
 
@@ -27,21 +30,13 @@
 #include <vector>
 #include <algorithm>
 #include <GameCore.h>
-#include <LtcTables.h>
 
 // #define DRAW_LTC_MAT
 
-struct Light
+struct _Light
 {
-    float m_Width = 8.f;
-    float m_Height = 10.f;
     float m_RotY = 0.f;
     float m_RotZ = 0.f;
-    float m_Roughness = 0.25f;
-    glm::vec4 m_Diffuse = glm::vec4(1.f);
-    glm::vec4 m_Specular = glm::vec4(1.f);
-    float m_Intensity = 4.0f;
-    bool m_bTwoSided = false;
 };
 
 class AreaLight final : public gamecore::IGameApp
@@ -66,16 +61,18 @@ public:
 
 private:
 
-    int32_t m_RotX, m_RotY;
     float m_Zoom;
-    Light m_Light;
+    int32_t m_RotX, m_RotY;
+	TCamera m_Camera;
+    light::Light m_Light;
     glm::mat4 m_View;
     FullscreenTriangleMesh m_ScreenTraingle;
+    PlaneMesh m_Plane;
+    CubeMesh m_Cube;
     ProgramShader m_Shader;
     ProgramShader m_BlitShader;
     GraphicsDevicePtr m_Device;
-    GraphicsTexturePtr m_LtcMatTex;
-    GraphicsTexturePtr m_LtcMagTex;
+    GraphicsTexturePtr m_FilteredTex;
 };
 
 CREATE_APPLICATION(AreaLight);
@@ -91,6 +88,9 @@ AreaLight::~AreaLight() noexcept
 
 void AreaLight::startup() noexcept
 {
+	m_Camera.setViewParams(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f) );
+	m_Camera.setMoveCoefficient(0.35f);
+
 	GraphicsDeviceDesc deviceDesc;
 #if __APPLE__
 	deviceDesc.setDeviceType(GraphicsDeviceType::GraphicsDeviceTypeOpenGL);
@@ -100,10 +100,12 @@ void AreaLight::startup() noexcept
 	m_Device = createDevice(deviceDesc);
 	assert(m_Device);
 
+	light::initialize(m_Device);
+	
 	m_Shader.setDevice(m_Device);
 	m_Shader.initialize();
-	m_Shader.addShader(GL_VERTEX_SHADER, "Ltc.Vertex");
-	m_Shader.addShader(GL_FRAGMENT_SHADER, "Ltc.Fragment");
+	m_Shader.addShader(GL_VERTEX_SHADER, "Flat.Vertex");
+	m_Shader.addShader(GL_FRAGMENT_SHADER, "Flat.Fragment");
 	m_Shader.link();
 
 	m_BlitShader.setDevice(m_Device);
@@ -113,38 +115,57 @@ void AreaLight::startup() noexcept
 	m_BlitShader.link();
 
     m_ScreenTraingle.create();
+	m_Plane.create();
+    m_Cube.create();
 
-    GraphicsTextureDesc ltcMatDesc;
-    ltcMatDesc.setTarget(gli::TARGET_2D);
-    ltcMatDesc.setFormat(gli::FORMAT_RGBA32_SFLOAT_PACK32);
-    ltcMatDesc.setWidth(64);
-    ltcMatDesc.setHeight(64);
-    ltcMatDesc.setStream((uint8_t*)g_ltc_mat);
-    ltcMatDesc.setStreamSize(sizeof(g_ltc_mat));
-    m_LtcMatTex = m_Device->createTexture(ltcMatDesc);
+    // TODO: move to texture descriptor
+    auto type = m_Device->getGraphicsDeviceDesc().getDeviceType();
+    auto SetParameter = [type](GraphicsTexturePtr& tex, GLenum pname, GLint param)
+    {
+        if(type == GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore)
+        {
+            auto texture = tex->downcast_pointer<OGLCoreTexture>();
+            if(texture) texture->parameter(pname, param);
+        }
+        else if(type == GraphicsDeviceType::GraphicsDeviceTypeOpenGL)
+        {
+            auto texture = tex->downcast_pointer<OGLTexture>();
+            if(texture) texture->parameter(pname, param);
+        }
+    };
 
-    GraphicsTextureDesc ltcMagDesc;
-    ltcMagDesc.setTarget(gli::TARGET_2D);
-    ltcMagDesc.setFormat(gli::FORMAT_R32_SFLOAT_PACK32);
-    ltcMagDesc.setWidth(64);
-    ltcMagDesc.setHeight(64);
-    ltcMagDesc.setStream((uint8_t*)g_ltc_mag);
-    ltcMagDesc.setStreamSize(sizeof(g_ltc_mag));
-    m_LtcMagTex = m_Device->createTexture(ltcMagDesc);
+    GraphicsTextureDesc filteredDesc;
+    filteredDesc.setFilename("resources/stained_glass_filtered.dds");
+    m_FilteredTex = m_Device->createTexture(filteredDesc);
+    SetParameter(m_FilteredTex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    SetParameter(m_FilteredTex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    SetParameter(m_FilteredTex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    SetParameter(m_FilteredTex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
+    GraphicsTextureDesc source;
+    source.setFilename("resources/stained_glass.dds");
+    auto lightSource = m_Device->createTexture(source);
+
+	// rotate toward ground and tilt slightly
+	// auto rot = glm::angleAxis(glm::pi<float>(), glm::vec3(1, 0, 0));
+	// rot = glm::angleAxis(glm::pi<float>()*0.25f, glm::vec3(0, 0, 1)) * rot;
+	auto rot = glm::angleAxis(-glm::half_pi<float>(), glm::vec3(1, 0, 0));
+
+	m_Light.setRotation(rot);
+	m_Light.setPosition(glm::vec3(0, -1, 2));
+    m_Light.setLightFilterd(m_FilteredTex);
+    m_Light.create();
 }
 
 void AreaLight::closeup() noexcept
 {
     m_ScreenTraingle.destroy();
+    light::shutdown();
 }
 
 void AreaLight::update() noexcept
 {
-    // Add in camera controller's rotation
-    m_View = glm::mat4(1.f);
-    m_View = glm::translate(m_View, glm::vec3(0, 6, 0.5f*m_Zoom - 0.5f));
-    m_View = glm::rotate(m_View, float(m_RotX + 10)/25, glm::vec3(1, 0, 0));
-    m_View = glm::rotate(m_View, float(m_RotY)/25, glm::vec3(0, 1, 0));
+    m_Camera.update();
 }
 
 void AreaLight::updateHUD() noexcept
@@ -167,9 +188,10 @@ void AreaLight::updateHUD() noexcept
         ImGui::SliderFloat("Intensity", &m_Light.m_Intensity, 0.f, 10.f);
         ImGui::SliderFloat("Width", &m_Light.m_Width, 0.1f, 15.f);
         ImGui::SliderFloat("Height", &m_Light.m_Height, 0.1f, 15.f);
-        ImGui::SliderFloat("Rotation Y", &m_Light.m_RotY, 0.f, 1.f);
-        ImGui::SliderFloat("Rotation Z", &m_Light.m_RotZ, 0.f, 1.f);
+        // ImGui::SliderFloat("Rotation Y", &m_Light.m_RotY, 0.f, 1.f);
+        // ImGui::SliderFloat("Rotation Z", &m_Light.m_RotZ, 0.f, 1.f);
         ImGui::Checkbox("Tow sided", &m_Light.m_bTwoSided);
+        ImGui::Checkbox("Textured Light", &m_Light.m_bTexturedLight);
     ImGui::Unindent();
     ImGui::End();
 }
@@ -184,6 +206,8 @@ void AreaLight::render() noexcept
 	glPolygonMode(GL_FRONT_AND_BACK, isWireframe() ? GL_LINE : GL_FILL);
 
     glm::vec2 resolution = glm::vec2((float)getFrameWidth(), (float)getFrameHeight());
+	glm::mat4 projection = m_Camera.getProjectionMatrix();
+	glm::mat4 view = m_Camera.getViewMatrix();
 	glm::vec4 mat_ambient = glm::vec4(glm::vec3(0.1f), 1.f);
 	glm::vec4 mat_diffuse = glm::vec4(glm::vec3(0.8f), 1.f);
 	glm::vec4 mat_specular = glm::vec4(glm::vec3(0.8f), 1.f);;
@@ -193,26 +217,19 @@ void AreaLight::render() noexcept
     glm::vec3 dcolor = glm::vec3(1.f, 1.f, 1.f);
     glm::vec3 scolor = glm::vec3(1.f, 1.f, 1.f);
 
-#ifdef DRAW_LTC_MAT
-    m_BlitShader.bind();
-    m_BlitShader.bindTexture("uTexSource", m_LtcMatTex, 0);
-#else
-	m_Shader.bind();
-    m_Shader.setUniform("uTwoSided", m_Light.m_bTwoSided);
-    m_Shader.setUniform("uIntensity", m_Light.m_Intensity);
-    m_Shader.setUniform("uView", m_View);
-    m_Shader.setUniform("uResolution", resolution);
-    m_Shader.setUniform("uDcolor", glm::vec3(m_Light.m_Diffuse));
-    m_Shader.setUniform("uScolor", glm::vec3(m_Light.m_Specular));
-    m_Shader.setUniform("uWidth", m_Light.m_Width);
-    m_Shader.setUniform("uHeight", m_Light.m_Height);
-    m_Shader.setUniform("uRotY", m_Light.m_RotY);
-    m_Shader.setUniform("uRotZ", m_Light.m_RotZ);
-    m_Shader.setUniform("uRoughness", m_Light.m_Roughness);
-    m_Shader.bindTexture("uLtcMat", m_LtcMatTex, 0);
-    m_Shader.bindTexture("uLtcMag", m_LtcMagTex, 1);
-#endif
-    m_ScreenTraingle.draw();
+	// plane
+	{
+		glm::mat4 model = glm::mat4(1.f);
+		model = glm::translate(model, glm::vec3(3.0f, -3.5f, 0.0));
+        m_Shader.bind();
+        m_Shader.setUniform("projection", projection);
+        m_Shader.setUniform("view", view);
+		m_Shader.setUniform("model", model);
+        m_Shader.setUniform("color", glm::vec3(1.f));
+		m_Plane.draw();
+	}
+
+	m_Light.draw(m_Camera, resolution);
 }
 
 void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
@@ -220,35 +237,39 @@ void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
 	switch (key)
 	{
 	case GLFW_KEY_UP:
-        m_RotX--;
+		m_Camera.keyboardHandler(MOVE_FORWARD, isPressed);
 		break;
 
 	case GLFW_KEY_DOWN:
-        m_RotX++;
+		m_Camera.keyboardHandler(MOVE_BACKWARD, isPressed);
 		break;
 
 	case GLFW_KEY_LEFT:
-        m_RotY--;
+		m_Camera.keyboardHandler(MOVE_LEFT, isPressed);
 		break;
 
 	case GLFW_KEY_RIGHT:
-        m_RotY++;
+		m_Camera.keyboardHandler(MOVE_RIGHT, isPressed);
 		break;
 	}
 }
 
 void AreaLight::framesizeCallback(int32_t width, int32_t height) noexcept
 {
+	float aspectRatio = (float)width/height;
+	m_Camera.setProjectionParams(45.0f, aspectRatio, 0.1f, 100.0f);
 }
 
 void AreaLight::motionCallback(float xpos, float ypos, bool bPressed) noexcept
 {
 	const bool mouseOverGui = ImGui::MouseOverArea();
+	if (!mouseOverGui && bPressed) m_Camera.motionHandler(int(xpos), int(ypos), false);    
 }
 
 void AreaLight::mouseCallback(float xpos, float ypos, bool bPressed) noexcept
 {
 	const bool mouseOverGui = ImGui::MouseOverArea();
+	if (!mouseOverGui && bPressed) m_Camera.motionHandler(int(xpos), int(ypos), true); 
 }
 
 void AreaLight::scrollCallback(float xoffset, float yoffset) noexcept

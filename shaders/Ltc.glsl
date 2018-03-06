@@ -38,9 +38,11 @@ uniform float uHeight;
 uniform float uRotY;
 uniform float uRotZ;
 uniform bool uTwoSided;
+uniform bool uTexturedLight;
 
 uniform sampler2D uLtcMat;
 uniform sampler2D uLtcMag;
+uniform sampler2D uFilteredMap;
 
 uniform mat4 uView;
 uniform vec2 uResolution;
@@ -269,9 +271,37 @@ void ClipQuadToHorizon(inout vec3 L[5], out int n)
         L[4] = L[0];
 }
 
+// Use code in 'LTC demo sample'
+vec3 FetchDiffuseFilteredTexture(sampler2D texLightFiltered, vec3 p1_, vec3 p2_, vec3 p3_, vec3 p4_)
+{
+    // area light plane basis
+    vec3 V1 = p2_ - p1_;
+    vec3 V2 = p4_ - p1_;
+    vec3 planeOrtho = (cross(V1, V2));
+    float planeAreaSquared = dot(planeOrtho, planeOrtho);
+    float planeDistxPlaneArea = dot(planeOrtho, p1_);
+    // orthonormal projection of (0,0,0) in area light space
+    vec3 P = planeDistxPlaneArea * planeOrtho / planeAreaSquared - p1_;
 
+    // find tex coords of P
+    float dot_V1_V2 = dot(V1,V2);
+    float inv_dot_V1_V1 = 1.0 / dot(V1, V1);
+    vec3 V2_ = V2 - V1 * dot_V1_V2 * inv_dot_V1_V1;
+    vec2 Puv;
+    Puv.y = dot(V2_, P) / dot(V2_, V2_);
+    Puv.x = dot(V1, P)*inv_dot_V1_V1 - dot_V1_V2*inv_dot_V1_V1*Puv.y ;
+
+    // LOD
+    float d = abs(planeDistxPlaneArea) / pow(planeAreaSquared, 0.75);
+
+    // 0.125, 0.75 looks like border gap and content length
+    // 2048.0 is may be image size
+    return textureLod(texLightFiltered, vec2(0.125, 0.125) + 0.75 * Puv, log(2048.0*d)/log(3.0) ).rgb;
+}
+
+// Use code in 'LTC webgl sample'
 vec3 LTC_Evaluate(
-    vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSided)
+    vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSided, sampler2D texFilteredMap)
 {
     // construct orthonormal basis around N
     vec3 T1, T2;
@@ -287,6 +317,11 @@ vec3 LTC_Evaluate(
     L[1] = mul(Minv, points[1] - P);
     L[2] = mul(Minv, points[2] - P);
     L[3] = mul(Minv, points[3] - P);
+    L[4] = L[3]; // avoid warning
+
+    vec3 textureLight = vec3(1, 1, 1);
+    if (uTexturedLight)
+        textureLight = FetchDiffuseFilteredTexture(texFilteredMap, L[0], L[1], L[2], L[3]);
     
     int n;
     ClipQuadToHorizon(L, n);
@@ -315,7 +350,8 @@ vec3 LTC_Evaluate(
     
     vec3 Lo_i = vec3(sum, sum, sum);
 
-    return Lo_i;
+    // scale by filtered light color
+    return Lo_i * textureLight;
 }
 
 // Scene helpers
@@ -386,12 +422,12 @@ void main()
             vec3( t.w,   0, t.x)
         );
 
-        vec3 spec = LTC_Evaluate(N, V, pos, Minv, points, uTwoSided);
+        vec3 spec = LTC_Evaluate(N, V, pos, Minv, points, uTwoSided, uFilteredMap);
         spec *= texture2D(uLtcMag, uv).r;
         
-        vec3 diff = LTC_Evaluate(N, V, pos, mat3(1), points, uTwoSided); 
+        vec3 diff = LTC_Evaluate(N, V, pos, mat3(1), points, uTwoSided, uFilteredMap); 
         
-        col  = lcol*(scol*spec + dcol*diff);
+        col = lcol*(scol*spec + dcol*diff);
         col /= 2.0*pi;
     }
 

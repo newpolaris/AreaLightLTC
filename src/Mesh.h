@@ -72,12 +72,15 @@ class PlaneMesh : public Mesh
 {
   protected:
     float m_size;
+    float m_res;
     
   public:
-    PlaneMesh(float size=100.0f)//
-      : Mesh(),
-        m_size(size)
-    {}
+    PlaneMesh(float size = 100.0f, float res = 32)//
+      : Mesh()
+      , m_size(size)
+      , m_res(res)
+    {
+    }
     
     void create() override;
     void draw() const;

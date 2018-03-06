@@ -247,6 +247,9 @@ bool ProgramShader::setUniform(const std::string &name, const glm::mat4 &v) cons
 
 bool ProgramShader::bindTexture(const std::string& name, const GraphicsTexturePtr& texture, GLint unit)
 {
+    assert(texture);
+    assert(unit >= 0);
+
     GLint loc = glGetUniformLocation(m_ShaderID, name.c_str());
 
     if (-1 == loc)
@@ -256,6 +259,7 @@ bool ProgramShader::bindTexture(const std::string& name, const GraphicsTexturePt
     }
 
     auto device = m_Device.lock();
+    assert(device);
     if (!device) return false;
     auto type = device->getGraphicsDeviceDesc().getDeviceType();
 
