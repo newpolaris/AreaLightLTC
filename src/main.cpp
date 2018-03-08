@@ -72,7 +72,7 @@ private:
     ProgramShader m_Shader;
     ProgramShader m_BlitShader;
     GraphicsTexturePtr m_ColorTex;
-    FramebufferPtr m_ColorRenderTarget;
+    GraphicsFramebufferPtr m_ColorRenderTarget;
     GraphicsDevicePtr m_Device;
 };
 
@@ -273,9 +273,9 @@ void AreaLight::framesizeCallback(int32_t width, int32_t height) noexcept
     auto color = m_ColorTex->downcast_pointer<OGLCoreTexture>();
     auto depth = depthTex->downcast_pointer<OGLCoreTexture>();
 
-    FramebufferDesc desc;  
-    desc.addComponent(AttachmentBinding(color, GL_COLOR_ATTACHMENT0));
-    desc.addComponent(AttachmentBinding(depth, GL_DEPTH_ATTACHMENT));
+    GraphicsFramebufferDesc desc;  
+    desc.addComponent(GraphicsAttachmentBinding(color, GL_COLOR_ATTACHMENT0));
+    desc.addComponent(GraphicsAttachmentBinding(depth, GL_DEPTH_ATTACHMENT));
     m_ColorRenderTarget = GraphicsFramebuffer::Create(desc);
 }
 

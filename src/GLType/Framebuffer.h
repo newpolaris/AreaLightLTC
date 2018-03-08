@@ -1,28 +1,41 @@
 #pragma once
 
 #include <GraphicsTypes.h>
+#include <tools/Rtti.h>
 
-class AttachmentBinding final
+class GraphicsAttachmentBinding final
 {
 public:
 
-    AttachmentBinding(const OGLCoreTexturePtr& texture, std::uint32_t attachment, std::uint32_t mipLevel = 0, std::uint32_t layer = 0) noexcept;
-    ~AttachmentBinding() noexcept;
+    GraphicsAttachmentBinding(const OGLCoreTexturePtr& texture, std::uint32_t attachment, std::uint32_t mipLevel = 0, std::uint32_t layer = 0) noexcept;
+    ~GraphicsAttachmentBinding() noexcept;
 
-    OGLCoreTexturePtr m_Texture;
+    OGLCoreTexturePtr getTexture() const noexcept;
+    void setTexture(const OGLCoreTexturePtr& texture) noexcept;
+
+    std::uint32_t getAttachment() const noexcept;
+    void setAttachment(std::uint32_t attachment) noexcept;
+
+    std::uint32_t getMipLevel() const noexcept;
+    void setMipLevel(std::uint32_t mipLevel) noexcept;
+
+    std::uint32_t getLayer() const noexcept;
+    void setLayer(std::uint32_t layer) noexcept;
+
     std::uint32_t m_Attachment;
     std::uint32_t m_MipLevel;
     std::uint32_t m_Layer;
+    OGLCoreTexturePtr m_Texture;
 };
 
-class FramebufferDesc final
+class GraphicsFramebufferDesc final
 {
 public:
 
-    FramebufferDesc() noexcept;
-    ~FramebufferDesc() noexcept;
+    GraphicsFramebufferDesc() noexcept;
+    ~GraphicsFramebufferDesc() noexcept;
 
-	void addComponent(const AttachmentBinding& component) noexcept;
+	void addComponent(const GraphicsAttachmentBinding& component) noexcept;
 	const AttachmentBindings& getComponents() const noexcept;
 
 private:
@@ -30,21 +43,22 @@ private:
 	AttachmentBindings m_Bindings;
 };
 
-class GraphicsFramebuffer final
+class GraphicsFramebuffer : public rtti::Interface
 {
+    __DeclareSubInterface(GraphicsFramebuffer, rtti::Interface)
 public:
 
-    static FramebufferPtr Create(const FramebufferDesc& desc) noexcept;
+    static GraphicsFramebufferPtr Create(const GraphicsFramebufferDesc& desc) noexcept;
 
     GraphicsFramebuffer() noexcept;
     ~GraphicsFramebuffer() noexcept;
 
     void bind() noexcept;
-    bool create(const FramebufferDesc& desc);
+    bool create(const GraphicsFramebufferDesc& desc);
 	void destroy() noexcept;
 
 private:
 
     std::uint32_t m_FBO;
-    FramebufferDesc m_FramebufferDesc;
+    GraphicsFramebufferDesc m_FramebufferDesc;
 };

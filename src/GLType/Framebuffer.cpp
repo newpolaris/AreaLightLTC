@@ -3,7 +3,9 @@
 #include <GLType/OGLCoreTexture.h>
 #include <cassert>
 
-FramebufferPtr GraphicsFramebuffer::Create(const FramebufferDesc& desc) noexcept
+__ImplementSubInterface(GraphicsFramebuffer, rtti::Interface)
+
+GraphicsFramebufferPtr GraphicsFramebuffer::Create(const GraphicsFramebufferDesc& desc) noexcept
 {
     auto buffer = std::make_shared<GraphicsFramebuffer>();
     if (buffer->create(desc))
@@ -27,7 +29,7 @@ void GraphicsFramebuffer::bind() noexcept
     glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
 }
 
-bool GraphicsFramebuffer::create(const FramebufferDesc& desc)
+bool GraphicsFramebuffer::create(const GraphicsFramebufferDesc& desc)
 {
     assert(m_FBO == GL_NONE);
 
@@ -39,9 +41,17 @@ bool GraphicsFramebuffer::create(const FramebufferDesc& desc)
     const auto& components = desc.getComponents();
     for (const auto& c : components)
     {
-        glNamedFramebufferTexture(m_FBO, c.m_Attachment, c.m_Texture->getTextureID(), c.m_MipLevel);
-        if (c.m_Attachment != GL_DEPTH_ATTACHMENT)
-            drawBuffers[drawCount++] = c.m_Attachment;
+        auto attachment = c.getAttachment();
+        auto texture = c.getTexture()->downcast_pointer<OGLCoreTexture>();
+        auto levels = c.getMipLevel();
+        auto layer = c.getLayer();
+        if (layer > 0)
+            glNamedFramebufferTextureLayer(m_FBO, attachment, texture->getTextureID(), levels, layer);
+        else
+            glNamedFramebufferTexture(m_FBO, attachment, texture->getTextureID(), levels);
+
+        if (attachment != GL_DEPTH_ATTACHMENT)
+            drawBuffers[drawCount++] = attachment;
     }
     glNamedFramebufferDrawBuffers(m_FBO, drawCount, drawBuffers);
 
@@ -58,32 +68,72 @@ void GraphicsFramebuffer::destroy() noexcept
     }
 }
 
-FramebufferDesc::FramebufferDesc() noexcept
+GraphicsFramebufferDesc::GraphicsFramebufferDesc() noexcept
 {
 }
 
-FramebufferDesc::~FramebufferDesc() noexcept
+GraphicsFramebufferDesc::~GraphicsFramebufferDesc() noexcept
 {
 }
 
-void FramebufferDesc::addComponent(const AttachmentBinding& component) noexcept
+void GraphicsFramebufferDesc::addComponent(const GraphicsAttachmentBinding& component) noexcept
 {
     m_Bindings.push_back(component);
 }
 
-const AttachmentBindings& FramebufferDesc::getComponents() const noexcept
+const AttachmentBindings& GraphicsFramebufferDesc::getComponents() const noexcept
 {
     return m_Bindings;
 }
 
-AttachmentBinding::AttachmentBinding(const OGLCoreTexturePtr& texture, std::uint32_t attachment, std::uint32_t mipLevel, std::uint32_t layer) noexcept :
-    m_Texture(texture),
-    m_Attachment(attachment),
-    m_MipLevel(mipLevel),
-    m_Layer(layer)
+GraphicsAttachmentBinding::GraphicsAttachmentBinding(const OGLCoreTexturePtr& texture, std::uint32_t attachment, std::uint32_t mipLevel, std::uint32_t layer) noexcept
+    : m_Texture(texture)
+    , m_Attachment(attachment)
+    , m_MipLevel(mipLevel)
+    , m_Layer(layer)
 {
 }
 
-AttachmentBinding::~AttachmentBinding() noexcept
+GraphicsAttachmentBinding::~GraphicsAttachmentBinding() noexcept
 {
+}
+
+OGLCoreTexturePtr GraphicsAttachmentBinding::getTexture() const noexcept
+{
+    return m_Texture;
+}
+
+void GraphicsAttachmentBinding::setTexture(const OGLCoreTexturePtr& texture) noexcept
+{
+    m_Texture = texture;
+}
+
+std::uint32_t GraphicsAttachmentBinding::getAttachment() const noexcept
+{
+    return m_Attachment;
+}
+
+void GraphicsAttachmentBinding::setAttachment(std::uint32_t attachment) noexcept
+{
+    m_Attachment = attachment;
+}
+
+std::uint32_t GraphicsAttachmentBinding::getMipLevel() const noexcept
+{
+    return m_MipLevel;
+}
+
+void GraphicsAttachmentBinding::setMipLevel(std::uint32_t mipLevel) noexcept
+{
+    m_MipLevel = mipLevel;
+}
+
+std::uint32_t GraphicsAttachmentBinding::getLayer() const noexcept
+{
+    return m_Layer;
+}
+
+void GraphicsAttachmentBinding::setLayer(std::uint32_t layer) noexcept
+{
+    m_Layer = layer;
 }

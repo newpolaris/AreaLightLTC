@@ -13,12 +13,12 @@ typedef std::shared_ptr<class GraphicsDevice> GraphicsDevicePtr;
 typedef std::shared_ptr<class GraphicsData> GraphicsDataPtr;
 typedef std::shared_ptr<class GraphicsTexture> GraphicsTexturePtr;
 typedef std::shared_ptr<class OGLCoreTexture> OGLCoreTexturePtr;
-typedef std::shared_ptr<class GraphicsFramebuffer> FramebufferPtr;
+typedef std::shared_ptr<class GraphicsFramebuffer> GraphicsFramebufferPtr;
 
 typedef std::weak_ptr<class GraphicsDevice> GraphicsDeviceWeakPtr;
 typedef std::weak_ptr<class GraphicsData> GraphicsDataWeakPtr;
 
-typedef std::vector<class AttachmentBinding> AttachmentBindings;
+typedef std::vector<class GraphicsAttachmentBinding> AttachmentBindings;
 
 enum GraphicsDeviceType
 {
