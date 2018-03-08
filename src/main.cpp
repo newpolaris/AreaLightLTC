@@ -71,6 +71,8 @@ private:
     CubeMesh m_Cube;
     ProgramShader m_Shader;
     ProgramShader m_BlitShader;
+    GraphicsTexturePtr m_ColorTex;
+    FramebufferPtr m_ColorRenderTarget;
     GraphicsDevicePtr m_Device;
 };
 
@@ -199,14 +201,15 @@ void AreaLight::updateHUD() noexcept
 
 void AreaLight::render() noexcept
 {
-	// Rendering
 	glViewport(0, 0, getFrameWidth(), getFrameHeight());
+
+    m_ColorRenderTarget->bind();
+
+	// Rendering
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClearDepthf(1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glPolygonMode(GL_FRONT_AND_BACK, isWireframe() ? GL_LINE : GL_FILL);
-
-    // glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glm::vec2 resolution = glm::vec2((float)getFrameWidth(), (float)getFrameHeight());
 	glm::mat4 projection = m_Camera.getProjectionMatrix();
@@ -219,6 +222,13 @@ void AreaLight::render() noexcept
 
 	m_Light.draw(m_Camera, resolution);
     m_Plane.draw();
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDisable(GL_DEPTH_TEST);
+    m_BlitShader.bind();
+    m_BlitShader.bindTexture("uTexSource", m_ColorTex, 0);
+    m_ScreenTraingle.draw();
+    glEnable(GL_DEPTH_TEST);
 }
 
 void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
@@ -247,6 +257,26 @@ void AreaLight::framesizeCallback(int32_t width, int32_t height) noexcept
 {
 	float aspectRatio = (float)width/height;
 	m_Camera.setProjectionParams(45.0f, aspectRatio, 0.1f, 100.0f);
+
+    GraphicsTextureDesc colorDesc;
+    colorDesc.setWidth(width);
+    colorDesc.setHeight(height);
+    colorDesc.setFormat(gli::FORMAT_RGBA16_SFLOAT_PACK16);
+    m_ColorTex = m_Device->createTexture(colorDesc);
+
+    GraphicsTextureDesc depthDesc;
+    depthDesc.setWidth(width);
+    depthDesc.setHeight(height);
+    depthDesc.setFormat(gli::FORMAT_D24_UNORM_S8_UINT_PACK32);
+    auto depthTex = m_Device->createTexture(depthDesc);
+
+    auto color = m_ColorTex->downcast_pointer<OGLCoreTexture>();
+    auto depth = depthTex->downcast_pointer<OGLCoreTexture>();
+
+    FramebufferDesc desc;  
+    desc.addComponent(AttachmentBinding(color, GL_COLOR_ATTACHMENT0));
+    desc.addComponent(AttachmentBinding(depth, GL_DEPTH_ATTACHMENT));
+    m_ColorRenderTarget = GraphicsFramebuffer::Create(desc);
 }
 
 void AreaLight::motionCallback(float xpos, float ypos, bool bPressed) noexcept

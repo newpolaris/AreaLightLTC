@@ -266,10 +266,6 @@ namespace gamecore {
 		glfwSetFramebufferSizeCallback(window, glfw_framesize_callback);
 
 		m_Window = window;
-
-		glfwGetFramebufferSize(m_Window, &m_FrameWidth, &m_FrameHeight);
-		glfw_framesize_callback(m_Window, m_FrameWidth, m_FrameHeight);
-		glfw_reshape_callback(m_Window, WINDOW_WIDTH, WINDOW_HEIGHT);
 	}
 
 	// GLFW Callbacks_________________________________________________  
@@ -492,6 +488,10 @@ void gamecore::runApplication(IGameApp& app, std::string name)
 	initialize(app, name);
 
 	app.startup();
+
+    glfwGetFramebufferSize(m_Window, &m_FrameWidth, &m_FrameHeight);
+    glfw_framesize_callback(m_Window, m_FrameWidth, m_FrameHeight);
+    glfw_reshape_callback(m_Window, WINDOW_WIDTH, WINDOW_HEIGHT);
 
 	do {
 	}

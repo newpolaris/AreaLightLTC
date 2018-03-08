@@ -3,31 +3,31 @@
 #include <GLType/OGLCoreTexture.h>
 #include <cassert>
 
-FramebufferPtr Framebuffer::Create(const FramebufferDesc& desc) noexcept
+FramebufferPtr GraphicsFramebuffer::Create(const FramebufferDesc& desc) noexcept
 {
-    auto buffer = std::make_shared<Framebuffer>();
+    auto buffer = std::make_shared<GraphicsFramebuffer>();
     if (buffer->create(desc))
         return buffer;
     return nullptr;
 }
 
-Framebuffer::Framebuffer() noexcept :
+GraphicsFramebuffer::GraphicsFramebuffer() noexcept :
     m_FBO(GL_NONE)
 {
 }
 
-Framebuffer::~Framebuffer() noexcept
+GraphicsFramebuffer::~GraphicsFramebuffer() noexcept
 {
     destroy();
 }
 
-void Framebuffer::bind() noexcept
+void GraphicsFramebuffer::bind() noexcept
 {
     assert(m_FBO != GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
 }
 
-bool Framebuffer::create(const FramebufferDesc& desc)
+bool GraphicsFramebuffer::create(const FramebufferDesc& desc)
 {
     assert(m_FBO == GL_NONE);
 
@@ -49,7 +49,7 @@ bool Framebuffer::create(const FramebufferDesc& desc)
     return status == GL_FRAMEBUFFER_COMPLETE;
 }
 
-void Framebuffer::destroy() noexcept
+void GraphicsFramebuffer::destroy() noexcept
 {
     if (m_FBO != GL_NONE)
     {

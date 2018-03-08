@@ -30,14 +30,14 @@ private:
 	AttachmentBindings m_Bindings;
 };
 
-class Framebuffer final
+class GraphicsFramebuffer final
 {
 public:
 
     static FramebufferPtr Create(const FramebufferDesc& desc) noexcept;
 
-    Framebuffer() noexcept;
-    ~Framebuffer() noexcept;
+    GraphicsFramebuffer() noexcept;
+    ~GraphicsFramebuffer() noexcept;
 
     void bind() noexcept;
     bool create(const FramebufferDesc& desc);

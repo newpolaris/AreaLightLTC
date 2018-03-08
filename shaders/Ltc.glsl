@@ -432,11 +432,4 @@ void main()
     col /= 2.0*pi;
 
 	FragColor = vec4(col, 1.0);
-
-#if 0
-	col = aces_fitted(col);
-	col = ToSRGB(col);
-
-	FragColor = vec4(col, 1.0);
-#endif
 }
