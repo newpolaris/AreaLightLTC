@@ -78,6 +78,7 @@ bool OGLCoreTexture::createFromFileGLI(const std::string& filename)
 	if (Texture.empty())
 		return false;
 
+    // data source / image
     Texture = gli::flip(Texture);
 
 	gli::gl GL(gli::gl::PROFILE_GL33);

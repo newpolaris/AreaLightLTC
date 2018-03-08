@@ -72,7 +72,6 @@ private:
     ProgramShader m_Shader;
     ProgramShader m_BlitShader;
     GraphicsDevicePtr m_Device;
-    GraphicsTexturePtr m_FilteredTex;
 };
 
 CREATE_APPLICATION(AreaLight);
@@ -88,7 +87,7 @@ AreaLight::~AreaLight() noexcept
 
 void AreaLight::startup() noexcept
 {
-	m_Camera.setViewParams(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f) );
+	m_Camera.setViewParams(glm::vec3(0.0f, 5.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f));
 	m_Camera.setMoveCoefficient(0.35f);
 
 	GraphicsDeviceDesc deviceDesc;
@@ -136,24 +135,26 @@ void AreaLight::startup() noexcept
 
     GraphicsTextureDesc filteredDesc;
     filteredDesc.setFilename("resources/stained_glass_filtered.dds");
-    m_FilteredTex = m_Device->createTexture(filteredDesc);
-    SetParameter(m_FilteredTex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    SetParameter(m_FilteredTex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    SetParameter(m_FilteredTex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    SetParameter(m_FilteredTex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
+    auto filteredTex = m_Device->createTexture(filteredDesc);
+    SetParameter(filteredTex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    SetParameter(filteredTex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    SetParameter(filteredTex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    SetParameter(filteredTex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
     GraphicsTextureDesc source;
     source.setFilename("resources/stained_glass.dds");
+
     auto lightSource = m_Device->createTexture(source);
 
 	// rotate toward ground and tilt slightly
 	// auto rot = glm::angleAxis(glm::pi<float>(), glm::vec3(1, 0, 0));
 	// rot = glm::angleAxis(glm::pi<float>()*0.25f, glm::vec3(0, 0, 1)) * rot;
-	auto rot = glm::angleAxis(-glm::half_pi<float>(), glm::vec3(1, 0, 0));
+	auto rot = glm::angleAxis(glm::half_pi<float>(), glm::vec3(1, 0, 0));
 
 	m_Light.setRotation(rot);
 	m_Light.setPosition(glm::vec3(0, -1, 2));
-    m_Light.setLightFilterd(m_FilteredTex);
+    m_Light.setLightSource(lightSource);
+    m_Light.setLightFilterd(filteredTex);
     m_Light.create();
 }
 
@@ -205,6 +206,8 @@ void AreaLight::render() noexcept
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glPolygonMode(GL_FRONT_AND_BACK, isWireframe() ? GL_LINE : GL_FILL);
 
+    // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     glm::vec2 resolution = glm::vec2((float)getFrameWidth(), (float)getFrameHeight());
 	glm::mat4 projection = m_Camera.getProjectionMatrix();
 	glm::mat4 view = m_Camera.getViewMatrix();
@@ -214,22 +217,8 @@ void AreaLight::render() noexcept
 	glm::vec4 mat_emissive = glm::vec4(0.0f);
 	float mat_shininess = 10.0;
 
-    glm::vec3 dcolor = glm::vec3(1.f, 1.f, 1.f);
-    glm::vec3 scolor = glm::vec3(1.f, 1.f, 1.f);
-
-	// plane
-	{
-		glm::mat4 model = glm::mat4(1.f);
-		model = glm::translate(model, glm::vec3(3.0f, -3.5f, 0.0));
-        m_Shader.bind();
-        m_Shader.setUniform("projection", projection);
-        m_Shader.setUniform("view", view);
-		m_Shader.setUniform("model", model);
-        m_Shader.setUniform("color", glm::vec3(1.f));
-		m_Plane.draw();
-	}
-
 	m_Light.draw(m_Camera, resolution);
+    m_Plane.draw();
 }
 
 void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept

@@ -85,6 +85,8 @@ void PlaneMesh::create()
         }
     }
 
+    for (auto& coord : texCoords)
+        coord.g = 1 - coord.g;
 
     m_vertexBuffer.initialize();
     m_vertexBuffer.complete(GL_STATIC_DRAW);

@@ -24,12 +24,22 @@ in vec2 vTexcoords;
 // OUT
 out vec4 FragColor;
 
+uniform bool ubTexturedLight;
+uniform vec4 uDiffuseColor;
 uniform float uIntensity;
 uniform sampler2D uTexColor;
 
+vec3 toLinear(vec3 _rgb)
+{
+	return pow(abs(_rgb), vec3(2.2));
+}
+  
 void main()
 {
-    vec3 color = texture(uTexColor, vTexcoords).rgb;
+    vec3 color = uDiffuseColor.rgb;
+    if (ubTexturedLight)
+    	color = texture(uTexColor, vTexcoords).rgb;
+    color = toLinear(color);
     color *= uIntensity;
     FragColor = vec4(color, 1.0);
 }
