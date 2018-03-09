@@ -41,6 +41,21 @@ public:
     GraphicsFormat getFormat() const noexcept;
     void setFormat(GraphicsFormat format) noexcept;
 
+    uint32_t getWrapS() const noexcept;
+    void setWrapS(uint32_t wrap) noexcept;
+
+    uint32_t getWrapT() const noexcept;
+    void setWrapT(uint32_t wrap) noexcept;
+
+    uint32_t getWrapR() const noexcept;
+    void setWrapR(uint32_t wrap) noexcept;
+
+    uint32_t getMinFilter() const noexcept;
+    void setMinFilter(uint32_t filter) noexcept;
+
+    uint32_t getMagFilter() const noexcept;
+    void setMagFilter(uint32_t filter) noexcept;
+
 private:
 
     std::string m_Name;
@@ -49,6 +64,14 @@ private:
     int32_t m_Height;
     int32_t m_Depth;
     int32_t m_Levels;
+
+    // TODO: Move to sampler
+    uint32_t m_WrapS;
+    uint32_t m_WrapT;
+    uint32_t m_WrapR;
+    uint32_t m_MinFilter;
+    uint32_t m_MagFilter;
+
     GraphicsTarget m_Target;
     GraphicsFormat m_Format;
 	std::uint8_t* m_Data;

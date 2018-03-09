@@ -39,37 +39,21 @@ namespace light
         m_LightMesh.create();
         m_ScreenTraingle.create();
 
-        // TODO: move to texture descriptor
-        auto type = device->getGraphicsDeviceDesc().getDeviceType();
-        auto SetParameter = [type](GraphicsTexturePtr& tex, GLenum pname, GLint param)
-        {
-            if (type == GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore)
-            {
-                auto texture = tex->downcast_pointer<OGLCoreTexture>();
-                if(texture) texture->parameter(pname, param);
-            }
-            else if (type == GraphicsDeviceType::GraphicsDeviceTypeOpenGL)
-            {
-                auto texture = tex->downcast_pointer<OGLTexture>();
-                if(texture) texture->parameter(pname, param);
-            }
-        };
-
         GraphicsTextureDesc source;
         source.setFilename("resources/white.png");
         m_WhiteTex = device->createTexture(source);
 
         GraphicsTextureDesc ltcMatDesc;
         ltcMatDesc.setFilename("resources/ltc_mat.dds");
+        ltcMatDesc.setWrapS(GL_CLAMP_TO_EDGE);
+        ltcMatDesc.setWrapT(GL_CLAMP_TO_EDGE);
         m_LtcMatTex = device->createTexture(ltcMatDesc);
-        SetParameter(m_LtcMatTex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        SetParameter(m_LtcMatTex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
         GraphicsTextureDesc ltcMagDesc;
         ltcMagDesc.setFilename("resources/ltc_amp.dds");
+        ltcMagDesc.setWrapS(GL_CLAMP_TO_EDGE);
+        ltcMagDesc.setWrapT(GL_CLAMP_TO_EDGE);
         m_LtcMagTex = device->createTexture(ltcMagDesc);
-        SetParameter(m_LtcMagTex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        SetParameter(m_LtcMagTex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     }
 
     void shutdown()

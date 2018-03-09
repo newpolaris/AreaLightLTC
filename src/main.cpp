@@ -15,11 +15,10 @@
 #include <GLType/GraphicsData.h>
 #include <GLType/OGLDevice.h>
 #include <GLType/ProgramShader.h>
-#include <GLType/Framebuffer.h>
+#include <GLType/GraphicsFramebuffer.h>
 
 #include <GLType/OGLTexture.h>
 #include <GLType/OGLCoreTexture.h>
-#include <GLType/Framebuffer.h>
 #include <GLType/OGLCoreFramebuffer.h>
 
 #include <GraphicsTypes.h>
@@ -95,7 +94,7 @@ void AreaLight::startup() noexcept
 	m_Camera.setMoveCoefficient(0.35f);
 
 	GraphicsDeviceDesc deviceDesc;
-#if !__APPLE__
+#if __APPLE__
 	deviceDesc.setDeviceType(GraphicsDeviceType::GraphicsDeviceTypeOpenGL);
 #else
 	deviceDesc.setDeviceType(GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore);
@@ -121,29 +120,13 @@ void AreaLight::startup() noexcept
 	m_Plane.create();
     m_Cube.create();
 
-    // TODO: move to texture descriptor
-    auto type = m_Device->getGraphicsDeviceDesc().getDeviceType();
-    auto SetParameter = [type](GraphicsTexturePtr& tex, GLenum pname, GLint param)
-    {
-        if(type == GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore)
-        {
-            auto texture = tex->downcast_pointer<OGLCoreTexture>();
-            if(texture) texture->parameter(pname, param);
-        }
-        else if(type == GraphicsDeviceType::GraphicsDeviceTypeOpenGL)
-        {
-            auto texture = tex->downcast_pointer<OGLTexture>();
-            if(texture) texture->parameter(pname, param);
-        }
-    };
-
     GraphicsTextureDesc filteredDesc;
     filteredDesc.setFilename("resources/stained_glass_filtered.dds");
+    filteredDesc.setWrapS(GL_CLAMP_TO_EDGE);
+    filteredDesc.setWrapT(GL_CLAMP_TO_EDGE);
+    filteredDesc.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
+    filteredDesc.setMagFilter(GL_LINEAR);
     auto filteredTex = m_Device->createTexture(filteredDesc);
-    SetParameter(filteredTex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    SetParameter(filteredTex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    SetParameter(filteredTex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    SetParameter(filteredTex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     GraphicsTextureDesc source;
     source.setFilename("resources/stained_glass.dds");

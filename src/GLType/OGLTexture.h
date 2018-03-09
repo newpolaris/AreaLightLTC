@@ -23,13 +23,16 @@ public:
 	void generateMipmap();
 	void parameter(GLenum pname, GLint param);
 
-    bool createFromFileGLI(const std::string& filename);
-    bool createFromFileSTB(const std::string& filename);
-
     GLuint getTextureID() const noexcept;
     GLenum getFormat() const noexcept;
 
     const GraphicsTextureDesc& getGraphicsTextureDesc() const noexcept;
+
+private:
+
+    void applyParameters(const GraphicsTextureDesc& desc);
+    bool createFromFileGLI(const std::string& filename);
+    bool createFromFileSTB(const std::string& filename);
 
 private:
 

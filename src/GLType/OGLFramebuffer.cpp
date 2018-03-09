@@ -35,7 +35,8 @@ bool OGLFramebuffer::create(const GraphicsFramebufferDesc& desc) noexcept
 {
     assert(m_FBO == GL_NONE);
 
-    glCreateFramebuffers(1, &m_FBO);
+    glGenFramebuffers(1, &m_FBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
 
 	GLsizei drawCount = 0;
     GLenum drawBuffers[GL_COLOR_ATTACHMENT15 - GL_COLOR_ATTACHMENT0] = { GL_NONE, };
@@ -48,14 +49,14 @@ bool OGLFramebuffer::create(const GraphicsFramebufferDesc& desc) noexcept
         auto levels = c.getMipLevel();
         auto layer = c.getLayer();
         if (layer > 0)
-            glNamedFramebufferTextureLayer(m_FBO, attachment, texture->getTextureID(), levels, layer);
+            glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment, texture->getTextureID(), levels, layer);
         else
-            glNamedFramebufferTexture(m_FBO, attachment, texture->getTextureID(), levels);
+            glFramebufferTexture(GL_FRAMEBUFFER,  attachment, texture->getTextureID(), levels);
 
         if (attachment != GL_DEPTH_ATTACHMENT)
             drawBuffers[drawCount++] = attachment;
     }
-    glNamedFramebufferDrawBuffers(m_FBO, drawCount, drawBuffers);
+    glDrawBuffers(drawCount, drawBuffers);
 
     GLuint status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     return status == GL_FRAMEBUFFER_COMPLETE;

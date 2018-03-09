@@ -48,18 +48,23 @@ bool OGLTexture::create(const GraphicsTextureDesc& desc)
 {
     m_TextureDesc = desc;
 
+    bool bSuccess = false;
     auto filename = desc.getFileName();
     if (!filename.empty())
-        return create(filename);
-
-    auto width = desc.getWidth();
-    auto height = desc.getHeight();
-    auto levels = desc.getLevels();
-    auto data = desc.getStream();
-    auto format = desc.getFormat();
-    auto target = OGLTypes::translate(desc.getTarget());
-    auto size = desc.getStreamSize();
-    return create(width, height, target, format, levels, data, size);
+        bSuccess = create(filename);
+    else
+    {
+        auto width = desc.getWidth();
+        auto height = desc.getHeight();
+        auto levels = desc.getLevels();
+        auto data = desc.getStream();
+        auto format = desc.getFormat();
+        auto target = OGLTypes::translate(desc.getTarget());
+        auto size = desc.getStreamSize();
+        bSuccess = create(width, height, target, format, levels, data, size);
+    }
+    if (bSuccess) applyParameters(desc);
+    return bSuccess;
 }
 
 bool OGLTexture::create(const std::string& filename)
@@ -75,7 +80,7 @@ bool OGLTexture::create(const std::string& filename)
 bool OGLTexture::createFromFileGLI(const std::string& filename)
 {
 	gli::texture Texture = gli::load(filename);
-	if(Texture.empty())
+	if (Texture.empty())
 		return false;
 
     Texture = gli::flip(Texture);
@@ -311,6 +316,32 @@ void OGLTexture::generateMipmap()
 	glBindTexture(m_Target, m_TextureID);
 	glGenerateMipmap(m_Target);
 }
+
+void OGLTexture::applyParameters(const GraphicsTextureDesc& desc)
+{
+    auto wrapS = desc.getWrapS();
+    auto wrapT = desc.getWrapT();
+    auto wrapR = desc.getWrapR();
+    auto defaultWrap = GL_REPEAT;
+
+    if (wrapS != defaultWrap)
+        parameter(GL_TEXTURE_WRAP_S, wrapS);
+    if (wrapT != defaultWrap)
+        parameter(GL_TEXTURE_WRAP_T, wrapS);
+    if (wrapR != defaultWrap)
+        parameter(GL_TEXTURE_WRAP_R, wrapR);
+
+    auto minFilter = desc.getMinFilter();
+    auto magFilter = desc.getMagFilter();
+    auto defaultMinFilter = GL_LINEAR_MIPMAP_LINEAR;
+    auto defaultMagFilter = GL_LINEAR;
+    assert(magFilter == GL_NEAREST || magFilter == GL_LINEAR);
+    if (minFilter != defaultMinFilter)
+        parameter(GL_TEXTURE_MIN_FILTER, minFilter);
+    if (magFilter != defaultMagFilter)
+        parameter(GL_TEXTURE_MAG_FILTER, magFilter);
+}
+
 
 void OGLTexture::parameter(GLenum pname, GLint param)
 {

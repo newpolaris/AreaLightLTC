@@ -1,4 +1,5 @@
 #include <GLType/GraphicsTexture.h>
+#include <GL/glew.h>
 
 __ImplementSubInterface(GraphicsTexture, rtti::Interface)
 
@@ -7,6 +8,11 @@ GraphicsTextureDesc::GraphicsTextureDesc() noexcept
     , m_Height(1)
     , m_Depth(1)
     , m_Levels(1)
+    , m_WrapS(GL_REPEAT)
+    , m_WrapT(GL_REPEAT)
+    , m_WrapR(GL_REPEAT)
+    , m_MinFilter(GL_NEAREST_MIPMAP_LINEAR)
+    , m_MagFilter(GL_LINEAR)
     , m_Target(gli::TARGET_2D)
     , m_Format(gli::FORMAT_UNDEFINED)
     , m_Data(nullptr)
@@ -116,6 +122,56 @@ GraphicsFormat GraphicsTextureDesc::getFormat() const noexcept
 void GraphicsTextureDesc::setFormat(GraphicsFormat format) noexcept
 {
     m_Format = format;
+}
+
+uint32_t GraphicsTextureDesc::getWrapS() const noexcept
+{
+    return m_WrapS;
+}
+
+void GraphicsTextureDesc::setWrapS(uint32_t wrap) noexcept
+{
+    m_WrapS = wrap;
+}
+
+uint32_t GraphicsTextureDesc::getWrapT() const noexcept
+{
+    return m_WrapT;
+}
+
+void GraphicsTextureDesc::setWrapT(uint32_t wrap) noexcept
+{
+    m_WrapT = wrap;
+}
+
+uint32_t GraphicsTextureDesc::getWrapR() const noexcept
+{
+    return m_WrapT;
+}
+
+void GraphicsTextureDesc::setWrapR(uint32_t wrap) noexcept
+{
+    m_WrapR = wrap;
+}
+
+uint32_t GraphicsTextureDesc::getMinFilter() const noexcept
+{
+    return m_MinFilter;
+}
+
+void GraphicsTextureDesc::setMinFilter(uint32_t filter) noexcept
+{
+    m_MinFilter = filter;
+}
+
+uint32_t GraphicsTextureDesc::getMagFilter() const noexcept
+{
+    return m_MagFilter;
+}
+
+void GraphicsTextureDesc::setMagFilter(uint32_t filter) noexcept
+{
+    m_MagFilter = filter;
 }
 
 GraphicsTexture::GraphicsTexture() noexcept
