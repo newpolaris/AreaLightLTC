@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GLType/Framebuffer.h"
+#include "GLType/GraphicsFramebuffer.h"
 
 class OGLFramebuffer final : public GraphicsFramebuffer
 {

@@ -1,4 +1,4 @@
-#include "Framebuffer.h"
+#include "GLType/GraphicsFramebuffer.h"
 
 __ImplementSubInterface(GraphicsFramebuffer, rtti::Interface)
 
