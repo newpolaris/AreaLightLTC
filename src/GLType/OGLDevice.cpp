@@ -76,25 +76,39 @@ GraphicsFramebufferPtr OGLDevice::createFramebuffer(const GraphicsFramebufferDes
 {
     if (m_Desc.getDeviceType() == GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore)
     {
-        auto framebuffer = std::make_shared<OGLCoreFramebuffer>();
-        if (!framebuffer) return nullptr;
-		framebuffer->setDevice(this->downcast_pointer<OGLDevice>());
-        if (framebuffer->create(desc))
-            return framebuffer;
+        auto fbo = std::make_shared<OGLCoreFramebuffer>();
+        if (!fbo) return nullptr;
+		fbo->setDevice(this->downcast_pointer<OGLDevice>());
+        if (fbo->create(desc))
+            return fbo;
         return nullptr;
     }
-#if 0
     else if (m_Desc.getDeviceType() == GraphicsDeviceType::GraphicsDeviceTypeOpenGL)
     {
-        auto texture = std::make_shared<OGLTexture>();
-        if (!texture) return nullptr;
-		texture->setDevice(this->downcast_pointer<OGLDevice>());
-        if (texture->create(desc))
-            return texture;
+        auto fbo = std::make_shared<OGLFramebuffer>();
+        if (!fbo) return nullptr;
+		fbo->setDevice(this->downcast_pointer<OGLDevice>());
+        if (fbo->create(desc))
+            return fbo;
         return nullptr;
     }
-#endif
     return nullptr;
+}
+
+void OGLDevice::setFramebuffer(const GraphicsFramebufferPtr& framebuffer) noexcept
+{
+    assert(framebuffer);
+
+    if (m_Desc.getDeviceType() == GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore)
+    {
+        auto fbo = framebuffer->downcast_pointer<OGLCoreFramebuffer>();
+        if (fbo) fbo->bind();
+    }
+    else if (m_Desc.getDeviceType() == GraphicsDeviceType::GraphicsDeviceTypeOpenGL)
+    {
+        auto fbo = framebuffer->downcast_pointer<OGLFramebuffer>();
+        if (fbo) fbo->bind();
+    }
 }
 
 const GraphicsDeviceDesc& OGLDevice::getGraphicsDeviceDesc() const noexcept

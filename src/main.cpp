@@ -95,7 +95,7 @@ void AreaLight::startup() noexcept
 	m_Camera.setMoveCoefficient(0.35f);
 
 	GraphicsDeviceDesc deviceDesc;
-#if __APPLE__
+#if !__APPLE__
 	deviceDesc.setDeviceType(GraphicsDeviceType::GraphicsDeviceTypeOpenGL);
 #else
 	deviceDesc.setDeviceType(GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore);
@@ -203,9 +203,8 @@ void AreaLight::updateHUD() noexcept
 
 void AreaLight::render() noexcept
 {
+    m_Device->setFramebuffer(m_ColorRenderTarget);
 	glViewport(0, 0, getFrameWidth(), getFrameHeight());
-
-    m_ColorRenderTarget->downcast_pointer<OGLCoreFramebuffer>()->bind();
 
 	// Rendering
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -225,7 +224,9 @@ void AreaLight::render() noexcept
 	m_Light.draw(m_Camera, resolution);
     m_Plane.draw();
 
+    // TODO: default frame buffer with/without depth test
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, getFrameWidth(), getFrameHeight());
     glDisable(GL_DEPTH_TEST);
     m_BlitShader.bind();
     m_BlitShader.bindTexture("uTexSource", m_ColorTex, 0);
@@ -272,12 +273,9 @@ void AreaLight::framesizeCallback(int32_t width, int32_t height) noexcept
     depthDesc.setFormat(gli::FORMAT_D24_UNORM_S8_UINT_PACK32);
     auto depthTex = m_Device->createTexture(depthDesc);
 
-    auto color = m_ColorTex->downcast_pointer<OGLCoreTexture>();
-    auto depth = depthTex->downcast_pointer<OGLCoreTexture>();
-
     GraphicsFramebufferDesc desc;  
-    desc.addComponent(GraphicsAttachmentBinding(color, GL_COLOR_ATTACHMENT0));
-    desc.addComponent(GraphicsAttachmentBinding(depth, GL_DEPTH_ATTACHMENT));
+    desc.addComponent(GraphicsAttachmentBinding(m_ColorTex, GL_COLOR_ATTACHMENT0));
+    desc.addComponent(GraphicsAttachmentBinding(depthTex, GL_DEPTH_ATTACHMENT));
     
     m_ColorRenderTarget = m_Device->createFramebuffer(desc);;
 }

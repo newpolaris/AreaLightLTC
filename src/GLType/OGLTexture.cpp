@@ -78,6 +78,8 @@ bool OGLTexture::createFromFileGLI(const std::string& filename)
 	if(Texture.empty())
 		return false;
 
+    Texture = gli::flip(Texture);
+
 	gli::gl GL(gli::gl::PROFILE_GL33);
 	gli::gl::format const Format = GL.translate(Texture.format(), Texture.swizzles());
 	GLenum Target = GL.translate(Texture.target());

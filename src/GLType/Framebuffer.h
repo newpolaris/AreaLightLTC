@@ -7,11 +7,11 @@ class GraphicsAttachmentBinding final
 {
 public:
 
-    GraphicsAttachmentBinding(const OGLCoreTexturePtr& texture, std::uint32_t attachment, std::uint32_t mipLevel = 0, std::uint32_t layer = 0) noexcept;
+    GraphicsAttachmentBinding(const GraphicsTexturePtr& texture, std::uint32_t attachment, std::uint32_t mipLevel = 0, std::uint32_t layer = 0) noexcept;
     ~GraphicsAttachmentBinding() noexcept;
 
-    OGLCoreTexturePtr getTexture() const noexcept;
-    void setTexture(const OGLCoreTexturePtr& texture) noexcept;
+    GraphicsTexturePtr getTexture() const noexcept;
+    void setTexture(const GraphicsTexturePtr& texture) noexcept;
 
     std::uint32_t getAttachment() const noexcept;
     void setAttachment(std::uint32_t attachment) noexcept;
@@ -25,7 +25,7 @@ public:
     std::uint32_t m_Attachment;
     std::uint32_t m_MipLevel;
     std::uint32_t m_Layer;
-    OGLCoreTexturePtr m_Texture;
+    GraphicsTexturePtr m_Texture;
 };
 
 class GraphicsFramebufferDesc final

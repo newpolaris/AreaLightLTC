@@ -20,7 +20,7 @@ const AttachmentBindings& GraphicsFramebufferDesc::getComponents() const noexcep
     return m_Bindings;
 }
 
-GraphicsAttachmentBinding::GraphicsAttachmentBinding(const OGLCoreTexturePtr& texture, std::uint32_t attachment, std::uint32_t mipLevel, std::uint32_t layer) noexcept
+GraphicsAttachmentBinding::GraphicsAttachmentBinding(const GraphicsTexturePtr& texture, std::uint32_t attachment, std::uint32_t mipLevel, std::uint32_t layer) noexcept
     : m_Texture(texture)
     , m_Attachment(attachment)
     , m_MipLevel(mipLevel)
@@ -32,12 +32,12 @@ GraphicsAttachmentBinding::~GraphicsAttachmentBinding() noexcept
 {
 }
 
-OGLCoreTexturePtr GraphicsAttachmentBinding::getTexture() const noexcept
+GraphicsTexturePtr GraphicsAttachmentBinding::getTexture() const noexcept
 {
     return m_Texture;
 }
 
-void GraphicsAttachmentBinding::setTexture(const OGLCoreTexturePtr& texture) noexcept
+void GraphicsAttachmentBinding::setTexture(const GraphicsTexturePtr& texture) noexcept
 {
     m_Texture = texture;
 }

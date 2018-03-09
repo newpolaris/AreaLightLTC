@@ -17,6 +17,8 @@ public:
     GraphicsTexturePtr createTexture(const GraphicsTextureDesc& desc) noexcept override;
     GraphicsFramebufferPtr createFramebuffer(const GraphicsFramebufferDesc& desc) noexcept override;
 
+    void setFramebuffer(const GraphicsFramebufferPtr& framebuffer) noexcept override;
+
 	const GraphicsDeviceDesc& getGraphicsDeviceDesc() const noexcept;
 
 private:

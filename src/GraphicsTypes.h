@@ -13,6 +13,7 @@ class GraphicsFramebufferDesc;
 typedef std::shared_ptr<class GraphicsDevice> GraphicsDevicePtr;
 typedef std::shared_ptr<class GraphicsData> GraphicsDataPtr;
 typedef std::shared_ptr<class GraphicsTexture> GraphicsTexturePtr;
+typedef std::shared_ptr<class OGLTexture> OGLTexturePtr;
 typedef std::shared_ptr<class OGLCoreTexture> OGLCoreTexturePtr;
 typedef std::shared_ptr<class GraphicsFramebuffer> GraphicsFramebufferPtr;
 typedef std::shared_ptr<class OGLCoreFramebuffer> OGLCoreFramebufferPtr;
