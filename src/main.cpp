@@ -19,6 +19,8 @@
 
 #include <GLType/OGLTexture.h>
 #include <GLType/OGLCoreTexture.h>
+#include <GLType/Framebuffer.h>
+#include <GLType/OGLCoreFramebuffer.h>
 
 #include <GraphicsTypes.h>
 #include <Light.h>
@@ -203,7 +205,7 @@ void AreaLight::render() noexcept
 {
 	glViewport(0, 0, getFrameWidth(), getFrameHeight());
 
-    m_ColorRenderTarget->bind();
+    m_ColorRenderTarget->downcast_pointer<OGLCoreFramebuffer>()->bind();
 
 	// Rendering
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -276,7 +278,8 @@ void AreaLight::framesizeCallback(int32_t width, int32_t height) noexcept
     GraphicsFramebufferDesc desc;  
     desc.addComponent(GraphicsAttachmentBinding(color, GL_COLOR_ATTACHMENT0));
     desc.addComponent(GraphicsAttachmentBinding(depth, GL_DEPTH_ATTACHMENT));
-    m_ColorRenderTarget = GraphicsFramebuffer::Create(desc);
+    
+    m_ColorRenderTarget = m_Device->createFramebuffer(desc);;
 }
 
 void AreaLight::motionCallback(float xpos, float ypos, bool bPressed) noexcept

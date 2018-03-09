@@ -27,6 +27,7 @@ public:
 
 	virtual GraphicsDataPtr createGraphicsData(const GraphicsDataDesc& desc) noexcept = 0;
     virtual GraphicsTexturePtr createTexture(const GraphicsTextureDesc& desc) noexcept = 0;
+    virtual GraphicsFramebufferPtr createFramebuffer(const GraphicsFramebufferDesc& desc) noexcept = 0;
 
 	virtual const GraphicsDeviceDesc& getGraphicsDeviceDesc() const noexcept = 0;
 

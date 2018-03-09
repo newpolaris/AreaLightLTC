@@ -3,6 +3,8 @@
 #include <GLType/OGLCoreGraphicsData.h>
 #include <GLType/OGLTexture.h>
 #include <GLType/OGLCoreTexture.h>
+#include <GLType/OGLFramebuffer.h>
+#include <GLType/OGLCoreFramebuffer.h>
 
 __ImplementSubInterface(OGLDevice, GraphicsDevice)
 
@@ -67,6 +69,31 @@ GraphicsTexturePtr OGLDevice::createTexture(const GraphicsTextureDesc& desc) noe
             return texture;
         return nullptr;
     }
+    return nullptr;
+}
+
+GraphicsFramebufferPtr OGLDevice::createFramebuffer(const GraphicsFramebufferDesc& desc) noexcept
+{
+    if (m_Desc.getDeviceType() == GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore)
+    {
+        auto framebuffer = std::make_shared<OGLCoreFramebuffer>();
+        if (!framebuffer) return nullptr;
+		framebuffer->setDevice(this->downcast_pointer<OGLDevice>());
+        if (framebuffer->create(desc))
+            return framebuffer;
+        return nullptr;
+    }
+#if 0
+    else if (m_Desc.getDeviceType() == GraphicsDeviceType::GraphicsDeviceTypeOpenGL)
+    {
+        auto texture = std::make_shared<OGLTexture>();
+        if (!texture) return nullptr;
+		texture->setDevice(this->downcast_pointer<OGLDevice>());
+        if (texture->create(desc))
+            return texture;
+        return nullptr;
+    }
+#endif
     return nullptr;
 }
 

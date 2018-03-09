@@ -48,17 +48,6 @@ class GraphicsFramebuffer : public rtti::Interface
     __DeclareSubInterface(GraphicsFramebuffer, rtti::Interface)
 public:
 
-    static GraphicsFramebufferPtr Create(const GraphicsFramebufferDesc& desc) noexcept;
-
     GraphicsFramebuffer() noexcept;
-    ~GraphicsFramebuffer() noexcept;
-
-    void bind() noexcept;
-    bool create(const GraphicsFramebufferDesc& desc);
-	void destroy() noexcept;
-
-private:
-
-    std::uint32_t m_FBO;
-    GraphicsFramebufferDesc m_FramebufferDesc;
+    virtual ~GraphicsFramebuffer() noexcept;
 };
