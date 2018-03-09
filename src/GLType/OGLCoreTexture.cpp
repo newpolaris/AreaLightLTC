@@ -380,12 +380,4 @@ bool OGLCoreTexture::createFromMemoryHDR(const char* data, size_t size) noexcept
     bool bSuccess = create(width, height, target, format, 1, (const uint8_t*)imagedata, size);
     stbi_image_free(imagedata);
     return bSuccess;
-
-#if 0
-    if (util::stricmp(Ext, "HDR"))
-    {
-        Type = ;
-    }
-    else
-#endif
 }

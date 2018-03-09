@@ -1,6 +1,7 @@
 #include <gli/gli.hpp>
 #include <tools/stb_image.h>
 #include <tools/string.h>
+#include <tools/FileUtility.h>
 #include <GLType/OGLTypes.h>
 #include <GLType/OGLTexture.h>
 
@@ -18,13 +19,14 @@ OGLTexture::~OGLTexture()
 	destroy();
 }
 
-bool OGLTexture::create(GLint width, GLint height, GLenum target, GraphicsFormat format, GLuint levels, uint8_t* data, uint32_t size)
+bool OGLTexture::create(GLint width, GLint height, GLenum target, GraphicsFormat format, GLuint levels, const uint8_t* data, uint32_t size) noexcept
 {
     using namespace gli;
 
     gl GL(gl::PROFILE_GL33);
     swizzles swizzle(gl::SWIZZLE_RED, gl::SWIZZLE_GREEN, gl::SWIZZLE_BLUE, gl::SWIZZLE_ALPHA);
     auto Format = GL.translate(format, swizzle);
+
 	GLuint TextureID = 0;
 	glGenTextures(1, &TextureID);
 	glBindTexture(target, TextureID);
@@ -44,7 +46,7 @@ bool OGLTexture::create(GLint width, GLint height, GLenum target, GraphicsFormat
 	return true;
 }
 
-bool OGLTexture::create(const GraphicsTextureDesc& desc)
+bool OGLTexture::create(const GraphicsTextureDesc& desc) noexcept
 {
     m_TextureDesc = desc;
 
@@ -57,29 +59,181 @@ bool OGLTexture::create(const GraphicsTextureDesc& desc)
         auto width = desc.getWidth();
         auto height = desc.getHeight();
         auto levels = desc.getLevels();
-        auto data = desc.getStream();
         auto format = desc.getFormat();
-        auto target = OGLTypes::translate(desc.getTarget());
+        auto data = desc.getStream();
         auto size = desc.getStreamSize();
+        auto target = OGLTypes::translate(desc.getTarget());
         bSuccess = create(width, height, target, format, levels, data, size);
     }
     if (bSuccess) applyParameters(desc);
     return bSuccess;
 }
 
-bool OGLTexture::create(const std::string& filename)
+bool OGLTexture::create(const std::string& filename) noexcept
 {
-    if (filename.empty()) return false;
-    std::string ext = util::getFileExtension(filename);
-    if (util::stricmp(ext, "DDX") || util::stricmp(ext, "DDS"))
-        return createFromFileGLI(filename);
-    return createFromFileSTB(filename);
+    static_assert(std::is_same<char, std::istream::char_type>::value, "Compatible type needed");
+
+    if (filename.empty()) 
+        return false;
+
+    auto data = util::ReadFileSync(filename);
+    if (data == util::NullFile)
+        return false;
+
+    const std::string ext = util::getFileExtension(filename);
+    if (util::stricmp(ext, "zlib"))
+        return createFromMemoryZIP(data->data(), data->size());
+    else if (util::stricmp(ext, "DDS") || util::stricmp(ext, "KTX"))
+        return createFromMemoryDDS(data->data(), data->size());
+    else if (util::stricmp(ext, "HDR"))
+        return createFromMemoryHDR(data->data(), data->size());
+    return createFromMemoryLDR(data->data(), data->size());
 } 
 
-// filename can be KTX or DDS files
-bool OGLTexture::createFromFileGLI(const std::string& filename)
+bool OGLTexture::createFromMemoryLDR(const char* data, size_t size) noexcept
 {
-	gli::texture Texture = gli::load(filename);
+    stbi_set_flip_vertically_on_load(true);
+
+	GLenum target = GL_TEXTURE_2D;
+    GLenum type = GL_UNSIGNED_BYTE;
+    int width = 0, height = 0, nrComponents = 0;
+    stbi_uc* imagedata = stbi_load_from_memory((stbi_uc*)data, (int)size, &width, &height, &nrComponents, 0);
+    if (!imagedata) return false;
+
+    GLenum Format = OGLTypes::getComponent(nrComponents);
+    GLenum InternalFormat = OGLTypes::getInternalComponent(nrComponents, type == GL_FLOAT);
+
+	gli::gl GL(gli::gl::PROFILE_GL33);
+    gli::format format = GL.find(
+        static_cast<gli::gl::internal_format>(InternalFormat),
+        static_cast<gli::gl::external_format>(Format),
+        static_cast<gli::gl::type_format>(type));
+
+    bool bSuccess = create(width, height, target, format, 1, (const uint8_t*)imagedata, size);
+    stbi_image_free(imagedata);
+    return bSuccess;
+}
+
+// TODO: decodesize error or dds sample image have dummy data at the end. Which causes an gli assert
+bool OGLTexture::createFromMemoryZIP(const char* data, size_t dataSize) noexcept
+{
+    int decodesize = 0;
+    // malloc never throws exception
+    char* decodedata = stbi_zlib_decode_malloc(data, (int)dataSize, &decodesize);
+    if (decodedata == nullptr)
+        return false;
+    bool bSuccess = createFromMemory(decodedata, decodesize);
+    free(decodedata);
+    return bSuccess;
+}
+
+GLuint OGLTexture::getTextureID() const noexcept
+{
+    return m_TextureID;
+}
+
+GLenum OGLTexture::getFormat() const noexcept
+{
+    return m_Format;
+}
+
+const GraphicsTextureDesc& OGLTexture::getGraphicsTextureDesc() const noexcept
+{
+    return m_TextureDesc;
+}
+
+void OGLTexture::setDevice(const GraphicsDevicePtr& device) noexcept
+{
+    m_Device = device;
+}
+
+GraphicsDevicePtr OGLTexture::getDevice() noexcept
+{
+    return m_Device.lock();
+}
+
+void OGLTexture::destroy() noexcept
+{
+	if (!m_TextureID)
+	{
+		glDeleteTextures(1, &m_TextureID);
+		m_TextureID = 0;
+
+        m_Format = GL_INVALID_ENUM;
+	}
+	m_Target = GL_INVALID_ENUM;
+}
+
+void OGLTexture::bind(GLuint unit) const
+{
+	assert( 0u != m_TextureID );  
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(m_Target, m_TextureID);
+}
+
+void OGLTexture::unbind(GLuint unit) const
+{
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(m_Target, 0u);
+}
+
+void OGLTexture::generateMipmap()
+{
+	assert(m_Target != GL_INVALID_ENUM);
+	assert(m_TextureID != 0);
+
+	glBindTexture(m_Target, m_TextureID);
+	glGenerateMipmap(m_Target);
+}
+
+void OGLTexture::applyParameters(const GraphicsTextureDesc& desc)
+{
+    auto wrapS = desc.getWrapS();
+    auto wrapT = desc.getWrapT();
+    auto wrapR = desc.getWrapR();
+    auto defaultWrap = GL_REPEAT;
+
+    if (wrapS != defaultWrap)
+        parameter(GL_TEXTURE_WRAP_S, wrapS);
+    if (wrapT != defaultWrap)
+        parameter(GL_TEXTURE_WRAP_T, wrapS);
+    if (wrapR != defaultWrap)
+        parameter(GL_TEXTURE_WRAP_R, wrapR);
+
+    auto minFilter = desc.getMinFilter();
+    auto magFilter = desc.getMagFilter();
+    auto defaultMinFilter = GL_LINEAR_MIPMAP_LINEAR;
+    auto defaultMagFilter = GL_LINEAR;
+    assert(magFilter == GL_NEAREST || magFilter == GL_LINEAR);
+    if (minFilter != defaultMinFilter)
+        parameter(GL_TEXTURE_MIN_FILTER, minFilter);
+    if (magFilter != defaultMagFilter)
+        parameter(GL_TEXTURE_MAG_FILTER, magFilter);
+}
+
+
+void OGLTexture::parameter(GLenum pname, GLint param)
+{
+	assert(m_Target != GL_INVALID_ENUM);
+	assert(m_TextureID != 0);
+
+	glBindTexture(m_Target, m_TextureID);
+    glTexParameteri(m_Target, pname, param);
+}
+
+bool OGLTexture::createFromMemory(const char* data, size_t dataSize) noexcept
+{
+    if (createFromMemoryZIP(data, dataSize)
+        || createFromMemoryDDS(data, dataSize)
+        || createFromMemoryLDR(data, dataSize)
+        || createFromMemoryHDR(data, dataSize))
+        return true;
+    return false;
+}
+
+bool OGLTexture::createFromMemoryDDS(const char* data, size_t dataSize) noexcept
+{
+	gli::texture Texture = gli::load(data, dataSize);
 	if (Texture.empty())
 		return false;
 
@@ -211,143 +365,26 @@ bool OGLTexture::createFromFileGLI(const std::string& filename)
 	return true;
 }
 
-// filename can be JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC files
-bool OGLTexture::createFromFileSTB(const std::string& filename)
+bool OGLTexture::createFromMemoryHDR(const char* data, size_t size) noexcept
 {
     stbi_set_flip_vertically_on_load(true);
 
-	GLenum Target = GL_TEXTURE_2D;
-    GLenum Type = GL_UNSIGNED_BYTE;
-    int Width = 0, Height = 0, nrComponents = 0;
-    void* Data = nullptr;
-    std::string Ext = util::getFileExtension(filename);
-    if (util::stricmp(Ext, "HDR"))
-    {
-        Type = GL_FLOAT;
-        Data = stbi_loadf(filename.c_str(), &Width, &Height, &nrComponents, 0);
-    }
-    else
-    {
-        Data = stbi_load(filename.c_str(), &Width, &Height, &nrComponents, 0);
-    }
-    if (!Data) return false;
+	GLenum target = GL_TEXTURE_2D;
+    GLenum type = GL_FLOAT;
+    int width = 0, height = 0, nrComponents = 0;
+    float* imagedata = stbi_loadf_from_memory((const stbi_uc*)data, (int)size, &width, &height, &nrComponents, 0);
+    if (!imagedata) return false;
 
     GLenum Format = OGLTypes::getComponent(nrComponents);
-    GLenum InternalFormat = OGLTypes::getInternalComponent(nrComponents, Type == GL_FLOAT);
+    GLenum InternalFormat = OGLTypes::getInternalComponent(nrComponents, type == GL_FLOAT);
 
-	GLuint TextureID = 0;
-	glGenTextures(1, &TextureID);
-	glBindTexture(Target, TextureID);
+	gli::gl GL(gli::gl::PROFILE_GL33);
+    gli::format format = GL.find(
+        static_cast<gli::gl::internal_format>(InternalFormat),
+        static_cast<gli::gl::external_format>(Format),
+        static_cast<gli::gl::type_format>(type));
 
-	// Use fixed storage
-    glTexStorage2D(Target, 1, InternalFormat, Width, Height);
-    glTexSubImage2D(Target, 0, 0, 0, Width, Height, Format, Type, Data);
-
-    stbi_image_free(Data);
-
-	m_Target = Target;
-	m_TextureID = TextureID;
-	m_Format = Type;
-
-    m_TextureDesc.setTarget(gli::TARGET_2D);
-    m_TextureDesc.setFormat(gli::FORMAT_UNDEFINED);
-    m_TextureDesc.setWidth(Width);
-    m_TextureDesc.setHeight(Height);
-	m_TextureDesc.setDepth(1);
-    m_TextureDesc.setLevels(1);
-
-	return true;
-}
-
-GLuint OGLTexture::getTextureID() const noexcept
-{
-    return m_TextureID;
-}
-
-GLenum OGLTexture::getFormat() const noexcept
-{
-    return m_Format;
-}
-
-const GraphicsTextureDesc& OGLTexture::getGraphicsTextureDesc() const noexcept
-{
-    return m_TextureDesc;
-}
-
-void OGLTexture::setDevice(const GraphicsDevicePtr& device) noexcept
-{
-    m_Device = device;
-}
-
-GraphicsDevicePtr OGLTexture::getDevice() noexcept
-{
-    return m_Device.lock();
-}
-
-void OGLTexture::destroy()
-{
-	if (!m_TextureID)
-	{
-		glDeleteTextures( 1, &m_TextureID);
-		m_TextureID = 0;
-        m_Format = GL_INVALID_ENUM;
-	}
-	m_Target = GL_INVALID_ENUM;
-}
-
-void OGLTexture::bind(GLuint unit) const
-{
-	assert( 0u != m_TextureID );  
-	glActiveTexture(GL_TEXTURE0 + unit);
-	glBindTexture(m_Target, m_TextureID);
-}
-
-void OGLTexture::unbind(GLuint unit) const
-{
-	glActiveTexture(GL_TEXTURE0 + unit);
-	glBindTexture(m_Target, 0u);
-}
-
-void OGLTexture::generateMipmap()
-{
-	assert(m_Target != GL_INVALID_ENUM);
-	assert(m_TextureID != 0);
-
-	glBindTexture(m_Target, m_TextureID);
-	glGenerateMipmap(m_Target);
-}
-
-void OGLTexture::applyParameters(const GraphicsTextureDesc& desc)
-{
-    auto wrapS = desc.getWrapS();
-    auto wrapT = desc.getWrapT();
-    auto wrapR = desc.getWrapR();
-    auto defaultWrap = GL_REPEAT;
-
-    if (wrapS != defaultWrap)
-        parameter(GL_TEXTURE_WRAP_S, wrapS);
-    if (wrapT != defaultWrap)
-        parameter(GL_TEXTURE_WRAP_T, wrapS);
-    if (wrapR != defaultWrap)
-        parameter(GL_TEXTURE_WRAP_R, wrapR);
-
-    auto minFilter = desc.getMinFilter();
-    auto magFilter = desc.getMagFilter();
-    auto defaultMinFilter = GL_LINEAR_MIPMAP_LINEAR;
-    auto defaultMagFilter = GL_LINEAR;
-    assert(magFilter == GL_NEAREST || magFilter == GL_LINEAR);
-    if (minFilter != defaultMinFilter)
-        parameter(GL_TEXTURE_MIN_FILTER, minFilter);
-    if (magFilter != defaultMagFilter)
-        parameter(GL_TEXTURE_MAG_FILTER, magFilter);
-}
-
-
-void OGLTexture::parameter(GLenum pname, GLint param)
-{
-	assert(m_Target != GL_INVALID_ENUM);
-	assert(m_TextureID != 0);
-
-	glBindTexture(m_Target, m_TextureID);
-    glTexParameteri(m_Target, pname, param);
+    bool bSuccess = create(width, height, target, format, 1, (const uint8_t*)imagedata, size);
+    stbi_image_free(imagedata);
+    return bSuccess;
 }

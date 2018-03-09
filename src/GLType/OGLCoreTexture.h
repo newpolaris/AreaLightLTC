@@ -36,7 +36,7 @@ private:
     bool createFromMemoryDDS(const char* data, size_t dataSize) noexcept; // DDS, KTX
     bool createFromMemoryHDR(const char* data, size_t dataSize) noexcept; // HDR
     bool createFromMemoryLDR(const char* data, size_t dataSize) noexcept; // JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC files
-    bool createFromMemoryZIP(const char* data, size_t dataSize) noexcept;
+    bool createFromMemoryZIP(const char* data, size_t dataSize) noexcept; // ZLIB
 
 private:
 
