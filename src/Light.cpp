@@ -15,29 +15,29 @@
 namespace light
 {
     PlaneMesh m_LightMesh(2.0, 1.0);
-    FullscreenTriangleMesh m_ScreenTraingle;
     GraphicsTexturePtr m_LtcMatTex;
     GraphicsTexturePtr m_LtcMagTex;
     GraphicsTexturePtr m_WhiteTex;
-    ProgramShader m_ShaderLight;
-    ProgramShader m_ShaderLTC;
+    ShaderPtr m_ShaderLight;
+    ShaderPtr m_ShaderLTC;
 
     void initialize(const GraphicsDevicePtr& device)
     {
-        m_ShaderLight.setDevice(device);
-        m_ShaderLight.initialize();
-        m_ShaderLight.addShader(GL_VERTEX_SHADER, "TexturedLight.Vertex");
-        m_ShaderLight.addShader(GL_FRAGMENT_SHADER, "TexturedLight.Fragment");
-        m_ShaderLight.link();
+        m_ShaderLight = std::make_shared<ProgramShader>();
+        m_ShaderLight->setDevice(device);
+        m_ShaderLight->initialize();
+        m_ShaderLight->addShader(GL_VERTEX_SHADER, "TexturedLight.Vertex");
+        m_ShaderLight->addShader(GL_FRAGMENT_SHADER, "TexturedLight.Fragment");
+        m_ShaderLight->link();
 
-        m_ShaderLTC.setDevice(device);
-        m_ShaderLTC.initialize();
-        m_ShaderLTC.addShader(GL_VERTEX_SHADER, "Ltc.Vertex");
-        m_ShaderLTC.addShader(GL_FRAGMENT_SHADER, "Ltc.Fragment");
-        m_ShaderLTC.link();
+        m_ShaderLTC = std::make_shared<ProgramShader>();
+        m_ShaderLTC->setDevice(device);
+        m_ShaderLTC->initialize();
+        m_ShaderLTC->addShader(GL_VERTEX_SHADER, "Ltc.Vertex");
+        m_ShaderLTC->addShader(GL_FRAGMENT_SHADER, "Ltc.Fragment");
+        m_ShaderLTC->link();
 
         m_LightMesh.create();
-        m_ScreenTraingle.create();
 
         GraphicsTextureDesc source;
         source.setFilename("resources/white.png");
@@ -59,7 +59,6 @@ namespace light
     void shutdown()
     {
         m_LightMesh.destroy();
-        m_ScreenTraingle.destroy();
     }
 }
 
@@ -73,38 +72,34 @@ Light::Light() noexcept
     , m_Width(8.f)
     , m_Height(8.f)
     , m_Intensity(4.f)
-    , m_Roughness(0.25f)
     , m_bTwoSided(false)
     , m_bTexturedLight(false)
 {
 }
 
-void Light::create()
-{
-}
-
-void Light::draw(const TCamera& camera, const glm::vec2& resolution)
+void Light::draw(const TCamera& camera)
 {
     glm::mat4 projection = camera.getProjectionMatrix();
     glm::mat4 view = camera.getViewMatrix();
+    glm::mat4 world = getWorld();
 
-    glm::mat4 model = glm::mat4(1.f);
-    model = glm::translate(model, glm::vec3(m_Position));
-    model = model * glm::toMat4(m_Rotation);
-    model = glm::scale(model, glm::vec3(m_Width, 1, m_Height));
+    auto& sourceTex = m_bTexturedLight ? m_LightSourceTex : m_WhiteTex;
 
-    // Render light source
-    {
-        m_ShaderLight.bind();
-        auto& sourceTex = m_bTexturedLight ? m_LightSourceTex : m_WhiteTex;
-        m_ShaderLight.bindTexture("uTexColor", sourceTex, 0);
-        m_ShaderLight.setUniform("ubTexturedLight", m_bTexturedLight);
-        m_ShaderLight.setUniform("uDiffuseColor", m_Diffuse);
-        m_ShaderLight.setUniform("uIntensity", m_Intensity);
-        m_ShaderLight.setUniform("uModelViewProj", projection*view*model);
+    m_ShaderLight->bind();
+    m_ShaderLight->bindTexture("uTexColor", sourceTex, 0);
+    m_ShaderLight->setUniform("ubTexturedLight", m_bTexturedLight);
+    m_ShaderLight->setUniform("uDiffuseColor", m_Diffuse);
+    m_ShaderLight->setUniform("uIntensity", m_Intensity);
+    m_ShaderLight->setUniform("uModelViewProj", projection*view*world);
 
-        m_LightMesh.draw();
-    }
+    m_LightMesh.draw();
+}
+
+ShaderPtr Light::bindLightProgram(const TCamera& camera)
+{
+    glm::mat4 projection = camera.getProjectionMatrix();
+    glm::mat4 view = camera.getViewMatrix();
+    glm::mat4 model = getWorld();
 
     // area light rect poinsts in world space
     glm::vec4 points[] = 
@@ -120,50 +115,31 @@ void Light::draw(const TCamera& camera, const glm::vec2& resolution)
     points[2] = model * points[2];
     points[3] = model * points[3];
 
-    // Area Light
-    if (1)
-    {
-		glm::mat4 world = glm::mat4(1.f);
-		world = glm::translate(world, glm::vec3(0.0f, 0.0f, 0.0));
+    m_ShaderLTC->bind();
+    // global
+    m_ShaderLTC->setUniform("uView", view);
+    m_ShaderLTC->setUniform("uProjection", projection);
+    m_ShaderLTC->setUniform("uViewPositionW", camera.getPosition());
+    m_ShaderLTC->setUniform("uTwoSided", m_bTwoSided);
+    m_ShaderLTC->setUniform("uTexturedLight", m_bTexturedLight);
+    m_ShaderLTC->bindTexture("uLtcMat", m_LtcMatTex, 0);
+    m_ShaderLTC->bindTexture("uLtcMag", m_LtcMagTex, 1);
+    // local
+    m_ShaderLTC->setUniform("uIntensity", m_Intensity);
+    m_ShaderLTC->setUniform("uDcolor", glm::vec3(m_Diffuse));
+    m_ShaderLTC->setUniform("uScolor", glm::vec3(m_Specular));
+    m_ShaderLTC->setUniform("uQuadPoints", points, 4);
+    m_ShaderLTC->bindTexture("uFilteredMap", m_LightFilteredTex, 2);
 
-        m_ShaderLTC.bind();
-        m_ShaderLTC.setUniform("uTwoSided", m_bTwoSided);
-        m_ShaderLTC.setUniform("uTexturedLight", m_bTexturedLight);
-        m_ShaderLTC.setUniform("uIntensity", m_Intensity);
-        m_ShaderLTC.setUniform("uWorld", world);
-        m_ShaderLTC.setUniform("uView", view);
-        m_ShaderLTC.setUniform("uProjection", projection);
-        m_ShaderLTC.setUniform("uViewPositionW", camera.getPosition());
-        m_ShaderLTC.setUniform("uDcolor", glm::vec3(m_Diffuse));
-        m_ShaderLTC.setUniform("uScolor", glm::vec3(m_Specular));
-        m_ShaderLTC.setUniform("uRoughness", m_Roughness);
-        // m_ShaderLTC.setUniform("uWidth", m_Width);
-        // m_ShaderLTC.setUniform("uHeight", m_Height);
-        // m_Shader.setUniform("uRotY", m_RotY);
-        // m_Shader.setUniform("uRotZ", m_RotZ);
-        // m_ShaderLTC.setUniform("uResolution", resolution);
-        m_ShaderLTC.setUniform("uQuadPoints", points, 4);
-        m_ShaderLTC.bindTexture("uLtcMat", m_LtcMatTex, 0);
-        m_ShaderLTC.bindTexture("uLtcMag", m_LtcMagTex, 1);
-        m_ShaderLTC.bindTexture("uFilteredMap", m_LightFilteredTex, 2);
-    }
+    return m_ShaderLTC;
 }
 
-void Light::update(const GraphicsDataPtr& buffer)
+glm::mat4 Light::getWorld() const
 {
-    // const auto makeYaxisFoward = glm::angleAxis(-glm::half_pi<float>(), glm::vec3(1, 0, 0));
-    // auto rotation = glm::toMat3(m_Rotation * makeYaxisFoward);
-    auto rotation = glm::toMat3(m_Rotation);
-    auto lightEyePosition = glm::vec4(m_Position, 1.0f);
-
-#if 0
-    light.position = lightEyePosition;
-    light.width = m_width;
-    light.height = m_height;
-    light.right = rotation[0];
-    light.up = rotation[1];
-    light.spotDirection = rotation[2];
-#endif
+    glm::mat4 model = glm::mat4(1.f);
+    model = glm::translate(model, glm::vec3(m_Position));
+    model = model * glm::toMat4(m_Rotation);
+    return glm::scale(model, glm::vec3(m_Width, 1, m_Height));
 }
 
 const glm::vec3& Light::getPosition() noexcept
@@ -196,7 +172,7 @@ void Light::setIntensity(float intensity) noexcept
     m_Intensity = intensity;
 }
 
-GraphicsTexturePtr light::Light::getLightSource() const noexcept
+GraphicsTexturePtr Light::getLightSource() const noexcept
 {
     return m_LightSourceTex;
 }

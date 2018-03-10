@@ -32,12 +32,55 @@
 #include <algorithm>
 #include <GameCore.h>
 
-// #define DRAW_LTC_MAT
+typedef std::shared_ptr<class Model> ModelPtr;
+typedef std::shared_ptr<class Mesh> MeshPtr;
+typedef std::shared_ptr<class Light> LightPtr;
+typedef std::vector<MeshPtr> MeshList;
+typedef std::vector<ModelPtr> ModelList;
+typedef std::vector<LightPtr> LightList;
 
-struct _Light
+class Model final
 {
-    float m_RotY = 0.f;
-    float m_RotZ = 0.f;
+public:
+
+    Model() noexcept;
+    virtual ~Model() noexcept;
+
+    void appendMesh(MeshPtr&& mesh) noexcept;
+    void submit(const ShaderPtr& shader) noexcept;
+
+private:
+
+    glm::mat4 m_World;
+    MeshList m_Meshes;
+};
+
+Model::Model() noexcept
+    : m_World(1.f)
+{
+}
+
+Model::~Model() noexcept
+{
+}
+
+void Model::appendMesh(MeshPtr&& mesh) noexcept
+{
+    m_Meshes.emplace_back(std::move(mesh));
+}
+
+void Model::submit(const ShaderPtr& shader) noexcept
+{
+    for (auto& mesh : m_Meshes)
+    {
+        shader->setUniform("uWorld", m_World);
+        mesh->draw();
+    }
+}
+
+struct SceneSettings
+{
+    uint32_t m_LightIndex = 0;
 };
 
 class AreaLight final : public gamecore::IGameApp
@@ -56,23 +99,23 @@ public:
 	virtual void framesizeCallback(int32_t width, int32_t height) noexcept override;
 	virtual void motionCallback(float xpos, float ypos, bool bPressed) noexcept override;
 	virtual void mouseCallback(float xpos, float ypos, bool bPressed) noexcept override;
-    virtual void scrollCallback(float xoffset, float yoffset) noexcept override;
 
 	GraphicsDevicePtr createDevice(const GraphicsDeviceDesc& desc) noexcept;
 
 private:
 
-    float m_Zoom;
+    SceneSettings m_Settings;
+
+    float m_Roughness;
     int32_t m_RotX, m_RotY;
 	TCamera m_Camera;
-    light::Light m_Light;
-    glm::mat4 m_View;
+    LightList m_Lights;
+    ModelList m_Models;
     FullscreenTriangleMesh m_ScreenTraingle;
     PlaneMesh m_Plane;
     CubeMesh m_Cube;
-    ProgramShader m_Shader;
     ProgramShader m_BlitShader;
-    GraphicsTexturePtr m_ColorTex;
+    GraphicsTexturePtr m_ScreenColorTex;
     GraphicsFramebufferPtr m_ColorRenderTarget;
     GraphicsDevicePtr m_Device;
 };
@@ -80,7 +123,9 @@ private:
 CREATE_APPLICATION(AreaLight);
 
 AreaLight::AreaLight() noexcept
-    : m_RotX(0), m_RotY(0), m_Zoom(0.f)
+    : m_RotX(0)
+    , m_RotY(0)
+    , m_Roughness(0.25f)
 {
 }
 
@@ -104,12 +149,6 @@ void AreaLight::startup() noexcept
 
 	light::initialize(m_Device);
 	
-	m_Shader.setDevice(m_Device);
-	m_Shader.initialize();
-	m_Shader.addShader(GL_VERTEX_SHADER, "Flat.Vertex");
-	m_Shader.addShader(GL_FRAGMENT_SHADER, "Flat.Fragment");
-	m_Shader.link();
-
 	m_BlitShader.setDevice(m_Device);
 	m_BlitShader.initialize();
 	m_BlitShader.addShader(GL_VERTEX_SHADER, "BlitTexture.Vertex");
@@ -130,7 +169,6 @@ void AreaLight::startup() noexcept
 
     GraphicsTextureDesc source;
     source.setFilename("resources/stained_glass.dds");
-
     auto lightSource = m_Device->createTexture(source);
 
 	// rotate toward ground and tilt slightly
@@ -138,11 +176,19 @@ void AreaLight::startup() noexcept
 	// rot = glm::angleAxis(glm::pi<float>()*0.25f, glm::vec3(0, 0, 1)) * rot;
 	auto rot = glm::angleAxis(glm::half_pi<float>(), glm::vec3(1, 0, 0));
 
-	m_Light.setRotation(rot);
-	m_Light.setPosition(glm::vec3(0, -1, 2));
-    m_Light.setLightSource(lightSource);
-    m_Light.setLightFilterd(filteredTex);
-    m_Light.create();
+    auto light = std::make_shared<Light>();
+	light->setRotation(rot);
+	light->setPosition(glm::vec3(0, -1, 2));
+    light->setLightSource(lightSource);
+    light->setLightFilterd(filteredTex);
+    m_Lights.emplace_back(std::move(light));
+
+    auto mesh = std::make_shared<PlaneMesh>();
+    mesh->create();
+    ModelPtr model = std::make_shared<Model>();;
+    model->appendMesh(mesh);
+
+    m_Models.emplace_back(std::move(model));
 }
 
 void AreaLight::closeup() noexcept
@@ -170,16 +216,17 @@ void AreaLight::updateHUD() noexcept
         ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::PushItemWidth(180.0f);
     ImGui::Indent();
-        ImGui::SliderFloat("Roughness", &m_Light.m_Roughness, 0.01f, 1.f);
-        ImGui::ColorWheel("Diffuse Color:", glm::value_ptr(m_Light.m_Diffuse), 0.6f);
-        ImGui::ColorWheel("Specular Color:", glm::value_ptr(m_Light.m_Specular), 0.6f);
-        ImGui::SliderFloat("Intensity", &m_Light.m_Intensity, 0.f, 10.f);
-        ImGui::SliderFloat("Width", &m_Light.m_Width, 0.1f, 15.f);
-        ImGui::SliderFloat("Height", &m_Light.m_Height, 0.1f, 15.f);
-        // ImGui::SliderFloat("Rotation Y", &m_Light.m_RotY, 0.f, 1.f);
-        // ImGui::SliderFloat("Rotation Z", &m_Light.m_RotZ, 0.f, 1.f);
-        ImGui::Checkbox("Tow sided", &m_Light.m_bTwoSided);
-        ImGui::Checkbox("Textured Light", &m_Light.m_bTexturedLight);
+        auto idx = m_Settings.m_LightIndex;
+        ImGui::SliderFloat("Roughness", &m_Roughness, 0.01f, 1.f);
+        ImGui::ColorWheel("Diffuse Color:", glm::value_ptr(m_Lights[idx]->m_Diffuse), 0.6f);
+        ImGui::ColorWheel("Specular Color:", glm::value_ptr(m_Lights[idx]->m_Specular), 0.6f);
+        ImGui::SliderFloat("Intensity", &m_Lights[idx]->m_Intensity, 0.f, 10.f);
+        ImGui::SliderFloat("Width", &m_Lights[idx]->m_Width, 0.1f, 15.f);
+        ImGui::SliderFloat("Height", &m_Lights[idx]->m_Height, 0.1f, 15.f);
+        // ImGui::SliderFloat("Rotation Y", &m_Lights[index]->m_RotY, 0.f, 1.f);
+        // ImGui::SliderFloat("Rotation Z", &m_Lights[index]->m_RotZ, 0.f, 1.f);
+        ImGui::Checkbox("Tow sided", &m_Lights[idx]->m_bTwoSided);
+        ImGui::Checkbox("Textured Light", &m_Lights[idx]->m_bTexturedLight);
     ImGui::Unindent();
     ImGui::End();
 }
@@ -195,24 +242,29 @@ void AreaLight::render() noexcept
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glPolygonMode(GL_FRONT_AND_BACK, isWireframe() ? GL_LINE : GL_FILL);
 
-    glm::vec2 resolution = glm::vec2((float)getFrameWidth(), (float)getFrameHeight());
-	glm::mat4 projection = m_Camera.getProjectionMatrix();
-	glm::mat4 view = m_Camera.getViewMatrix();
-	glm::vec4 mat_ambient = glm::vec4(glm::vec3(0.1f), 1.f);
-	glm::vec4 mat_diffuse = glm::vec4(glm::vec3(0.8f), 1.f);
-	glm::vec4 mat_specular = glm::vec4(glm::vec3(0.8f), 1.f);;
-	glm::vec4 mat_emissive = glm::vec4(0.0f);
-	float mat_shininess = 10.0;
+    {
+        // light::submitPerFrameObjectUniforms();
+        // light::submitPerLightUniforms();
+        // light::bindPerFrameObjectUniforms();
+        for (auto& light : m_Lights)
+            light->draw(m_Camera);
+    }
 
-	m_Light.draw(m_Camera, resolution);
-    m_Plane.draw();
+    for (auto& light : m_Lights)
+    {
+        auto lightProgram = light->bindLightProgram(m_Camera);
+        lightProgram->setUniform("uRoughness", m_Roughness);
+
+        for (auto& model : m_Models)
+            model->submit(lightProgram);
+    }
 
     // TODO: default frame buffer with/without depth test
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glViewport(0, 0, getFrameWidth(), getFrameHeight());
     glDisable(GL_DEPTH_TEST);
     m_BlitShader.bind();
-    m_BlitShader.bindTexture("uTexSource", m_ColorTex, 0);
+    m_BlitShader.bindTexture("uTexSource", m_ScreenColorTex, 0);
     m_ScreenTraingle.draw();
     glEnable(GL_DEPTH_TEST);
 }
@@ -248,7 +300,7 @@ void AreaLight::framesizeCallback(int32_t width, int32_t height) noexcept
     colorDesc.setWidth(width);
     colorDesc.setHeight(height);
     colorDesc.setFormat(gli::FORMAT_RGBA16_SFLOAT_PACK16);
-    m_ColorTex = m_Device->createTexture(colorDesc);
+    m_ScreenColorTex = m_Device->createTexture(colorDesc);
 
     GraphicsTextureDesc depthDesc;
     depthDesc.setWidth(width);
@@ -257,7 +309,7 @@ void AreaLight::framesizeCallback(int32_t width, int32_t height) noexcept
     auto depthTex = m_Device->createTexture(depthDesc);
 
     GraphicsFramebufferDesc desc;  
-    desc.addComponent(GraphicsAttachmentBinding(m_ColorTex, GL_COLOR_ATTACHMENT0));
+    desc.addComponent(GraphicsAttachmentBinding(m_ScreenColorTex, GL_COLOR_ATTACHMENT0));
     desc.addComponent(GraphicsAttachmentBinding(depthTex, GL_DEPTH_ATTACHMENT));
     
     m_ColorRenderTarget = m_Device->createFramebuffer(desc);;
@@ -273,11 +325,6 @@ void AreaLight::mouseCallback(float xpos, float ypos, bool bPressed) noexcept
 {
 	const bool mouseOverGui = ImGui::MouseOverArea();
 	if (!mouseOverGui && bPressed) m_Camera.motionHandler(int(xpos), int(ypos), true); 
-}
-
-void AreaLight::scrollCallback(float xoffset, float yoffset) noexcept
-{
-    m_Zoom += yoffset;
 }
 
 GraphicsDevicePtr AreaLight::createDevice(const GraphicsDeviceDesc& desc) noexcept
