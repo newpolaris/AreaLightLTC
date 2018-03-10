@@ -18,10 +18,13 @@ class Light
 {
 public:
 
+    static ShaderPtr BindLightProgram(const TCamera& camera);
+    static ShaderPtr BindAreaProgram(const TCamera& camera);
+
     Light() noexcept;
 
-    void draw(const TCamera& camera);
-    ShaderPtr bindLightProgram(const TCamera& camera);
+    ShaderPtr submit(ShaderPtr& shader);
+    ShaderPtr submitPerLightUniforms(ShaderPtr& shader);
 
     glm::mat4 getWorld() const;
 

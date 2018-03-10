@@ -77,30 +77,50 @@ Light::Light() noexcept
 {
 }
 
-void Light::draw(const TCamera& camera)
+ShaderPtr Light::BindLightProgram(const TCamera& camera)
 {
     glm::mat4 projection = camera.getProjectionMatrix();
     glm::mat4 view = camera.getViewMatrix();
+
+    m_ShaderLTC->bind();
+    m_ShaderLTC->setUniform("uView", view);
+    m_ShaderLTC->setUniform("uProjection", projection);
+    m_ShaderLTC->setUniform("uViewPositionW", camera.getPosition());
+    m_ShaderLTC->bindTexture("uLtcMat", m_LtcMatTex, 0);
+    m_ShaderLTC->bindTexture("uLtcMag", m_LtcMagTex, 1);
+    return m_ShaderLTC;
+}
+
+ShaderPtr Light::BindAreaProgram(const TCamera& camera)
+{
+    glm::mat4 projection = camera.getProjectionMatrix();
+    glm::mat4 view = camera.getViewMatrix();
+    m_ShaderLight->bind();
+    m_ShaderLight->setUniform("uViewProj", projection*view);
+    return m_ShaderLight;
+}
+
+ShaderPtr Light::submit(ShaderPtr& shader)
+{
     glm::mat4 world = getWorld();
 
     auto& sourceTex = m_bTexturedLight ? m_LightSourceTex : m_WhiteTex;
 
-    m_ShaderLight->bind();
-    m_ShaderLight->bindTexture("uTexColor", sourceTex, 0);
+    m_ShaderLight->setUniform("uWorld", world);
     m_ShaderLight->setUniform("ubTexturedLight", m_bTexturedLight);
     m_ShaderLight->setUniform("uDiffuseColor", m_Diffuse);
     m_ShaderLight->setUniform("uIntensity", m_Intensity);
-    m_ShaderLight->setUniform("uModelViewProj", projection*view*world);
+    m_ShaderLight->bindTexture("uTexColor", sourceTex, 0);
 
     m_LightMesh.draw();
+
+    return shader;
 }
 
-ShaderPtr Light::bindLightProgram(const TCamera& camera)
+ShaderPtr Light::submitPerLightUniforms(ShaderPtr& shader)
 {
-    glm::mat4 projection = camera.getProjectionMatrix();
-    glm::mat4 view = camera.getViewMatrix();
+    // local
     glm::mat4 model = getWorld();
-
     // area light rect poinsts in world space
     glm::vec4 points[] = 
     {
@@ -115,23 +135,15 @@ ShaderPtr Light::bindLightProgram(const TCamera& camera)
     points[2] = model * points[2];
     points[3] = model * points[3];
 
-    m_ShaderLTC->bind();
-    // global
-    m_ShaderLTC->setUniform("uView", view);
-    m_ShaderLTC->setUniform("uProjection", projection);
-    m_ShaderLTC->setUniform("uViewPositionW", camera.getPosition());
-    m_ShaderLTC->setUniform("uTwoSided", m_bTwoSided);
-    m_ShaderLTC->setUniform("uTexturedLight", m_bTexturedLight);
-    m_ShaderLTC->bindTexture("uLtcMat", m_LtcMatTex, 0);
-    m_ShaderLTC->bindTexture("uLtcMag", m_LtcMagTex, 1);
-    // local
-    m_ShaderLTC->setUniform("uIntensity", m_Intensity);
-    m_ShaderLTC->setUniform("uDcolor", glm::vec3(m_Diffuse));
-    m_ShaderLTC->setUniform("uScolor", glm::vec3(m_Specular));
-    m_ShaderLTC->setUniform("uQuadPoints", points, 4);
-    m_ShaderLTC->bindTexture("uFilteredMap", m_LightFilteredTex, 2);
+    shader->setUniform("uTwoSided", m_bTwoSided);
+    shader->setUniform("uTexturedLight", m_bTexturedLight);
+    shader->setUniform("uIntensity", m_Intensity);
+    shader->setUniform("uDcolor", glm::vec3(m_Diffuse));
+    shader->setUniform("uScolor", glm::vec3(m_Specular));
+    shader->setUniform("uQuadPoints", points, 4);
+    shader->bindTexture("uFilteredMap", m_LightFilteredTex, 2);
 
-    return m_ShaderLTC;
+    return shader;
 }
 
 glm::mat4 Light::getWorld() const

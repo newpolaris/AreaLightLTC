@@ -47,6 +47,7 @@ public:
     virtual ~Model() noexcept;
 
     void appendMesh(MeshPtr&& mesh) noexcept;
+    void setWorld(const glm::mat4& world) noexcept;
     void submit(const ShaderPtr& shader) noexcept;
 
 private:
@@ -69,19 +70,34 @@ void Model::appendMesh(MeshPtr&& mesh) noexcept
     m_Meshes.emplace_back(std::move(mesh));
 }
 
+void Model::setWorld(const glm::mat4& world) noexcept
+{
+    m_World = world;
+}
+
 void Model::submit(const ShaderPtr& shader) noexcept
 {
+    shader->setUniform("uWorld", m_World);
     for (auto& mesh : m_Meshes)
-    {
-        shader->setUniform("uWorld", m_World);
         mesh->draw();
-    }
 }
 
 struct SceneSettings
 {
     uint32_t m_LightIndex = 0;
 };
+
+template <typename T, typename... Args>
+ModelPtr createPrimitive(const glm::mat4& world, Args&&... args)
+{
+    auto mesh = std::make_shared<T>(std::forward<Args>(args)...);
+    mesh->create();
+
+    ModelPtr model = std::make_shared<Model>();;
+    model->appendMesh(mesh);
+    model->setWorld(world);
+    return model;
+}
 
 class AreaLight final : public gamecore::IGameApp
 {
@@ -102,6 +118,8 @@ public:
 
 	GraphicsDevicePtr createDevice(const GraphicsDeviceDesc& desc) noexcept;
 
+    ShaderPtr submitPerFrameUniformLight(ShaderPtr& shader) noexcept;
+
 private:
 
     SceneSettings m_Settings;
@@ -112,8 +130,6 @@ private:
     LightList m_Lights;
     ModelList m_Models;
     FullscreenTriangleMesh m_ScreenTraingle;
-    PlaneMesh m_Plane;
-    CubeMesh m_Cube;
     ProgramShader m_BlitShader;
     GraphicsTexturePtr m_ScreenColorTex;
     GraphicsFramebufferPtr m_ColorRenderTarget;
@@ -156,8 +172,6 @@ void AreaLight::startup() noexcept
 	m_BlitShader.link();
 
     m_ScreenTraingle.create();
-	m_Plane.create();
-    m_Cube.create();
 
     GraphicsTextureDesc filteredDesc;
     filteredDesc.setFilename("resources/stained_glass_filtered.dds");
@@ -183,12 +197,21 @@ void AreaLight::startup() noexcept
     light->setLightFilterd(filteredTex);
     m_Lights.emplace_back(std::move(light));
 
-    auto mesh = std::make_shared<PlaneMesh>();
-    mesh->create();
-    ModelPtr model = std::make_shared<Model>();;
-    model->appendMesh(mesh);
+    // Ground plane
+    m_Models.emplace_back(createPrimitive<PlaneMesh>(glm::mat4(1.f)));
 
-    m_Models.emplace_back(std::move(model));
+    // Simple cube
+    {
+        glm::mat4 world = glm::mat4(1.f);
+        world = glm::translate(world, glm::vec3(-2.f, 1.f, 8.f));
+        m_Models.emplace_back(createPrimitive<CubeMesh>(world));
+    }
+    // Simple sphere
+    {
+        glm::mat4 world = glm::mat4(1.f);
+        world = glm::translate(world, glm::vec3(2.f, 0.f, 8.f));
+        m_Models.emplace_back(createPrimitive<SphereMesh>(world, 32));
+    }
 }
 
 void AreaLight::closeup() noexcept
@@ -242,22 +265,18 @@ void AreaLight::render() noexcept
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glPolygonMode(GL_FRONT_AND_BACK, isWireframe() ? GL_LINE : GL_FILL);
 
-    {
-        // light::submitPerFrameObjectUniforms();
-        // light::submitPerLightUniforms();
-        // light::bindPerFrameObjectUniforms();
-        for (auto& light : m_Lights)
-            light->draw(m_Camera);
-    }
-
+    auto lightProgram = Light::BindLightProgram(m_Camera);
+    lightProgram = submitPerFrameUniformLight(lightProgram);
     for (auto& light : m_Lights)
     {
-        auto lightProgram = light->bindLightProgram(m_Camera);
-        lightProgram->setUniform("uRoughness", m_Roughness);
-
+        lightProgram = light->submitPerLightUniforms(lightProgram);
         for (auto& model : m_Models)
             model->submit(lightProgram);
     }
+
+    auto areaProgram = Light::BindAreaProgram(m_Camera);
+    for (auto& light : m_Lights)
+        light->submit(areaProgram);
 
     // TODO: default frame buffer with/without depth test
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -344,4 +363,10 @@ GraphicsDevicePtr AreaLight::createDevice(const GraphicsDeviceDesc& desc) noexce
         return nullptr;
     }
     return nullptr;
+}
+
+ShaderPtr AreaLight::submitPerFrameUniformLight(ShaderPtr& shader) noexcept
+{
+    shader->setUniform("uRoughness", m_Roughness);
+    return shader;
 }

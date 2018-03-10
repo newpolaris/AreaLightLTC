@@ -96,7 +96,7 @@ class SphereMesh : public Mesh
     float m_radius;
     
   public:
-    SphereMesh(int res=8, float radius=1.0f)
+    SphereMesh(int res = 16, float radius = 1.0f)
       : Mesh(),
         m_meshResolution(res),
         m_radius(radius)

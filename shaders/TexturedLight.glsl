@@ -8,12 +8,13 @@ layout (location = 2) in vec2 aTexCoords;
 // OUT
 out vec2 vTexcoords;
 
-uniform mat4 uModelViewProj;
+uniform mat4 uWorld;
+uniform mat4 uViewProj;
 
 void main()
 {
     vTexcoords = aTexCoords;
-    gl_Position = uModelViewProj* vec4(aPosition, 1.0);
+    gl_Position = (uViewProj * uWorld) * vec4(aPosition, 1.0);
 }
 
 --Fragment
