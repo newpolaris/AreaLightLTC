@@ -65,10 +65,9 @@ namespace light
 using namespace light;
 
 Light::Light() noexcept
-    : m_Position(glm::vec3(0.f))
-    , m_Rotation(1, 0, 0, 0)
-    , m_Diffuse(1.f)
-    , m_Specular(1.f)
+    : m_Position(0.f)
+    , m_Rotation(0.f)
+    , m_Albedo(1.f)
     , m_Width(8.f)
     , m_Height(8.f)
     , m_Intensity(4.f)
@@ -108,7 +107,6 @@ ShaderPtr Light::submit(ShaderPtr& shader)
 
     m_ShaderLight->setUniform("uWorld", world);
     m_ShaderLight->setUniform("ubTexturedLight", m_bTexturedLight);
-    m_ShaderLight->setUniform("uDiffuseColor", m_Diffuse);
     m_ShaderLight->setUniform("uIntensity", m_Intensity);
     m_ShaderLight->bindTexture("uTexColor", sourceTex, 0);
 
@@ -138,8 +136,7 @@ ShaderPtr Light::submitPerLightUniforms(ShaderPtr& shader)
     shader->setUniform("uTwoSided", m_bTwoSided);
     shader->setUniform("uTexturedLight", m_bTexturedLight);
     shader->setUniform("uIntensity", m_Intensity);
-    shader->setUniform("uDcolor", glm::vec3(m_Diffuse));
-    shader->setUniform("uScolor", glm::vec3(m_Specular));
+    shader->setUniform("uAlbedo", glm::vec3(m_Albedo));
     shader->setUniform("uQuadPoints", points, 4);
     shader->bindTexture("uFilteredMap", m_LightFilteredTex, 2);
 
@@ -148,10 +145,13 @@ ShaderPtr Light::submitPerLightUniforms(ShaderPtr& shader)
 
 glm::mat4 Light::getWorld() const
 {
-    glm::mat4 model = glm::mat4(1.f);
-    model = glm::translate(model, glm::vec3(m_Position));
-    model = model * glm::toMat4(m_Rotation);
-    return glm::scale(model, glm::vec3(m_Width, 1, m_Height));
+    glm::mat4 identity = glm::mat4(1.f);
+    glm::mat4 translate = glm::translate(identity, glm::vec3(m_Position));
+    glm::mat4 rotateZ = glm::rotate(identity, glm::radians(m_Rotation.z), glm::vec3(0, 0, 1));
+    glm::mat4 rotateY = glm::rotate(identity, glm::radians(m_Rotation.y), glm::vec3(0, 1, 0));
+    glm::mat4 rotateX = glm::rotate(identity, glm::radians(m_Rotation.x), glm::vec3(1, 0, 0));
+    glm::mat4 scale = glm::scale(identity, glm::vec3(m_Width, 1, m_Height));
+    return translate*rotateX*rotateY*rotateZ*scale;
 }
 
 const glm::vec3& Light::getPosition() noexcept
@@ -164,14 +164,14 @@ void Light::setPosition(const glm::vec3& position) noexcept
     m_Position = position;
 }
 
-const glm::quat& Light::getRotation() noexcept
+const glm::vec3& Light::getRotation() noexcept
 {
     return m_Rotation;
 }
 
-void Light::setRotation(const glm::quat& quaternion) noexcept
+void Light::setRotation(const glm::vec3& rotation) noexcept
 {
-    m_Rotation = quaternion;
+    m_Rotation = rotation;
 }
 
 const float Light::getIntensity() noexcept
@@ -184,9 +184,9 @@ void Light::setIntensity(float intensity) noexcept
     m_Intensity = intensity;
 }
 
-GraphicsTexturePtr Light::getLightSource() const noexcept
+void Light::setTexturedLight(bool bTextured) noexcept
 {
-    return m_LightSourceTex;
+    m_bTexturedLight = bTextured;
 }
 
 void Light::setLightSource(const GraphicsTexturePtr& texture) noexcept

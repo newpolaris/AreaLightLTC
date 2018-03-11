@@ -82,11 +82,6 @@ void Model::submit(const ShaderPtr& shader) noexcept
         mesh->draw();
 }
 
-struct SceneSettings
-{
-    uint32_t m_LightIndex = 0;
-};
-
 template <typename T, typename... Args>
 ModelPtr createPrimitive(const glm::mat4& world, Args&&... args)
 {
@@ -98,6 +93,14 @@ ModelPtr createPrimitive(const glm::mat4& world, Args&&... args)
     model->setWorld(world);
     return model;
 }
+
+struct SceneSettings
+{
+    uint32_t m_LightIndex = 0;
+    float m_Roughness = 0.25f;
+    float m_F0 = 0.04f; // fresnel
+    glm::vec4 m_Albedo = glm::vec4(0.5f, 0.5f, 0.5f, 1.f); // additional albedo
+};
 
 class AreaLight final : public gamecore::IGameApp
 {
@@ -123,9 +126,6 @@ public:
 private:
 
     SceneSettings m_Settings;
-
-    float m_Roughness;
-    int32_t m_RotX, m_RotY;
 	TCamera m_Camera;
     LightList m_Lights;
     ModelList m_Models;
@@ -139,9 +139,6 @@ private:
 CREATE_APPLICATION(AreaLight);
 
 AreaLight::AreaLight() noexcept
-    : m_RotX(0)
-    , m_RotY(0)
-    , m_Roughness(0.25f)
 {
 }
 
@@ -151,7 +148,7 @@ AreaLight::~AreaLight() noexcept
 
 void AreaLight::startup() noexcept
 {
-	m_Camera.setViewParams(glm::vec3(0.0f, 5.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+	m_Camera.setViewParams(glm::vec3(0.0f, 5.0f, 15.0f), glm::vec3(0.0f, 0.0f, 0.0f));
 	m_Camera.setMoveCoefficient(0.35f);
 
 	GraphicsDeviceDesc deviceDesc;
@@ -185,14 +182,11 @@ void AreaLight::startup() noexcept
     source.setFilename("resources/stained_glass.dds");
     auto lightSource = m_Device->createTexture(source);
 
-	// rotate toward ground and tilt slightly
-	// auto rot = glm::angleAxis(glm::pi<float>(), glm::vec3(1, 0, 0));
-	// rot = glm::angleAxis(glm::pi<float>()*0.25f, glm::vec3(0, 0, 1)) * rot;
 	auto rot = glm::angleAxis(glm::half_pi<float>(), glm::vec3(1, 0, 0));
-
     auto light = std::make_shared<Light>();
-	light->setRotation(rot);
+	light->setRotation(glm::vec3(90.f, 0, 0));
 	light->setPosition(glm::vec3(0, -1, 2));
+    light->setTexturedLight(true);
     light->setLightSource(lightSource);
     light->setLightFilterd(filteredTex);
     m_Lights.emplace_back(std::move(light));
@@ -239,17 +233,37 @@ void AreaLight::updateHUD() noexcept
         ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::PushItemWidth(180.0f);
     ImGui::Indent();
-        auto idx = m_Settings.m_LightIndex;
-        ImGui::SliderFloat("Roughness", &m_Roughness, 0.01f, 1.f);
-        ImGui::ColorWheel("Diffuse Color:", glm::value_ptr(m_Lights[idx]->m_Diffuse), 0.6f);
-        ImGui::ColorWheel("Specular Color:", glm::value_ptr(m_Lights[idx]->m_Specular), 0.6f);
-        ImGui::SliderFloat("Intensity", &m_Lights[idx]->m_Intensity, 0.f, 10.f);
-        ImGui::SliderFloat("Width", &m_Lights[idx]->m_Width, 0.1f, 15.f);
-        ImGui::SliderFloat("Height", &m_Lights[idx]->m_Height, 0.1f, 15.f);
-        // ImGui::SliderFloat("Rotation Y", &m_Lights[index]->m_RotY, 0.f, 1.f);
-        // ImGui::SliderFloat("Rotation Z", &m_Lights[index]->m_RotZ, 0.f, 1.f);
-        ImGui::Checkbox("Tow sided", &m_Lights[idx]->m_bTwoSided);
-        ImGui::Checkbox("Textured Light", &m_Lights[idx]->m_bTexturedLight);
+    {
+        // global
+        {
+            ImGui::SliderFloat("Roughness", &m_Settings.m_Roughness, 0.03f, 1.f);
+            ImGui::SliderFloat("Fresnel 0", &m_Settings.m_F0, 0.01f, 1.f);
+            ImGui::ColorWheel("Albedo Color:", glm::value_ptr(m_Settings.m_Albedo), 0.6f);
+            ImGui::Separator();
+        }
+        if (m_Lights.size() > 1)
+        {
+            auto idx = (float)m_Settings.m_LightIndex;
+            ImGui::SliderFloat("Roughness", &idx, 0.0f, (float)m_Lights.size() - 1);
+            m_Settings.m_LightIndex = (uint32_t)idx;
+            ImGui::Separator();
+        }
+        // Local
+        {
+            auto idx = m_Settings.m_LightIndex;
+            ImGui::SliderFloat("Intensity", &m_Lights[idx]->m_Intensity, 0.f, 10.f);
+            ImGui::SliderFloat("Width", &m_Lights[idx]->m_Width, 0.1f, 15.f);
+            ImGui::SliderFloat("Height", &m_Lights[idx]->m_Height, 0.1f, 15.f);
+            ImGui::SliderFloat("Position X", &m_Lights[idx]->m_Position.x, -10.f, 10.f);
+            ImGui::SliderFloat("Position Y", &m_Lights[idx]->m_Position.y, -10.f, 10.f);
+            ImGui::SliderFloat("Position Z", &m_Lights[idx]->m_Position.z, -10.f, 10.f);
+            ImGui::SliderFloat("Rotation X", &m_Lights[idx]->m_Rotation.x, -180.f, 179.f);
+            ImGui::SliderFloat("Rotation Y", &m_Lights[idx]->m_Rotation.y, -180.f, 179.f);
+            ImGui::SliderFloat("Rotation Z", &m_Lights[idx]->m_Rotation.z, -180.f, 179.f);
+            ImGui::Checkbox("Tow sided", &m_Lights[idx]->m_bTwoSided);
+            ImGui::Checkbox("Textured Light", &m_Lights[idx]->m_bTexturedLight);
+        }
+    }
     ImGui::Unindent();
     ImGui::End();
 }
@@ -367,6 +381,8 @@ GraphicsDevicePtr AreaLight::createDevice(const GraphicsDeviceDesc& desc) noexce
 
 ShaderPtr AreaLight::submitPerFrameUniformLight(ShaderPtr& shader) noexcept
 {
-    shader->setUniform("uRoughness", m_Roughness);
+    shader->setUniform("uRoughness", m_Settings.m_Roughness);
+    shader->setUniform("uAlbedo2", m_Settings.m_Albedo);
+    shader->setUniform("uF0", m_Settings.m_F0);
     return shader;
 }

@@ -42,12 +42,12 @@ out vec4 FragColor;
 
 uniform vec4 uQuadPoints[4]; // Area light quad
 uniform vec4 uStarPoints[10]; // Area light star
-uniform vec3 uLightPositionW;
 uniform vec3 uViewPositionW;
 
+uniform float uF0; // frenel
 uniform float uRoughness;
-uniform vec3 uDcolor;
-uniform vec3 uScolor;
+uniform vec3 uAlbedo; // from material
+uniform vec4 uAlbedo2; // additional albedo
 uniform float uIntensity;
 uniform float uWidth;
 uniform float uHeight;
@@ -389,23 +389,25 @@ vec3 toLinear(vec3 _rgb)
 void main()
 {
     const float pi = 3.14159265;
+    const float minRoughness = 0.03;
+    float metallic = 0.f;
+    float roughness = max(uRoughness*uRoughness, minRoughness);
     vec3 normal = normalize(vec3(vNormalW));
-
 	vec3 lcol = vec3(uIntensity);
-    vec3 dcol = toLinear(uDcolor);
-    vec3 scol = toLinear(uScolor);
-	vec3 col = vec3(0);
+    vec3 albedo = toLinear(vec3(uAlbedo2));
+    vec3 baseColor = toLinear(uAlbedo);
+    vec3 dcol = baseColor*(1.0 - metallic);
+    vec3 scol = mix(vec3(uF0), baseColor, metallic);
 
 	Ray ray = GenerateCameraRay(uViewPositionW, vPositionW.xyz);
 
-    col = vec3(1, 0, 0);
-
+	vec3 col = vec3(0);
     vec3 pos = vPositionW.xyz;
     vec3 V = -ray.dir;
     vec3 N = normal;
 
     float theta = acos(dot(N, V));
-    vec2 uv = vec2(uRoughness, theta / (0.5*pi));
+    vec2 uv = vec2(roughness, theta / (0.5*pi));
 
     const float LUT_SIZE = 32.0;
     const float LUT_SCALE = (LUT_SIZE - 1.0) / LUT_SIZE;
@@ -424,11 +426,14 @@ void main()
     );
 
     vec3 spec = LTC_Evaluate(N, V, pos, Minv, uQuadPoints, uTwoSided, uFilteredMap);
-    spec *= texture(uLtcMag, uv).r;
+
+    // apply BRDF scale terms (BRDF magnitude and Schlick Fresnel)
+    vec2 schlick = texture(uLtcMag, uv).xy;
+    scol = scol*schlick.x + (1.0 - scol)*schlick.y;
 
     vec3 diff = LTC_Evaluate(N, V, pos, mat3(1), uQuadPoints, uTwoSided, uFilteredMap);
 
-    col = lcol*(scol*spec + dcol*diff);
+    col = lcol*(scol*spec + dcol*diff*albedo);
     col /= 2.0*pi;
 
 	FragColor = vec4(col, 1.0);

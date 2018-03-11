@@ -1,3 +1,3 @@
 https://eheitzresearch.wordpress.com/415-2/
 
-[![link text](./screenshots/Quad.jpg)](./screenshots/Quad.jpg)
+[![link text](./screenshots/Textured.jpg)](./screenshots/Textured.jpg)

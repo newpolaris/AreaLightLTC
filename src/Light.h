@@ -30,17 +30,17 @@ public:
 
     const glm::vec3& getPosition() noexcept;
     void setPosition(const glm::vec3& position) noexcept;
-    const glm::quat& getRotation() noexcept;
-    void setRotation(const glm::quat& quaternion) noexcept;
+    const glm::vec3& getRotation() noexcept;
+    void setRotation(const glm::vec3& rotation) noexcept;
     const float getIntensity() noexcept;
     void setIntensity(float intensity) noexcept;
-    GraphicsTexturePtr getLightSource() const noexcept;
+    void setTexturedLight(bool bTextured) noexcept;
     void setLightSource(const GraphicsTexturePtr& texture) noexcept;
     void setLightFilterd(const GraphicsTexturePtr& texture) noexcept;
 
     glm::vec3 m_Position; // where are we
-    glm::quat m_Rotation;
-    glm::vec4 m_Diffuse;
+    glm::vec3 m_Rotation;
+    glm::vec4 m_Albedo;
     glm::vec4 m_Specular;
 
     float m_Width;

@@ -26,7 +26,6 @@ in vec2 vTexcoords;
 out vec4 FragColor;
 
 uniform bool ubTexturedLight;
-uniform vec4 uDiffuseColor;
 uniform float uIntensity;
 uniform sampler2D uTexColor;
 
@@ -37,7 +36,7 @@ vec3 toLinear(vec3 _rgb)
   
 void main()
 {
-    vec3 color = uDiffuseColor.rgb;
+    vec3 color = vec3(1);
     if (ubTexturedLight)
     	color = texture(uTexColor, vTexcoords).rgb;
     color = toLinear(color);
