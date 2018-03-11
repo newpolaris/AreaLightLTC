@@ -34,7 +34,7 @@ void PlaneMesh::create()
     m_bInitialized = true;
 
     const float SIZE = m_size; //
-    const int RES = m_res; //  
+    const int RES = static_cast<int>(m_res); //  
 
     m_count = 3 * 2 * (RES*RES);
 

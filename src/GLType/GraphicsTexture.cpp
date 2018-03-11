@@ -13,6 +13,7 @@ GraphicsTextureDesc::GraphicsTextureDesc() noexcept
     , m_WrapR(GL_REPEAT)
     , m_MinFilter(GL_NEAREST_MIPMAP_LINEAR)
     , m_MagFilter(GL_LINEAR)
+    , m_AnisotropyLevel(0)
     , m_Target(gli::TARGET_2D)
     , m_Format(gli::FORMAT_UNDEFINED)
     , m_Data(nullptr)
@@ -172,6 +173,16 @@ uint32_t GraphicsTextureDesc::getMagFilter() const noexcept
 void GraphicsTextureDesc::setMagFilter(uint32_t filter) noexcept
 {
     m_MagFilter = filter;
+}
+
+float GraphicsTextureDesc::getAnisotropyLevel() const noexcept
+{
+    return m_AnisotropyLevel;
+}
+
+void GraphicsTextureDesc::setAnisotropyLevel(float anisoLevel) noexcept
+{
+    m_AnisotropyLevel = anisoLevel;
 }
 
 GraphicsTexture::GraphicsTexture() noexcept

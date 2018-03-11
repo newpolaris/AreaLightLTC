@@ -30,7 +30,8 @@ public:
 private:
 
     void applyParameters(const GraphicsTextureDesc& desc);
-	void parameter(GLenum pname, GLint param);
+	void parameteri(GLenum pname, GLint param);
+	void parameterf(GLenum pname, GLfloat param);
 
     bool createFromMemory(const char* data, size_t dataSize) noexcept;
     bool createFromMemoryDDS(const char* data, size_t dataSize) noexcept; // DDS, KTX

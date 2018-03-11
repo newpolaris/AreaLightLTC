@@ -56,6 +56,9 @@ public:
     uint32_t getMagFilter() const noexcept;
     void setMagFilter(uint32_t filter) noexcept;
 
+    float getAnisotropyLevel() const noexcept;
+    void setAnisotropyLevel(float anisoLevel) noexcept;
+
 private:
 
     std::string m_Name;
@@ -71,6 +74,7 @@ private:
     uint32_t m_WrapR;
     uint32_t m_MinFilter;
     uint32_t m_MagFilter;
+    float m_AnisotropyLevel;
 
     GraphicsTarget m_Target;
     GraphicsFormat m_Format;

@@ -80,9 +80,9 @@ void TCamera::setViewParams(const glm::vec3 &pos, const glm::vec3 &target)
 
     // .Compute the UP vector
     // treat the case where the direction vector is parallel to the Y Axis
-    if((fabs(m_direction.x) < FLT_EPSILON) && (fabs(m_direction.z) < FLT_EPSILON))
+    if ((fabs(m_direction.x) < FLT_EPSILON) && (fabs(m_direction.z) < FLT_EPSILON))
     {
-        if(m_direction.y > 0.0f) {
+        if (m_direction.y > 0.0f) {
             m_up = glm::vec3(0.0f, 0.0f, 1.0f);
         }
         else {
@@ -115,7 +115,7 @@ void TCamera::setViewParams(const glm::vec3 &pos, const glm::vec3 &target)
 
 void TCamera::keyboardHandler(CameraKeys key, bool bPressed)
 {
-    if(!m_bEnableMove) {
+    if (!m_bEnableMove) {
         return;
     }
 
@@ -133,7 +133,7 @@ void TCamera::motionHandler(int x, int y, bool bClicked)
         m_cursorPos = glm::vec2(x, y);
         m_cursorDelta = glm::vec2(0.0f);
     }
-    else if(m_bEnableRotation)
+    else if (m_bEnableRotation)
     {
         m_cursorOldPos = m_cursorPos;
         m_cursorPos = glm::vec2(x, y);
@@ -144,19 +144,19 @@ void TCamera::motionHandler(int x, int y, bool bClicked)
 void TCamera::update(float deltaT)
 {
     // .Update camera velocity  
-    if(m_bHasMoved)
+    if (m_bHasMoved)
     {
         m_bHasMoved = false;
 
         glm::vec3 direction = glm::vec3(0.0f);
-        if(m_keydown[MOVE_RIGHT])    direction.x += 1.0f;
-        if(m_keydown[MOVE_LEFT])     direction.x -= 1.0f;
-        if(m_keydown[MOVE_UP])       direction.y += 1.0f;
-        if(m_keydown[MOVE_DOWN])     direction.y -= 1.0f;
-        if(m_keydown[MOVE_BACKWARD]) direction.z += 1.0f;
-        if(m_keydown[MOVE_FORWARD])  direction.z -= 1.0f;
+        if (m_keydown[MOVE_RIGHT])    direction.x += 1.0f;
+        if (m_keydown[MOVE_LEFT])     direction.x -= 1.0f;
+        if (m_keydown[MOVE_UP])       direction.y += 1.0f;
+        if (m_keydown[MOVE_DOWN])     direction.y -= 1.0f;
+        if (m_keydown[MOVE_BACKWARD]) direction.z += 1.0f;
+        if (m_keydown[MOVE_FORWARD])  direction.z -= 1.0f;
 
-        if((direction.x != 0.0f) || (direction.y != 0.0f) || (direction.z != 0.0f)) {
+        if ((direction.x != 0.0f) || (direction.y != 0.0f) || (direction.z != 0.0f)) {
             direction = glm::normalize(direction);
         }
 
@@ -167,9 +167,9 @@ void TCamera::update(float deltaT)
         m_rotationVelocity.y*m_rotationVelocity.y;
 
     // .Update camera rotation
-    if(m_bHasLooked || (inertia > FLT_EPSILON))
+    if (m_bHasLooked || (inertia > FLT_EPSILON))
     {
-        if(m_bHasLooked)
+        if (m_bHasLooked)
         {
             // interpolate to avoid jaggies
             m_cursorDelta = 0.70f*m_cursorDelta + 0.30f*(m_cursorPos - m_cursorOldPos);
@@ -190,7 +190,7 @@ void TCamera::update(float deltaT)
         float pitchDelta = m_rotationVelocity.y;
         m_pitchAngle += (m_bInvertPitch) ? pitchDelta : -pitchDelta;
 
-        if(m_bLimitPitchAngle)
+        if (m_bLimitPitchAngle)
         {
             m_pitchAngle = std::max(m_pitchAngle, float(-M_PI_2));
             m_pitchAngle = std::min(m_pitchAngle, float(+M_PI_2));
@@ -222,6 +222,6 @@ void TCamera::update(float deltaT)
 
     //Having the camera model matrix can be helpful + it holds position / target & up in
     // its columns
-    //camera = view⁻¹
+    //camera = view^-1
 }
 

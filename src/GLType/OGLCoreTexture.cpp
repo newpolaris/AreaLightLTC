@@ -190,11 +190,11 @@ void OGLCoreTexture::applyParameters(const GraphicsTextureDesc& desc)
     auto defaultWrap = GL_REPEAT;
 
     if (wrapS != defaultWrap)
-        parameter(GL_TEXTURE_WRAP_S, wrapS);
+        parameteri(GL_TEXTURE_WRAP_S, wrapS);
     if (wrapT != defaultWrap)
-        parameter(GL_TEXTURE_WRAP_T, wrapS);
+        parameteri(GL_TEXTURE_WRAP_T, wrapS);
     if (wrapR != defaultWrap)
-        parameter(GL_TEXTURE_WRAP_R, wrapR);
+        parameteri(GL_TEXTURE_WRAP_R, wrapR);
 
     auto minFilter = desc.getMinFilter();
     auto magFilter = desc.getMagFilter();
@@ -202,17 +202,30 @@ void OGLCoreTexture::applyParameters(const GraphicsTextureDesc& desc)
     auto defaultMagFilter = GL_LINEAR;
     assert(magFilter == GL_NEAREST || magFilter == GL_LINEAR);
     if (minFilter != defaultMinFilter)
-        parameter(GL_TEXTURE_MIN_FILTER, minFilter);
+        parameteri(GL_TEXTURE_MIN_FILTER, minFilter);
     if (magFilter != defaultMagFilter)
-        parameter(GL_TEXTURE_MAG_FILTER, magFilter);
+        parameteri(GL_TEXTURE_MAG_FILTER, magFilter);
+
+    GLfloat defaultAnisoLevel = 0;
+    auto anisoLevel = desc.getAnisotropyLevel();
+    if (anisoLevel > defaultAnisoLevel)
+        parameterf(GL_TEXTURE_MAX_ANISOTROPY_EXT, anisoLevel);
 }
 
-void OGLCoreTexture::parameter(GLenum pname, GLint param)
+void OGLCoreTexture::parameteri(GLenum pname, GLint param)
 {
 	assert(m_Target != GL_INVALID_ENUM);
 	assert(m_TextureID != 0);
 
     glTextureParameteri(m_TextureID, pname, param);
+}
+
+void OGLCoreTexture::parameterf(GLenum pname, GLfloat param)
+{
+	assert(m_Target != GL_INVALID_ENUM);
+	assert(m_TextureID != 0);
+
+    glTextureParameterf(m_TextureID, pname, param);
 }
 
 bool OGLCoreTexture::createFromMemory(const char* data, size_t dataSize) noexcept

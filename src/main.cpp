@@ -176,10 +176,12 @@ void AreaLight::startup() noexcept
     filteredDesc.setWrapT(GL_CLAMP_TO_EDGE);
     filteredDesc.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
     filteredDesc.setMagFilter(GL_LINEAR);
+    filteredDesc.setAnisotropyLevel(16);
     auto filteredTex = m_Device->createTexture(filteredDesc);
 
     GraphicsTextureDesc source;
     source.setFilename("resources/stained_glass.dds");
+    source.setAnisotropyLevel(16);
     auto lightSource = m_Device->createTexture(source);
 
 	auto rot = glm::angleAxis(glm::half_pi<float>(), glm::vec3(1, 0, 0));
