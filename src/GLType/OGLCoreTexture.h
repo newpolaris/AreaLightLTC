@@ -14,22 +14,29 @@ public:
 	OGLCoreTexture();
     virtual ~OGLCoreTexture();
 
-    bool create(const GraphicsTextureDesc& desc);
-	bool create(const std::string& filename);
-	bool create(GLint width, GLint height, GLenum target, GraphicsFormat format, GLuint levels, uint8_t* data, uint32_t size);
-	void destroy();
+    bool create(const GraphicsTextureDesc& desc) noexcept;
+	bool create(const std::string& filename) noexcept;
+	bool create(GLint width, GLint height, GLenum target, GraphicsFormat format, GLuint levels, const uint8_t* data, uint32_t size) noexcept;
+	void destroy() noexcept;
 	void bind(GLuint unit) const;
 	void unbind(GLuint unit) const;
 	void generateMipmap();
-	void parameter(GLenum pname, GLint param);
-
-    bool createFromFileGLI(const std::string& filename);
-    bool createFromFileSTB(const std::string& filename);
 
     GLuint getTextureID() const noexcept;
     GLenum getFormat() const noexcept;
 
     const GraphicsTextureDesc& getGraphicsTextureDesc() const noexcept;
+
+private:
+
+    void applyParameters(const GraphicsTextureDesc& desc);
+	void parameter(GLenum pname, GLint param);
+
+    bool createFromMemory(const char* data, size_t dataSize) noexcept;
+    bool createFromMemoryDDS(const char* data, size_t dataSize) noexcept; // DDS, KTX
+    bool createFromMemoryHDR(const char* data, size_t dataSize) noexcept; // HDR
+    bool createFromMemoryLDR(const char* data, size_t dataSize) noexcept; // JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC files
+    bool createFromMemoryZIP(const char* data, size_t dataSize) noexcept; // ZLIB
 
 private:
 
