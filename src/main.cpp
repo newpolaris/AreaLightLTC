@@ -96,6 +96,7 @@ ModelPtr createPrimitive(const glm::mat4& world, Args&&... args)
 
 struct SceneSettings
 {
+    int32_t m_SampleCount = 0;
     uint32_t m_LightIndex = 0;
     float m_Roughness = 0.25f;
     float m_F0 = 0.04f; // fresnel
@@ -272,16 +273,26 @@ void AreaLight::updateHUD() noexcept
 
 void AreaLight::render() noexcept
 {
+    RenderingData renderData { 
+        m_Camera.getPosition(),
+        m_Camera.getViewMatrix(),
+        m_Camera.getProjectionMatrix(),
+    };
+
     m_Device->setFramebuffer(m_ColorRenderTarget);
 	glViewport(0, 0, getFrameWidth(), getFrameHeight());
-
-	// Rendering
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClearDepthf(1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glPolygonMode(GL_FRONT_AND_BACK, isWireframe() ? GL_LINE : GL_FILL);
 
-    auto lightProgram = Light::BindLightProgram(m_Camera);
+    // glEnable(GL_BLEND);
+    // glBlendFunc(GL_ONE, GL_ONE); // additive
+    auto areaProgram = Light::BindAreaProgram(renderData);
+    for (auto& light : m_Lights)
+        light->submit(areaProgram);
+
+    auto lightProgram = Light::BindLightProgram(renderData);
     lightProgram = submitPerFrameUniformLight(lightProgram);
     for (auto& light : m_Lights)
     {
@@ -289,19 +300,23 @@ void AreaLight::render() noexcept
         for (auto& model : m_Models)
             model->submit(lightProgram);
     }
-
-    auto areaProgram = Light::BindAreaProgram(m_Camera);
-    for (auto& light : m_Lights)
-        light->submit(areaProgram);
+    // glDisable(GL_BLEND);
 
     // TODO: default frame buffer with/without depth test
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glViewport(0, 0, getFrameWidth(), getFrameHeight());
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE); // additive
+    if (m_Settings.m_SampleCount == 0)
+        glClear(GL_COLOR_BUFFER_BIT);
+
     glDisable(GL_DEPTH_TEST);
     m_BlitShader.bind();
     m_BlitShader.bindTexture("uTexSource", m_ScreenColorTex, 0);
     m_ScreenTraingle.draw();
     glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
 }
 
 void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept

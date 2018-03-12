@@ -37,7 +37,7 @@ in vec4 vPositionW;
 in vec3 vNormalW;
 
 // OUT
-out vec4 FragColor;
+out vec3 FragColor;
 
 uniform vec4 uQuadPoints[4]; // Area light quad
 uniform vec4 uStarPoints[10]; // Area light star
@@ -435,5 +435,5 @@ void main()
     col = lcol*(scol*spec + dcol*diff*albedo);
     col /= 2.0*pi;
 
-	FragColor = vec4(col, 1.0);
+	FragColor = col;
 }

@@ -76,26 +76,21 @@ Light::Light() noexcept
 {
 }
 
-ShaderPtr Light::BindLightProgram(const TCamera& camera)
+ShaderPtr Light::BindLightProgram(const RenderingData& data)
 {
-    glm::mat4 projection = camera.getProjectionMatrix();
-    glm::mat4 view = camera.getViewMatrix();
-
     m_ShaderLTC->bind();
-    m_ShaderLTC->setUniform("uView", view);
-    m_ShaderLTC->setUniform("uProjection", projection);
-    m_ShaderLTC->setUniform("uViewPositionW", camera.getPosition());
+    m_ShaderLTC->setUniform("uView", data.View);
+    m_ShaderLTC->setUniform("uProjection", data.Projection);
+    m_ShaderLTC->setUniform("uViewPositionW", data.Position);
     m_ShaderLTC->bindTexture("uLtcMat", m_LtcMatTex, 0);
     m_ShaderLTC->bindTexture("uLtcMag", m_LtcMagTex, 1);
     return m_ShaderLTC;
 }
 
-ShaderPtr Light::BindAreaProgram(const TCamera& camera)
+ShaderPtr Light::BindAreaProgram(const RenderingData& data)
 {
-    glm::mat4 projection = camera.getProjectionMatrix();
-    glm::mat4 view = camera.getViewMatrix();
     m_ShaderLight->bind();
-    m_ShaderLight->setUniform("uViewProj", projection*view);
+    m_ShaderLight->setUniform("uViewProj", data.Projection*data.View);
     return m_ShaderLight;
 }
 

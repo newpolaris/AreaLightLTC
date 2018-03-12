@@ -1,12 +1,18 @@
 #pragma once
 
-#include <tools/TCamera.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp> 
 #include <GraphicsTypes.h>
 
 typedef std::shared_ptr<class ProgramShader> ShaderPtr;
+
+struct RenderingData
+{
+    glm::vec3 Position;
+    glm::mat4 View;
+    glm::mat4 Projection;
+};
 
 namespace light
 {
@@ -18,8 +24,8 @@ class Light
 {
 public:
 
-    static ShaderPtr BindLightProgram(const TCamera& camera);
-    static ShaderPtr BindAreaProgram(const TCamera& camera);
+    static ShaderPtr BindLightProgram(const RenderingData& data);
+    static ShaderPtr BindAreaProgram(const RenderingData& data);
 
     Light() noexcept;
 
