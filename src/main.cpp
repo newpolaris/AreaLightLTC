@@ -194,6 +194,11 @@ void AreaLight::startup() noexcept
     light->setLightFilterd(filteredTex);
     m_Lights.emplace_back(std::move(light));
 
+    auto backLight = std::make_shared<Light>();
+	backLight->setRotation(glm::vec3(-90.f, 0, 0));
+	backLight->setPosition(glm::vec3(0, 0, 30));
+    m_Lights.emplace_back(std::move(backLight));
+
     // Ground plane
     m_Models.emplace_back(createPrimitive<PlaneMesh>(glm::mat4(1.f)));
 
@@ -247,7 +252,7 @@ void AreaLight::updateHUD() noexcept
         if (m_Lights.size() > 1)
         {
             auto idx = (float)m_Settings.m_LightIndex;
-            ImGui::SliderFloat("Roughness", &idx, 0.0f, (float)m_Lights.size() - 1);
+            ImGui::SliderFloat("Light index", &idx, 0.0f, (float)m_Lights.size() - 1);
             m_Settings.m_LightIndex = (uint32_t)idx;
             ImGui::Separator();
         }
@@ -257,9 +262,9 @@ void AreaLight::updateHUD() noexcept
             ImGui::SliderFloat("Intensity", &m_Lights[idx]->m_Intensity, 0.f, 10.f);
             ImGui::SliderFloat("Width", &m_Lights[idx]->m_Width, 0.1f, 15.f);
             ImGui::SliderFloat("Height", &m_Lights[idx]->m_Height, 0.1f, 15.f);
-            ImGui::SliderFloat("Position X", &m_Lights[idx]->m_Position.x, -10.f, 10.f);
-            ImGui::SliderFloat("Position Y", &m_Lights[idx]->m_Position.y, -10.f, 10.f);
-            ImGui::SliderFloat("Position Z", &m_Lights[idx]->m_Position.z, -10.f, 10.f);
+            ImGui::SliderFloat("Position X", &m_Lights[idx]->m_Position.x, -30.f, 30.f);
+            ImGui::SliderFloat("Position Y", &m_Lights[idx]->m_Position.y, -30.f, 30.f);
+            ImGui::SliderFloat("Position Z", &m_Lights[idx]->m_Position.z, -30.f, 30.f);
             ImGui::SliderFloat("Rotation X", &m_Lights[idx]->m_Rotation.x, -180.f, 179.f);
             ImGui::SliderFloat("Rotation Y", &m_Lights[idx]->m_Rotation.y, -180.f, 179.f);
             ImGui::SliderFloat("Rotation Z", &m_Lights[idx]->m_Rotation.z, -180.f, 179.f);
@@ -273,7 +278,7 @@ void AreaLight::updateHUD() noexcept
 
 void AreaLight::render() noexcept
 {
-    RenderingData renderData { 
+    const RenderingData renderData { 
         m_Camera.getPosition(),
         m_Camera.getViewMatrix(),
         m_Camera.getProjectionMatrix(),
@@ -286,21 +291,43 @@ void AreaLight::render() noexcept
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glPolygonMode(GL_FRONT_AND_BACK, isWireframe() ? GL_LINE : GL_FILL);
 
-    // glEnable(GL_BLEND);
-    // glBlendFunc(GL_ONE, GL_ONE); // additive
-    auto areaProgram = Light::BindAreaProgram(renderData);
-    for (auto& light : m_Lights)
-        light->submit(areaProgram);
-
-    auto lightProgram = Light::BindLightProgram(renderData);
-    lightProgram = submitPerFrameUniformLight(lightProgram);
-    for (auto& light : m_Lights)
+    // depth pre-pass
     {
-        lightProgram = light->submitPerLightUniforms(lightProgram);
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        glDepthFunc(GL_LEQUAL);
+        glDisable(GL_CULL_FACE);
+        auto depthLightProgram = Light::BindLightProgram(renderData, true);
+        for (auto& light : m_Lights)
+            light->submit(depthLightProgram, true);
+        glEnable(GL_CULL_FACE);
+
+        auto program = Light::BindProgram(renderData, true);
         for (auto& model : m_Models)
-            model->submit(lightProgram);
+            model->submit(program);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     }
-    // glDisable(GL_BLEND);
+    // color pass
+    {
+        glDepthMask(GL_TRUE);
+        glDepthFunc(GL_EQUAL);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE); // additive
+        glDisable(GL_CULL_FACE);
+        auto lightProgram = Light::BindLightProgram(renderData, false);
+        for (auto& light : m_Lights)
+            light->submit(lightProgram, false);
+        glEnable(GL_CULL_FACE);
+
+        auto program = Light::BindProgram(renderData, false);
+        program = submitPerFrameUniformLight(program);
+        for (auto& light : m_Lights)
+        {
+            program = light->submitPerLightUniforms(program);
+            for (auto& model : m_Models)
+                model->submit(program);
+        }
+        glDisable(GL_BLEND);
+    }
 
     // TODO: default frame buffer with/without depth test
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

@@ -19,7 +19,9 @@ namespace light
     GraphicsTexturePtr m_LtcMagTex;
     GraphicsTexturePtr m_WhiteTex;
     ShaderPtr m_ShaderLight;
+    ShaderPtr m_ShaderDepthLight;
     ShaderPtr m_ShaderLTC;
+    ShaderPtr m_ShaderDepthLTC;
 
     void initialize(const GraphicsDevicePtr& device)
     {
@@ -30,12 +32,24 @@ namespace light
         m_ShaderLight->addShader(GL_FRAGMENT_SHADER, "TexturedLight.Fragment");
         m_ShaderLight->link();
 
+        m_ShaderDepthLight = std::make_shared<ProgramShader>();
+        m_ShaderDepthLight->setDevice(device);
+        m_ShaderDepthLight->initialize();
+        m_ShaderDepthLight->addShader(GL_VERTEX_SHADER, "DepthLight.Vertex");
+        m_ShaderDepthLight->link();
+
         m_ShaderLTC = std::make_shared<ProgramShader>();
         m_ShaderLTC->setDevice(device);
         m_ShaderLTC->initialize();
         m_ShaderLTC->addShader(GL_VERTEX_SHADER, "Ltc.Vertex");
         m_ShaderLTC->addShader(GL_FRAGMENT_SHADER, "Ltc.Fragment");
         m_ShaderLTC->link();
+
+        m_ShaderDepthLTC = std::make_shared<ProgramShader>();
+        m_ShaderDepthLTC->setDevice(device);
+        m_ShaderDepthLTC->initialize();
+        m_ShaderDepthLTC->addShader(GL_VERTEX_SHADER, "Ltc.Vertex");
+        m_ShaderDepthLTC->link();
 
         m_LightMesh.create();
 
@@ -76,35 +90,41 @@ Light::Light() noexcept
 {
 }
 
-ShaderPtr Light::BindLightProgram(const RenderingData& data)
+ShaderPtr Light::BindProgram(const RenderingData& data, bool bDepth)
 {
-    m_ShaderLTC->bind();
-    m_ShaderLTC->setUniform("uView", data.View);
-    m_ShaderLTC->setUniform("uProjection", data.Projection);
-    m_ShaderLTC->setUniform("uViewPositionW", data.Position);
-    m_ShaderLTC->bindTexture("uLtcMat", m_LtcMatTex, 0);
-    m_ShaderLTC->bindTexture("uLtcMag", m_LtcMagTex, 1);
-    return m_ShaderLTC;
+    auto program = bDepth ? m_ShaderDepthLTC : m_ShaderLTC;
+
+    program->bind();
+    program->setUniform("uView", data.View);
+    program->setUniform("uProjection", data.Projection);
+    if (!bDepth)
+    {
+        program->setUniform("uViewPositionW", data.Position);
+        program->bindTexture("uLtcMat", m_LtcMatTex, 0);
+        program->bindTexture("uLtcMag", m_LtcMagTex, 1);
+    }
+    return program;
 }
 
-ShaderPtr Light::BindAreaProgram(const RenderingData& data)
+ShaderPtr Light::BindLightProgram(const RenderingData& data, bool bDepth)
 {
-    m_ShaderLight->bind();
-    m_ShaderLight->setUniform("uViewProj", data.Projection*data.View);
-    return m_ShaderLight;
+    auto shader = bDepth ? m_ShaderDepthLight : m_ShaderLight;
+    shader->bind();
+    shader->setUniform("uViewProj", data.Projection*data.View);
+    return shader;
 }
 
-ShaderPtr Light::submit(ShaderPtr& shader)
+ShaderPtr Light::submit(ShaderPtr& shader, bool bDepth)
 {
     glm::mat4 world = getWorld();
-
-    auto& sourceTex = m_bTexturedLight ? m_LightSourceTex : m_WhiteTex;
-
-    m_ShaderLight->setUniform("uWorld", world);
-    m_ShaderLight->setUniform("ubTexturedLight", m_bTexturedLight);
-    m_ShaderLight->setUniform("uIntensity", m_Intensity);
-    m_ShaderLight->bindTexture("uTexColor", sourceTex, 0);
-
+    shader->setUniform("uWorld", world);
+    if (!bDepth)
+    {
+        auto& sourceTex = m_bTexturedLight ? m_LightSourceTex : m_WhiteTex;
+        shader->setUniform("ubTexturedLight", m_bTexturedLight);
+        shader->setUniform("uIntensity", m_Intensity);
+        shader->bindTexture("uTexColor", sourceTex, 0);
+    }
     m_LightMesh.draw();
 
     return shader;
@@ -133,7 +153,9 @@ ShaderPtr Light::submitPerLightUniforms(ShaderPtr& shader)
     shader->setUniform("uIntensity", m_Intensity);
     shader->setUniform("uAlbedo", glm::vec3(m_Albedo));
     shader->setUniform("uQuadPoints", points, 4);
-    shader->bindTexture("uFilteredMap", m_LightFilteredTex, 2);
+
+    if (m_bTexturedLight)
+        shader->bindTexture("uFilteredMap", m_LightFilteredTex, 2);
 
     return shader;
 }

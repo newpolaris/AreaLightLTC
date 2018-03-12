@@ -24,12 +24,12 @@ class Light
 {
 public:
 
-    static ShaderPtr BindLightProgram(const RenderingData& data);
-    static ShaderPtr BindAreaProgram(const RenderingData& data);
+    static ShaderPtr BindProgram(const RenderingData& data, bool bDepth);
+    static ShaderPtr BindLightProgram(const RenderingData& data, bool bDepth);
 
     Light() noexcept;
 
-    ShaderPtr submit(ShaderPtr& shader);
+    ShaderPtr submit(ShaderPtr& shader, bool bDepth);
     ShaderPtr submitPerLightUniforms(ShaderPtr& shader);
 
     glm::mat4 getWorld() const;
