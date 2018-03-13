@@ -19,6 +19,7 @@ namespace light
     GraphicsTexturePtr m_LtcMagTex;
     GraphicsTexturePtr m_WhiteTex;
     ShaderPtr m_ShaderLight;
+    ShaderPtr m_ShaderGroudTruth;
     ShaderPtr m_ShaderDepthLight;
     ShaderPtr m_ShaderLTC;
     ShaderPtr m_ShaderDepthLTC;
@@ -50,6 +51,13 @@ namespace light
         m_ShaderDepthLTC->initialize();
         m_ShaderDepthLTC->addShader(GL_VERTEX_SHADER, "Ltc.Vertex");
         m_ShaderDepthLTC->link();
+
+        m_ShaderGroudTruth  = std::make_shared<ProgramShader>();
+        m_ShaderGroudTruth->setDevice(device);
+        m_ShaderGroudTruth->initialize();
+        m_ShaderGroudTruth->addShader(GL_VERTEX_SHADER, "GroundTruth.Vertex");
+        m_ShaderGroudTruth->addShader(GL_FRAGMENT_SHADER, "GroundTruth.Fragment");
+        m_ShaderGroudTruth->link();
 
         m_LightMesh.create();
 
@@ -92,7 +100,8 @@ Light::Light() noexcept
 
 ShaderPtr Light::BindProgram(const RenderingData& data, bool bDepth)
 {
-    auto program = bDepth ? m_ShaderDepthLTC : m_ShaderLTC;
+    auto program = data.bGroudTruth ? m_ShaderGroudTruth : m_ShaderLTC;
+    program = bDepth ? m_ShaderDepthLTC : program;
 
     program->bind();
     program->setUniform("uView", data.View);

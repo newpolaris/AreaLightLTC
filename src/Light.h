@@ -9,6 +9,7 @@ typedef std::shared_ptr<class ProgramShader> ShaderPtr;
 
 struct RenderingData
 {
+    bool bGroudTruth;
     glm::vec3 Position;
     glm::mat4 View;
     glm::mat4 Projection;

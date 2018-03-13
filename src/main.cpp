@@ -100,6 +100,7 @@ struct SceneSettings
     bool bUiChanged = false;
     bool bResized = false;
     bool bSampleReset = false;
+    bool bGroudTruth = true;
     int32_t m_SampleCount = 0;
     uint32_t m_LightIndex = 0;
     float m_JitterAASigma = 0.6f;
@@ -301,6 +302,7 @@ void AreaLight::updateHUD() noexcept
     {
         // global
         {
+            bUpdated |= ImGui::Checkbox("Ground truth", &m_Settings.bGroudTruth);
             bUpdated |= ImGui::SliderFloat("Roughness", &m_Settings.m_Roughness, 0.03f, 1.f);
             bUpdated |= ImGui::SliderFloat("Fresnel", &m_Settings.m_F0, 0.01f, 1.f);
             bUpdated |= ImGui::SliderFloat("Jitter Radius", &m_Settings.m_JitterAASigma, 0.01f, 2.f);
@@ -359,6 +361,7 @@ void AreaLight::render() noexcept
         (float)getFrameWidth(), (float)getFrameHeight());
 
     const RenderingData renderData { 
+        m_Settings.bGroudTruth,
         m_Camera.getPosition(),
         m_Camera.getViewMatrix(),
         projection,
