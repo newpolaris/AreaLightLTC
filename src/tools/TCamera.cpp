@@ -13,7 +13,7 @@
 #include "Mesh.h"
 
 TCamera::TCamera()
-    : m_projectionMatrix(1.f)
+    : m_PrevViewMatrix(1.f)
     , m_viewMatrix(1.f)
     , m_viewProjMatrix(1.f)
 {
@@ -141,8 +141,10 @@ void TCamera::motionHandler(int x, int y, bool bClicked)
     }
 }
 
-void TCamera::update(float deltaT)
+bool TCamera::update(float deltaT)
 {
+    bool bUpdated = false;
+
     // .Update camera velocity  
     if (m_bHasMoved)
     {
@@ -218,10 +220,23 @@ void TCamera::update(float deltaT)
     m_viewMatrix = glm::lookAt(m_position, m_target, m_up);
     m_viewProjMatrix = m_projectionMatrix * m_viewMatrix;
 
+    if (m_PrevProjMatrix != m_projectionMatrix)
+    {
+        bUpdated = true;
+        m_PrevProjMatrix = m_projectionMatrix;
+    }
+
+    if (m_PrevViewMatrix != m_viewMatrix)
+    {
+        bUpdated = true;
+        m_PrevViewMatrix = m_viewMatrix;
+    }
+
     /**/
 
     //Having the camera model matrix can be helpful + it holds position / target & up in
     // its columns
     //camera = view^-1
+    return bUpdated;
 }
 

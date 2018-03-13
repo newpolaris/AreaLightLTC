@@ -35,6 +35,8 @@ enum CameraKeys
 class TCamera
 {
 protected:
+    glm::mat4 m_PrevProjMatrix;
+    glm::mat4 m_PrevViewMatrix;
     glm::mat4 m_projectionMatrix;
     glm::mat4 m_viewMatrix;
     glm::mat4 m_viewProjMatrix;
@@ -77,7 +79,7 @@ public:
     TCamera();
 
     // .Update the camera attributes with user input
-    void update(float deltaT = 1.0f);
+    bool update(float deltaT = 1.0f);
 
     // .EVENT HANDLERS
     void keyboardHandler(CameraKeys key, bool bPressed);
@@ -99,7 +101,9 @@ public:
     void doEnableRotation(bool state) { m_bEnableRotation = state; }
 
     // .GETTERS
+    const glm::mat4& getPrevProjectionMatrix() const { return m_PrevProjMatrix; }
     const glm::mat4& getProjectionMatrix() const { return m_projectionMatrix; }
+    const glm::mat4& getPrevViewMatrix() const { return m_PrevViewMatrix; }
     const glm::mat4& getViewMatrix() const { return m_viewMatrix; }
     const glm::mat4& getViewProjMatrix() const { return m_viewProjMatrix; }
 
