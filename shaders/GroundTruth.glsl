@@ -251,7 +251,8 @@ bool QuadRayTest(vec4 q[4], vec3 pos, vec3 dir, out vec2 uv, bool twoSided)
 {
     // compute plane normal and distance from origin
     vec3 xaxis = q[1].xyz - q[0].xyz;
-    vec3 yaxis = q[3].xyz - q[0].xyz;
+    // swap (0,3) to fit right hand coordinate
+    vec3 yaxis = q[0].xyz - q[3].xyz;
 
     float xlen = length(xaxis);
     float ylen = length(yaxis);
@@ -279,6 +280,9 @@ bool QuadRayTest(vec4 q[4], vec3 pos, vec3 dir, out vec2 uv, bool twoSided)
     // use intersection point to determine the UV
     uv = vec2(dot(xaxis, projpt - q[0].xyz),
               dot(yaxis, projpt - q[0].xyz)) / vec2(xlen, ylen);
+
+    // swap y
+    uv.y = 1 - uv.y;
 
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
         return false;
@@ -344,7 +348,7 @@ void main()
     vec3 o = mul(w2t, toEye);
 
     vec3 ex = uQuadPoints[1].xyz - uQuadPoints[0].xyz;
-    vec3 ey = uQuadPoints[3].xyz - uQuadPoints[0].xyz;
+    vec3 ey = uQuadPoints[0].xyz - uQuadPoints[3].xyz;
     vec2 uvScale = vec2(length(ex), length(ey));
     SphQuad squad = SphQuadInit(uQuadPoints[0].xyz, ex, ey, position);
 
