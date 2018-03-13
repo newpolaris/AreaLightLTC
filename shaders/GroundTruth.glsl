@@ -141,7 +141,7 @@ vec3 toLinear(vec3 _rgb)
 	return pow(abs(_rgb), vec3(2.2));
 }
 
-// Building an Orthonormal Basis from a 3D Unit Vector Without Normalization
+// "Building an Orthonormal Basis from a 3D Unit Vector Without Normalization"
 mat3 BasisFrisvad(vec3 n)
 {
     vec3 b1, b2;
@@ -160,6 +160,7 @@ mat3 BasisFrisvad(vec3 n)
     return mat3(b1, b2, n);
 }
 
+// "An Area-Preserving Parametrization for Spherical Rectangles"
 struct SphQuad 
 {
     vec3 o, x, y, z; // local reference system 'R'
@@ -175,12 +176,18 @@ SphQuad SphQuadInit(vec3 s, vec3 ex, vec3 ey, vec3 o)
     SphQuad squad;
 
     squad.o = o;
-    float exl = length(ex), eyl = length(ey); // compute local reference system 'R' 
+    float exl = length(ex), eyl = length(ey); 
+
+    // compute local reference system 'R' 
     squad.x = ex / exl;
     squad.y = ey / eyl;
-    squad.z = cross(squad.x, squad.y); // compute rectangle coords in local reference system 
+    squad.z = cross(squad.x, squad.y);
+
+    // compute rectangle coords in local reference system 
     vec3 d = s - o;
-    squad.z0 = dot(d, squad.z); // flip 'z' to make it point against 'Q' 
+    squad.z0 = dot(d, squad.z); 
+
+    // flip 'z' to make it point against 'Q' 
     if (squad.z0 > 0) 
     {
         squad.z *= -1; 
@@ -192,24 +199,35 @@ SphQuad SphQuadInit(vec3 s, vec3 ex, vec3 ey, vec3 o)
     squad.x1 = squad.x0 + exl;
     squad.y1 = squad.y0 + eyl;
     squad.y0sq = squad.y0 * squad.y0;
-    squad.y1sq = squad.y1 * squad.y1; // create vectors to four vertices 
+    squad.y1sq = squad.y1 * squad.y1; 
+    
+    // create vectors to four vertices 
     vec3 v00 = vec3(squad.x0, squad.y0, squad.z0);
     vec3 v01 = vec3(squad.x0, squad.y1, squad.z0);
     vec3 v10 = vec3(squad.x1, squad.y0, squad.z0);
-    vec3 v11 = vec3(squad.x1, squad.y1, squad.z0); // compute normals to edges 
+    vec3 v11 = vec3(squad.x1, squad.y1, squad.z0); 
+
+    // compute normals to edges 
     vec3 n0 = normalize(cross(v00, v10));
     vec3 n1 = normalize(cross(v10, v11));
     vec3 n2 = normalize(cross(v11, v01));
-    vec3 n3 = normalize(cross(v01, v00)); // compute internal angles (gamma_i) 
+    vec3 n3 = normalize(cross(v01, v00)); 
+    
+    // compute internal angles (gamma_i) 
     float g0 = acos(-dot(n0,n1));
     float g1 = acos(-dot(n1,n2));
     float g2 = acos(-dot(n2,n3));
-    float g3 = acos(-dot(n3,n0)); // compute predefined constants 
+    float g3 = acos(-dot(n3,n0)); 
+    
+    // compute predefined constants 
     squad.b0 = n0.z;
     squad.b1 = n2.z;
     squad.b0sq = squad.b0 * squad.b0;
-    squad.k = 2*pi - g2 - g3; // compute solid angle from internal angles 
+    squad.k = 2*pi - g2 - g3; 
+    
+    // compute solid angle from internal angles 
     squad.S = g0 + g1 - squad.k; 
+
     return squad;
 }
 
@@ -252,7 +270,7 @@ bool QuadRayTest(vec4 q[4], vec3 pos, vec3 dir, out vec2 uv, bool twoSided)
     // compute plane normal and distance from origin
     vec3 xaxis = q[1].xyz - q[0].xyz;
     // swap (0,3) to fit right hand coordinate
-    vec3 yaxis = q[0].xyz - q[3].xyz;
+    vec3 yaxis = q[3].xyz - q[0].xyz;
 
     float xlen = length(xaxis);
     float ylen = length(yaxis);
@@ -262,7 +280,7 @@ bool QuadRayTest(vec4 q[4], vec3 pos, vec3 dir, out vec2 uv, bool twoSided)
     vec3 zaxis = normalize(cross(xaxis, yaxis));
     float d = -dot(zaxis, q[0].xyz);
 
-    float ndotz = -dot(dir, zaxis);
+    float ndotz = dot(dir, zaxis);
     if (twoSided)
         ndotz = abs(ndotz);
 
@@ -348,7 +366,7 @@ void main()
     vec3 o = mul(w2t, toEye);
 
     vec3 ex = uQuadPoints[1].xyz - uQuadPoints[0].xyz;
-    vec3 ey = uQuadPoints[0].xyz - uQuadPoints[3].xyz;
+    vec3 ey = uQuadPoints[3].xyz - uQuadPoints[0].xyz;
     vec2 uvScale = vec2(length(ex), length(ey));
     SphQuad squad = SphQuadInit(uQuadPoints[0].xyz, ex, ey, position);
 
@@ -435,7 +453,10 @@ void main()
 
             vec2 uv = vec2(0, 0);
             bool hit = QuadRayTest(uQuadPoints, position, mul(t2w, i), uv, uTwoSided);
-
+        #if 0
+            if (hit)
+                Lo_s += vec3(1, 1, 1) / 4;
+        #else
             vec3 F = scol + (1.0 - scol)*pow(1.0 - clamp(dot(h, o), 0, 1), 5.0);
 
             vec3 color = textureLod(uTexColor, uv, 0.0).rgb;
@@ -450,6 +471,7 @@ void main()
 
             if (cos_theta_i > 0.0 && pdfBRDF > 0.0)
                 Lo_s += fr_p*cos_theta_i/(pdfBRDF + pdfLight);
+        #endif
         }
     }
     // scale by diffuse albedo
