@@ -109,8 +109,13 @@ ShaderPtr Light::BindProgram(const RenderingData& data, bool bDepth)
     if (!bDepth)
     {
         program->setUniform("uViewPositionW", data.Position);
-        program->bindTexture("uLtcMat", m_LtcMatTex, 0);
-        program->bindTexture("uLtcMag", m_LtcMagTex, 1);
+        if (data.bGroudTruth)
+            program->setUniform("uSamples", data.Samples.data(), data.Samples.size());
+        else
+        {
+            program->bindTexture("uLtcMat", m_LtcMatTex, 0);
+            program->bindTexture("uLtcMag", m_LtcMagTex, 1);
+        }
     }
     return program;
 }
@@ -139,7 +144,7 @@ ShaderPtr Light::submit(ShaderPtr& shader, bool bDepth)
     return shader;
 }
 
-ShaderPtr Light::submitPerLightUniforms(ShaderPtr& shader)
+ShaderPtr Light::submitPerLightUniforms(const RenderingData& data, ShaderPtr& shader)
 {
     // local
     glm::mat4 model = getWorld();
@@ -158,14 +163,21 @@ ShaderPtr Light::submitPerLightUniforms(ShaderPtr& shader)
     points[3] = model * points[3];
 
     shader->setUniform("uTwoSided", m_bTwoSided);
-    shader->setUniform("uTexturedLight", m_bTexturedLight);
+    if (!data.bGroudTruth)
+    {
+        shader->setUniform("uTexturedLight", m_bTexturedLight);
+    }
     shader->setUniform("uIntensity", m_Intensity);
     shader->setUniform("uAlbedo", glm::vec3(m_Albedo));
     shader->setUniform("uQuadPoints", points, 4);
 
-    if (m_bTexturedLight)
+    if (m_bTexturedLight && !data.bGroudTruth)
         shader->bindTexture("uFilteredMap", m_LightFilteredTex, 2);
-
+    if (m_bTexturedLight && data.bGroudTruth)
+    {
+        auto& texture = m_bTexturedLight ? m_LightSourceTex : m_WhiteTex;
+        shader->bindTexture("uTexColor", texture, 0);
+    }
     return shader;
 }
 

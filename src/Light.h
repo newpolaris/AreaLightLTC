@@ -13,6 +13,7 @@ struct RenderingData
     glm::vec3 Position;
     glm::mat4 View;
     glm::mat4 Projection;
+    std::vector<glm::vec4> Samples;
 };
 
 namespace light
@@ -31,7 +32,7 @@ public:
     Light() noexcept;
 
     ShaderPtr submit(ShaderPtr& shader, bool bDepth);
-    ShaderPtr submitPerLightUniforms(ShaderPtr& shader);
+    ShaderPtr submitPerLightUniforms(const RenderingData& data, ShaderPtr& shader);
 
     glm::mat4 getWorld() const;
 

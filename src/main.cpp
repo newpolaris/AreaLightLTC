@@ -126,6 +126,19 @@ static float Halton(int index, float base)
     return result;
 }
 
+static std::vector<glm::vec4> Halton4D(int size, int offset)
+{
+    std::vector<glm::vec4> s(size);
+    for (int i = 0; i < size; i++)
+    {
+        s[i][0] = Halton(i + offset, 2.0f);
+        s[i][1] = Halton(i + offset, 3.0f);
+        s[i][2] = Halton(i + offset, 5.0f);
+        s[i][3] = Halton(i + offset, 7.0f);
+    }
+    return s;
+}
+
 glm::mat4 jitterProjMatrix(const glm::mat4& proj, int sampleCount, float jitterAASigma, float width, float height)
 {
     // Per-frame jitter to camera for AA
@@ -360,11 +373,14 @@ void AreaLight::render() noexcept
         m_Settings.m_JitterAASigma,
         (float)getFrameWidth(), (float)getFrameHeight());
 
+    auto samples = Halton4D(SceneSettings::NumSamples, m_Settings.m_SampleCount);
+
     const RenderingData renderData { 
         m_Settings.bGroudTruth,
         m_Camera.getPosition(),
         m_Camera.getViewMatrix(),
         projection,
+        samples
     };
 
     GLenum clearFlag = GL_DEPTH_BUFFER_BIT;
@@ -407,7 +423,7 @@ void AreaLight::render() noexcept
         program = submitPerFrameUniformLight(program);
         for (auto& light : m_Lights)
         {
-            program = light->submitPerLightUniforms(program);
+            program = light->submitPerLightUniforms(renderData, program);
             for (auto& model : m_Models)
                 model->submit(program);
         }

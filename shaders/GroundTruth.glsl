@@ -28,9 +28,12 @@ void main()
 // bind intensity   {label:"Light Intensity", default:4, min:0, max:10}
 // bind width       {label:"Width",  default: 8, min:0.1, max:15, step:0.1}
 // bind height      {label:"Height", default: 8, min:0.1, max:15, step:0.1}
-// bind roty        {label:"Rotation Y", default: 0, min:0, max:1, step:0.001}
-// bind rotz        {label:"Rotation Z", default: 0, min:0, max:1, step:0.001}
 // bind twoSided    {label:"Two-sided", default:false}
+
+bool bDiffuseBRDF = false;
+bool bDiffuseLight = false;
+bool bSpecBRDF = true;
+bool bSpecLight = true;
 
 // IN
 in vec4 vPositionW;
@@ -39,8 +42,12 @@ in vec3 vNormalW;
 // OUT
 out vec3 FragColor;
 
+const int NumSamples = 4;
+const float pi = 3.14159265;
+
 uniform vec4 uQuadPoints[4]; // Area light quad
 uniform vec4 uStarPoints[10]; // Area light star
+uniform vec4 uSamples[NumSamples];
 uniform vec3 uViewPositionW;
 
 uniform float uF0; // frenel
@@ -54,14 +61,9 @@ uniform float uRotY;
 uniform float uRotZ;
 uniform bool uTwoSided;
 uniform bool uTexturedLight;
-
-uniform sampler2D uLtcMat;
-uniform sampler2D uLtcMag;
-uniform sampler2D uFilteredMap;
-
-uniform mat4 uView;
-uniform vec2 uResolution;
 uniform int uSampleCount;
+
+uniform sampler2D uTexColor;
 
 // Tracing and intersection
 ///////////////////////////
@@ -105,51 +107,6 @@ bool RayRectIntersect(Ray ray, Rect rect, out float t)
 			intersect = false;
 	}
 	return intersect;
-}
-
-// Camera functions
-///////////////////
-
-Ray GenerateCameraRay(vec3 position, vec3 target)
-{
-	Ray ray;
-
-	// Random jitter within pixel for AA
-	ray.origin = position;
-	ray.dir = normalize(target - position);
-
-	return ray;
-}
-
-// Use code in 'LTC demo sample'
-vec3 FetchDiffuseFilteredTexture(sampler2D texLightFiltered, vec3 p1_, vec3 p2_, vec3 p3_, vec3 p4_)
-{
-    // area light plane basis
-    vec3 V1 = p2_ - p1_;
-    vec3 V2 = p4_ - p1_;
-    vec3 planeOrtho = (cross(V1, V2));
-    float planeAreaSquared = dot(planeOrtho, planeOrtho);
-    float planeDistxPlaneArea = dot(planeOrtho, p1_);
-    // orthonormal projection of (0,0,0) in area light space
-    vec3 P = planeDistxPlaneArea * planeOrtho / planeAreaSquared - p1_;
-
-    // find tex coords of P
-    float dot_V1_V2 = dot(V1,V2);
-    float inv_dot_V1_V1 = 1.0 / dot(V1, V1);
-    vec3 V2_ = V2 - V1 * dot_V1_V2 * inv_dot_V1_V1;
-    vec2 Puv;
-    Puv.y = dot(V2_, P) / dot(V2_, V2_);
-    Puv.x = dot(V1, P)*inv_dot_V1_V1 - dot_V1_V2*inv_dot_V1_V1*Puv.y ;
-
-    // invert UV
-    Puv.y = 1 - Puv.y;
-
-    // LOD
-    float d = abs(planeDistxPlaneArea) / pow(planeAreaSquared, 0.75);
-
-    // 0.125, 0.75 looks like border gap and content length
-    // 2048.0 is may be image size
-    return textureLod(texLightFiltered, vec2(0.125, 0.125) + 0.75 * Puv, log(2048.0*d)/log(3.0) ).rgb;
 }
 
 vec3 mul(mat3 m, vec3 v)
@@ -215,8 +172,6 @@ struct SphQuad
 
 SphQuad SphQuadInit(vec3 s, vec3 ex, vec3 ey, vec3 o) 
 {
-    const float pi = 3.14159265;
-
     SphQuad squad;
 
     squad.o = o;
@@ -292,6 +247,81 @@ vec4 FAST_32_hash(vec2 gridcell)
     return fract(P.xzxz * P.yyww * (1.0 / SOMELARGEFLOAT));
 }
 
+bool QuadRayTest(vec4 q[4], vec3 pos, vec3 dir, out vec2 uv, bool twoSided)
+{
+    // compute plane normal and distance from origin
+    vec3 xaxis = q[1].xyz - q[0].xyz;
+    vec3 yaxis = q[3].xyz - q[0].xyz;
+
+    float xlen = length(xaxis);
+    float ylen = length(yaxis);
+    xaxis = xaxis / xlen;
+    yaxis = yaxis / ylen;
+
+    vec3 zaxis = normalize(cross(xaxis, yaxis));
+    float d = -dot(zaxis, q[0].xyz);
+
+    float ndotz = -dot(dir, zaxis);
+    if (twoSided)
+        ndotz = abs(ndotz);
+
+    if (ndotz < 0.00001)
+        return false;
+
+    // compute intersection point
+    float t = -(dot(pos, zaxis) + d) / dot(dir, zaxis);
+
+    if (t < 0.0)
+        return false;
+
+    vec3 projpt = pos + dir * t;
+
+    // use intersection point to determine the UV
+    uv = vec2(dot(xaxis, projpt - q[0].xyz),
+              dot(yaxis, projpt - q[0].xyz)) / vec2(xlen, ylen);
+
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+        return false;
+
+    return true;
+}
+
+float GGX(vec3 V, vec3 L, float alpha, out float pdf)
+{
+    if (V.z <= 0.0 || L.z <= 0.0)
+    {
+        pdf = 0.0;
+        return 0.0;
+    }
+
+    float a2 = alpha*alpha;
+
+    // height-correlated Smith masking-shadowing function
+    float G1_wi = 2.0*V.z/(V.z + sqrt(a2 + (1.0 - a2)*V.z*V.z));
+    float G1_wo = 2.0*L.z/(L.z + sqrt(a2 + (1.0 - a2)*L.z*L.z));
+    float G     = G1_wi*G1_wo / (G1_wi + G1_wo - G1_wi*G1_wo);
+
+    // D
+    vec3 H = normalize(V + L);
+    float d = 1.0 + (a2 - 1.0)*H.z*H.z;
+    float D = a2/(pi* d*d);
+
+    float ndoth = H.z;
+    float vdoth = dot(V, H);
+
+    if (vdoth <= 0.0)
+    {
+        pdf = 0.0;
+        return 0.0;
+    }
+
+    pdf = D * ndoth / (4.0*vdoth);
+
+    float res = D * G / 4.0 / V.z / L.z;
+    return res;
+}
+
+
 void main()
 {
     const float pi = 3.14159265;
@@ -305,27 +335,129 @@ void main()
     vec3 dcol = baseColor*(1.0 - metallic);
     vec3 scol = mix(vec3(uF0), baseColor, metallic);
 
-    float alpha = 0.001;
-
     mat3 t2w = BasisFrisvad(normal);
     mat3 w2t = transpose(t2w);
-
-	Ray ray = GenerateCameraRay(uViewPositionW, vPositionW.xyz);
+    vec3 position = vPositionW.xyz;
+	vec3 toEye = normalize(uViewPositionW - vPositionW.xyz);
 
     // express receiver dir in tangent space
-    vec3 o = mul(w2t, ray.dir);
+    vec3 o = mul(w2t, toEye);
 
     vec3 ex = uQuadPoints[1].xyz - uQuadPoints[0].xyz;
     vec3 ey = uQuadPoints[3].xyz - uQuadPoints[0].xyz;
     vec2 uvScale = vec2(length(ex), length(ey));
-    SphQuad squad = SphQuadInit(uQuadPoints[0].xyz, ex, ey, ray.origin);
+    SphQuad squad = SphQuadInit(uQuadPoints[0].xyz, ex, ey, position);
 
     float rcpSolidAngle = 1.0/squad.S;
+    float alpha = roughness*roughness;
 
     vec3 quadn = normalize(cross(ex, ey));
     quadn = mul(w2t, quadn);
 
-    vec3 col = vec3(1, 0, 0);
+    vec2 jitter = FAST_32_hash(gl_FragCoord.xy).xy;
 
-	FragColor = col;
+    // integrate
+    vec3 Lo_d = vec3(0, 0, 0);
+    vec3 Lo_s = vec3(0, 0, 0);
+
+    for (int t = 0; t < NumSamples; t++)
+    {
+        float u1 = fract(jitter.x + uSamples[t].x);
+        float u2 = fract(jitter.y + uSamples[t].y);
+
+        // light sample
+        vec3 lightPos = SphQuadSample(squad, u1, u2);
+
+        vec3 i = normalize(lightPos - position);
+        i = mul(w2t, i);
+
+        // diffuse light sample
+        if (bDiffuseLight)
+        {
+            float cos_theta_i = i.z;
+
+            // Derive UVs from sample point
+            vec3 pd = lightPos - uQuadPoints[0].xyz;
+            vec2 uv = vec2(dot(pd, squad.x), dot(pd, squad.y))/uvScale;
+            vec3 color = textureLod(uTexColor, uv, 0.0).rgb;
+
+            float pdfBRDF = 1.0/(2.0*pi);
+            vec3 fr_p = color/pi;
+
+            float pdfLight = rcpSolidAngle;
+
+            if (cos_theta_i > 0.0 && (dot(i, quadn) < 0.0 || uTwoSided))
+                Lo_d += fr_p*cos_theta_i/(pdfBRDF + pdfLight);
+        }
+        // specular light sample
+        if (bSpecLight)
+        {
+        }
+
+        // BRDF sample
+        float phi = 2.0*pi*u1;
+        float cp = cos(phi);
+        float sp = sin(phi);
+
+        // diffuse BRDF sample
+        if (bDiffuseBRDF)
+        {
+            float r = sqrt(u2);
+            vec3 i = vec3(r*cp, r*sp, sqrt(1.0 - r*r));
+
+            float cos_theta_i = i.z;
+
+            vec2 uv = vec2(0, 0);
+            bool hit = QuadRayTest(uQuadPoints, position, mul(t2w, i), uv, uTwoSided);
+            vec3 color = textureLod(uTexColor, uv, 0.0).rgb;
+            color = hit ? color : vec3(0, 0, 0);
+
+            float pdfBRDF = cos_theta_i / pi;
+            vec3 fr_p = color/pi;
+
+            float pdfLight = hit ? rcpSolidAngle : 0.0;
+
+            if (cos_theta_i > 0.0 && pdfBRDF > 0.0)
+                Lo_d += fr_p*cos_theta_i/(pdfBRDF + pdfLight);
+        }
+        // Specular BRDF sample
+        if (bSpecBRDF)
+        {
+            float r = sqrt(u2/(1.0 - u2));
+            vec3 h = vec3(r*alpha*cp, r*alpha*sp, 1.0);
+            h = normalize(h);
+
+            vec3 i = reflect(-o, h);
+
+            vec2 uv = vec2(0, 0);
+            bool hit = QuadRayTest(uQuadPoints, position, mul(t2w, i), uv, uTwoSided);
+
+            vec3 F = scol + (1.0 - scol)*pow(1.0 - clamp(dot(h, o), 0, 1), 5.0);
+
+            vec3 color = textureLod(uTexColor, uv, 0.0).rgb;
+            color = hit ? color : vec3(0, 0, 0);
+
+            float pdfBRDF;
+            vec3 fr_p = GGX(o, i, alpha, pdfBRDF)*F*color;
+
+            float pdfLight = hit ? rcpSolidAngle : 0.0;
+
+            float cos_theta_i = i.z;
+
+            if (cos_theta_i > 0.0 && pdfBRDF > 0.0)
+                Lo_s += fr_p*cos_theta_i/(pdfBRDF + pdfLight);
+        }
+    }
+    // scale by diffuse albedo
+    Lo_d *= dcol*albedo;
+
+    vec3 Lo_i = Lo_d + Lo_s;
+
+    // scale by light intensity
+    Lo_i *= lcol;
+
+    // normalize
+    Lo_i /= float(NumSamples);
+
+    FragColor = Lo_i;
 }
