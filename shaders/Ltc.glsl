@@ -23,8 +23,6 @@ void main()
 
 -- Fragment
 
-#define USE_ACOS 1
-
 const float LUT_SIZE = 32.0;
 const float LUT_SCALE = (LUT_SIZE - 1.0) / LUT_SIZE;
 const float LUT_BIAS = 0.5 / LUT_SIZE;
@@ -62,8 +60,8 @@ uniform bool ubTwoSided;
 uniform bool ubClipless;
 uniform bool ubTexturedLight;
 
-uniform sampler2D uLtcMat;
-uniform sampler2D uLtcMag;
+uniform sampler2D uLtc1;
+uniform sampler2D uLtc2;
 uniform sampler2D uFilteredMap;
 
 uniform mat4 uView;
@@ -155,6 +153,7 @@ vec3 rotation_yz(vec3 v, float ay, float az)
 // Linearly Transformed Cosines
 ///////////////////////////////
 
+// s2016_ltc_rnd
 vec3 IntegrateEdgeVec(vec3 v1, vec3 v2)
 {
     float x = dot(v1, v2);
@@ -171,15 +170,7 @@ vec3 IntegrateEdgeVec(vec3 v1, vec3 v2)
 
 float IntegrateEdge(vec3 v1, vec3 v2)
 {
-#if USE_ACOS
-    float cosTheta = dot(v1, v2);
-    float theta = acos(cosTheta);
-    float res = cross(v1, v2).z * ((theta > 0.001) ? theta/sin(theta) : 1.0);
-
-    return res;
-#else
     return IntegrateEdgeVec(v1, v2).z;
-#endif
 }
 
 void ClipQuadToHorizon(inout vec3 L[5], out int n)
@@ -385,9 +376,11 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
             z = -z;
 
         vec2 uv = vec2(z*0.5 + 0.5, len);
+        // if mtx data is loaded from image need to be flip
+        uv.y = 1 - uv.y;
         uv = uv*LUT_SCALE + LUT_BIAS;
 
-        float scale = texture(uLtcMag, uv).w;
+        float scale = texture(uLtc2, uv).w;
 
         sum = len*scale;
 
@@ -468,31 +461,28 @@ void main()
     vec3 V = -ray.dir;
     vec3 N = normal;
 
-    float theta = acos(dot(N, V));
-    vec2 uv = vec2(roughness, theta / (0.5*pi));
-
-    // scale and bias coordinates, for correct filtered lookup
-    uv = uv*LUT_SCALE + LUT_BIAS;
+    vec2 uv = vec2(roughness, dot(N, V));
     // if mtx data is loaded from image need to be flip
     uv.y = 1 - uv.y;
+    // scale and bias coordinates, for correct filtered lookup
+    uv = uv*LUT_SCALE + LUT_BIAS;
 
-    vec4 t = texture(uLtcMat, uv);
+    vec4 t1 = texture(uLtc1, uv);
+    vec4 t2 = texture(uLtc2, uv);
     mat3 Minv = mat3(
-        vec3(1, 0, t.y),
-        vec3(0, t.z, 0),
-        vec3(t.w, 0, t.x)
+        vec3(t1.x, 0, t1.y),
+        vec3(0, t1.z, 0),
+        vec3(t1.w, 0, t2.x)
     );
 
     vec3 spec = LTC_Evaluate(N, V, pos, Minv, uQuadPoints, ubTwoSided, uFilteredMap);
 
     // apply BRDF scale terms (BRDF magnitude and Schlick Fresnel)
-    vec2 schlick = texture(uLtcMag, uv).xy;
-    scol = scol*schlick.x + (1.0 - scol)*schlick.y;
+    spec *= scol*t2.y + (1.0 - scol)*t2.z;
 
     vec3 diff = LTC_Evaluate(N, V, pos, mat3(1), uQuadPoints, ubTwoSided, uFilteredMap);
 
-    col = lcol*(scol*spec + dcol*diff*albedo);
-    col /= 2.0*pi;
+    col = lcol*(spec + dcol*diff*albedo);
 
 	FragColor = col;
 }

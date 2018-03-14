@@ -15,8 +15,8 @@
 namespace light
 {
     PlaneMesh m_LightMesh(2.0, 1.0);
-    GraphicsTexturePtr m_LtcMatTex;
-    GraphicsTexturePtr m_LtcMagTex;
+    GraphicsTexturePtr m_Ltc1Tex;
+    GraphicsTexturePtr m_Ltc2Tex;
     GraphicsTexturePtr m_WhiteTex;
     ShaderPtr m_ShaderLight;
     ShaderPtr m_ShaderGroudTruth;
@@ -66,16 +66,16 @@ namespace light
         m_WhiteTex = device->createTexture(source);
 
         GraphicsTextureDesc ltcMatDesc;
-        ltcMatDesc.setFilename("resources/ltc_mat.dds");
+        ltcMatDesc.setFilename("resources/ltc_1.dds");
         ltcMatDesc.setWrapS(GL_CLAMP_TO_EDGE);
         ltcMatDesc.setWrapT(GL_CLAMP_TO_EDGE);
-        m_LtcMatTex = device->createTexture(ltcMatDesc);
+        m_Ltc1Tex = device->createTexture(ltcMatDesc);
 
         GraphicsTextureDesc ltcMagDesc;
-        ltcMagDesc.setFilename("resources/ltc_amp.dds");
+        ltcMagDesc.setFilename("resources/ltc_2.dds");
         ltcMagDesc.setWrapS(GL_CLAMP_TO_EDGE);
         ltcMagDesc.setWrapT(GL_CLAMP_TO_EDGE);
-        m_LtcMagTex = device->createTexture(ltcMagDesc);
+        m_Ltc2Tex = device->createTexture(ltcMagDesc);
     }
 
     void shutdown()
@@ -113,8 +113,8 @@ ShaderPtr Light::BindProgram(const RenderingData& data, bool bDepth)
             program->setUniform("uSamples", data.Samples.data(), data.Samples.size());
         else
         {
-            program->bindTexture("uLtcMat", m_LtcMatTex, 0);
-            program->bindTexture("uLtcMag", m_LtcMagTex, 1);
+            program->bindTexture("uLtc1", m_Ltc1Tex, 0);
+            program->bindTexture("uLtc2", m_Ltc2Tex, 1);
         }
     }
     return program;

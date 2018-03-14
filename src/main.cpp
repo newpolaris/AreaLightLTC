@@ -98,16 +98,18 @@ struct SceneSettings
 {
     static const uint32_t NumSamples = 4;
     bool bProgressiveSampling = true;
+    bool bGroudTruth = true;
+    bool bClipless = true;
+    int32_t SampleCount = 0;
+    uint32_t LightIndex = 0;
+    float JitterAASigma = 0.6f;
+    float Roughness = 0.25f;
+    float F0 = 0.04f; // fresnel
+    glm::vec4 Albedo = glm::vec4(0.5f, 0.5f, 0.5f, 1.f); // additional albedo
+    // tempolar
     bool bUiChanged = false;
     bool bResized = false;
     bool bSampleReset = false;
-    bool bGroudTruth = true;
-    int32_t m_SampleCount = 0;
-    uint32_t m_LightIndex = 0;
-    float m_JitterAASigma = 0.6f;
-    float m_Roughness = 0.25f;
-    float m_F0 = 0.04f; // fresnel
-    glm::vec4 m_Albedo = glm::vec4(0.5f, 0.5f, 0.5f, 1.f); // additional albedo
 };
 
 static float Halton(int index, float base)
@@ -321,22 +323,24 @@ void AreaLight::updateHUD() noexcept
         {
             bUpdated |= ImGui::Checkbox("Ground Truth", &m_Settings.bGroudTruth);
             bUpdated |= ImGui::Checkbox("Progressive Sampling", &m_Settings.bProgressiveSampling);
+            bUpdated |= ImGui::Checkbox("Use Clipless", &m_Settings.bClipless);
             ImGui::Separator();
-            bUpdated |= ImGui::SliderFloat("Roughness", &m_Settings.m_Roughness, 0.03f, 1.f);
-            bUpdated |= ImGui::SliderFloat("Fresnel", &m_Settings.m_F0, 0.01f, 1.f);
-            bUpdated |= ImGui::SliderFloat("Jitter Radius", &m_Settings.m_JitterAASigma, 0.01f, 2.f);
-            ImGui::ColorWheel("Albedo Color:", glm::value_ptr(m_Settings.m_Albedo), 0.6f);
+            bUpdated |= ImGui::SliderFloat("Roughness", &m_Settings.Roughness, 0.03f, 1.f);
+            bUpdated |= ImGui::SliderFloat("Fresnel", &m_Settings.F0, 0.01f, 1.f);
+            bUpdated |= ImGui::SliderFloat("Jitter Radius", &m_Settings.JitterAASigma, 0.01f, 2.f);
+            ImGui::ColorWheel("Albedo Color:", glm::value_ptr(m_Settings.Albedo), 0.6f);
         }
+        ImGui::Separator();
         if (m_Lights.size() > 1)
         {
-            auto idx = (float)m_Settings.m_LightIndex;
+            auto idx = (float)m_Settings.LightIndex;
             bUpdated |= ImGui::SliderFloat("Light index", &idx, 0.0f, (float)m_Lights.size() - 1);
-            m_Settings.m_LightIndex = (uint32_t)idx;
+            m_Settings.LightIndex = (uint32_t)idx;
         }
         ImGui::Separator();
         // Local
         {
-            auto idx = m_Settings.m_LightIndex;
+            auto idx = m_Settings.LightIndex;
             bUpdated |= ImGui::SliderFloat("Intensity", &m_Lights[idx]->m_Intensity, 0.f, 10.f);
             bUpdated |= ImGui::SliderFloat("Width", &m_Lights[idx]->m_Width, 0.1f, 15.f);
             bUpdated |= ImGui::SliderFloat("Height", &m_Lights[idx]->m_Height, 0.1f, 15.f);
@@ -357,9 +361,9 @@ void AreaLight::updateHUD() noexcept
     ImGui::End();
 
     static glm::vec4 prevAlbedo(0.f);
-    if (prevAlbedo != m_Settings.m_Albedo)
+    if (prevAlbedo != m_Settings.Albedo)
     {
-        prevAlbedo = m_Settings.m_Albedo;
+        prevAlbedo = m_Settings.Albedo;
         bUpdated |= true;
     }
     m_Settings.bUiChanged = bUpdated;
@@ -369,17 +373,17 @@ void AreaLight::render() noexcept
 {
     // reset sampling count
     if (m_Settings.bSampleReset)
-        m_Settings.m_SampleCount = 0;
+        m_Settings.SampleCount = 0;
 
     // set the jittered projection matrix
     auto projection = m_Camera.getProjectionMatrix();
     projection = jitterProjMatrix(
         projection,
-        m_Settings.m_SampleCount/SceneSettings::NumSamples,
-        m_Settings.m_JitterAASigma,
+        m_Settings.SampleCount/SceneSettings::NumSamples,
+        m_Settings.JitterAASigma,
         (float)getFrameWidth(), (float)getFrameHeight());
 
-    auto samples = Halton4D(SceneSettings::NumSamples, m_Settings.m_SampleCount);
+    auto samples = Halton4D(SceneSettings::NumSamples, m_Settings.SampleCount);
 
     const RenderingData renderData { 
         m_Settings.bGroudTruth,
@@ -390,7 +394,7 @@ void AreaLight::render() noexcept
     };
 
     GLenum clearFlag = GL_DEPTH_BUFFER_BIT;
-    if (m_Settings.m_SampleCount == 0)
+    if (m_Settings.SampleCount == 0)
         clearFlag |= GL_COLOR_BUFFER_BIT;
     m_Device->setFramebuffer(m_ColorRenderTarget);
 	glViewport(0, 0, getFrameWidth(), getFrameHeight());
@@ -444,12 +448,12 @@ void AreaLight::render() noexcept
         glDisable(GL_DEPTH_TEST);
         m_BlitShader.bind();
         m_BlitShader.bindTexture("uTexSource", m_ScreenColorTex, 0);
-        m_BlitShader.setUniform("uSampleCount", m_Settings.m_SampleCount);
+        m_BlitShader.setUniform("uSampleCount", m_Settings.SampleCount);
         m_ScreenTraingle.draw();
         glEnable(GL_DEPTH_TEST);
     }
     if (m_Settings.bProgressiveSampling)
-        m_Settings.m_SampleCount += SceneSettings::NumSamples;
+        m_Settings.SampleCount += SceneSettings::NumSamples;
 }
 
 void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
@@ -531,8 +535,10 @@ GraphicsDevicePtr AreaLight::createDevice(const GraphicsDeviceDesc& desc) noexce
 
 ShaderPtr AreaLight::submitPerFrameUniformLight(ShaderPtr& shader) noexcept
 {
-    shader->setUniform("uRoughness", m_Settings.m_Roughness);
-    shader->setUniform("uAlbedo2", m_Settings.m_Albedo);
-    shader->setUniform("uF0", m_Settings.m_F0);
+    shader->setUniform("uRoughness", m_Settings.Roughness);
+    shader->setUniform("uAlbedo2", m_Settings.Albedo);
+    shader->setUniform("uF0", m_Settings.F0);
+    if (!m_Settings.bGroudTruth)
+        shader->setUniform("ubClipless", m_Settings.bClipless);
     return shader;
 }
