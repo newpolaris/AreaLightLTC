@@ -334,7 +334,6 @@ float GGX(vec3 V, vec3 L, float alpha, out float pdf)
     return res;
 }
 
-
 void main()
 {
     const float pi = 3.14159265;

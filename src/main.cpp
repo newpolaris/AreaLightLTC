@@ -97,6 +97,7 @@ ModelPtr createPrimitive(const glm::mat4& world, Args&&... args)
 struct SceneSettings
 {
     static const uint32_t NumSamples = 4;
+    bool bProgressiveSampling = true;
     bool bUiChanged = false;
     bool bResized = false;
     bool bSampleReset = false;
@@ -318,7 +319,8 @@ void AreaLight::updateHUD() noexcept
     {
         // global
         {
-            bUpdated |= ImGui::Checkbox("Ground truth", &m_Settings.bGroudTruth);
+            bUpdated |= ImGui::Checkbox("Ground Truth", &m_Settings.bGroudTruth);
+            bUpdated |= ImGui::Checkbox("Progressive Sampling", &m_Settings.bProgressiveSampling);
             ImGui::Separator();
             bUpdated |= ImGui::SliderFloat("Roughness", &m_Settings.m_Roughness, 0.03f, 1.f);
             bUpdated |= ImGui::SliderFloat("Fresnel", &m_Settings.m_F0, 0.01f, 1.f);
@@ -377,8 +379,7 @@ void AreaLight::render() noexcept
         m_Settings.m_JitterAASigma,
         (float)getFrameWidth(), (float)getFrameHeight());
 
-    static int i = 0;
-    auto samples = Halton4D(SceneSettings::NumSamples, i++);
+    auto samples = Halton4D(SceneSettings::NumSamples, m_Settings.m_SampleCount);
 
     const RenderingData renderData { 
         m_Settings.bGroudTruth,
@@ -447,7 +448,8 @@ void AreaLight::render() noexcept
         m_ScreenTraingle.draw();
         glEnable(GL_DEPTH_TEST);
     }
-    // m_Settings.m_SampleCount += SceneSettings::NumSamples;
+    if (m_Settings.bProgressiveSampling)
+        m_Settings.m_SampleCount += SceneSettings::NumSamples;
 }
 
 void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
