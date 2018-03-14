@@ -254,6 +254,9 @@ void AreaLight::startup() noexcept
     auto backLight = std::make_shared<Light>();
 	backLight->setRotation(glm::vec3(-90.f, 0, 0));
 	backLight->setPosition(glm::vec3(0, 0, 30));
+    backLight->setTexturedLight(false);
+    backLight->setLightSource(lightSource);
+    backLight->setLightFilterd(filteredTex);
     m_Lights.emplace_back(std::move(backLight));
 
     // Ground plane
@@ -316,6 +319,7 @@ void AreaLight::updateHUD() noexcept
         // global
         {
             bUpdated |= ImGui::Checkbox("Ground truth", &m_Settings.bGroudTruth);
+            ImGui::Separator();
             bUpdated |= ImGui::SliderFloat("Roughness", &m_Settings.m_Roughness, 0.03f, 1.f);
             bUpdated |= ImGui::SliderFloat("Fresnel", &m_Settings.m_F0, 0.01f, 1.f);
             bUpdated |= ImGui::SliderFloat("Jitter Radius", &m_Settings.m_JitterAASigma, 0.01f, 2.f);

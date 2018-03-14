@@ -268,15 +268,18 @@ bool QuadRayTest(vec4 q[4], vec3 pos, vec3 dir, out vec2 uv, bool twoSided)
 
     vec3 zaxis = normalize(cross(xaxis, yaxis));
 
-    float d = -dot(zaxis, q[0].xyz);
+    float d = dot(zaxis, q[0].xyz);
 
     // zaxis faces backwards in the plane
     float ndotz = dot(dir, zaxis);
     if (twoSided)
         ndotz = abs(ndotz);
 
+    if (ndotz < 0.00001)
+        return false;
+
     // compute intersection point
-    float t = -(dot(pos, zaxis) + d) / dot(dir, zaxis);
+    float t = (-dot(pos, zaxis) + d) / dot(dir, zaxis);
 
     if (t < 0.0)
         return false;
@@ -287,11 +290,11 @@ bool QuadRayTest(vec4 q[4], vec3 pos, vec3 dir, out vec2 uv, bool twoSided)
     uv = vec2(dot(xaxis, projpt - q[0].xyz),
               dot(yaxis, projpt - q[0].xyz)) / vec2(xlen, ylen);
 
-    // swap y in right hand coordinate
-    uv.y = 1 - uv.y;
-
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
         return false;
+
+    // swap y in right hand coordinate
+    uv.y = 1 - uv.y;
 
     return true;
 }
