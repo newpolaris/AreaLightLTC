@@ -1,12 +1,20 @@
 #pragma once
 
-#include <tools/TCamera.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp> 
 #include <GraphicsTypes.h>
 
 typedef std::shared_ptr<class ProgramShader> ShaderPtr;
+
+struct RenderingData
+{
+    bool bGroudTruth;
+    glm::vec3 Position;
+    glm::mat4 View;
+    glm::mat4 Projection;
+    std::vector<glm::vec4> Samples;
+};
 
 namespace light
 {
@@ -18,13 +26,13 @@ class Light
 {
 public:
 
-    static ShaderPtr BindLightProgram(const TCamera& camera);
-    static ShaderPtr BindAreaProgram(const TCamera& camera);
+    static ShaderPtr BindProgram(const RenderingData& data, bool bDepth);
+    static ShaderPtr BindLightProgram(const RenderingData& data, bool bDepth);
 
     Light() noexcept;
 
-    ShaderPtr submit(ShaderPtr& shader);
-    ShaderPtr submitPerLightUniforms(ShaderPtr& shader);
+    ShaderPtr submit(ShaderPtr& shader, bool bDepth);
+    ShaderPtr submitPerLightUniforms(const RenderingData& data, ShaderPtr& shader);
 
     glm::mat4 getWorld() const;
 

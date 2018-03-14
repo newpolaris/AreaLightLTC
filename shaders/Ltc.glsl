@@ -37,7 +37,7 @@ in vec4 vPositionW;
 in vec3 vNormalW;
 
 // OUT
-out vec4 FragColor;
+out vec3 FragColor;
 
 uniform vec4 uQuadPoints[4]; // Area light quad
 uniform vec4 uStarPoints[10]; // Area light star
@@ -53,7 +53,7 @@ uniform float uHeight;
 uniform float uRotY;
 uniform float uRotZ;
 uniform bool uTwoSided;
-uniform bool uTexturedLight;
+uniform bool ubTexturedLight;
 
 uniform sampler2D uLtcMat;
 uniform sampler2D uLtcMag;
@@ -329,7 +329,7 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
     L[4] = L[3]; // avoid warning
 
     vec3 textureLight = vec3(1, 1, 1);
-    if (uTexturedLight)
+    if (ubTexturedLight)
         textureLight = FetchDiffuseFilteredTexture(texFilteredMap, L[0], L[1], L[2], L[3]);
     
     int n;
@@ -435,5 +435,5 @@ void main()
     col = lcol*(scol*spec + dcol*diff*albedo);
     col /= 2.0*pi;
 
-	FragColor = vec4(col, 1.0);
+	FragColor = col;
 }

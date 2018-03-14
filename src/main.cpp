@@ -96,11 +96,70 @@ ModelPtr createPrimitive(const glm::mat4& world, Args&&... args)
 
 struct SceneSettings
 {
+    static const uint32_t NumSamples = 4;
+    bool bProgressiveSampling = true;
+    bool bUiChanged = false;
+    bool bResized = false;
+    bool bSampleReset = false;
+    bool bGroudTruth = true;
+    int32_t m_SampleCount = 0;
     uint32_t m_LightIndex = 0;
+    float m_JitterAASigma = 0.6f;
     float m_Roughness = 0.25f;
     float m_F0 = 0.04f; // fresnel
     glm::vec4 m_Albedo = glm::vec4(0.5f, 0.5f, 0.5f, 1.f); // additional albedo
 };
+
+static float Halton(int index, float base)
+{
+    float result = 0.0f;
+    float f = 1.0f/base;
+    float i = float(index);
+    for (;;)
+    {
+        if (i <= 0.0f)
+            break;
+
+        result += f*fmodf(i, base);
+        i = floorf(i/base);
+        f = f/base;
+    }
+    return result;
+}
+
+static std::vector<glm::vec4> Halton4D(int size, int offset)
+{
+    std::vector<glm::vec4> s(size);
+    for (int i = 0; i < size; i++)
+    {
+        s[i][0] = Halton(i + offset, 2.0f);
+        s[i][1] = Halton(i + offset, 3.0f);
+        s[i][2] = Halton(i + offset, 5.0f);
+        s[i][3] = Halton(i + offset, 7.0f);
+    }
+    return s;
+}
+
+glm::mat4 jitterProjMatrix(const glm::mat4& proj, int sampleCount, float jitterAASigma, float width, float height)
+{
+    // Per-frame jitter to camera for AA
+    const int frameNum = sampleCount + 1; // Add 1 since otherwise first sample is an outlier
+
+    float u1 = Halton(frameNum, 2.0f);
+    float u2 = Halton(frameNum, 3.0f);
+
+    // Gaussian sample
+    float phi = 2.0f*glm::pi<float>()*u2;
+    float r = jitterAASigma*sqrtf(-2.0f*log(std::max(u1, 1e-7f)));
+    float x = r*cos(phi);
+    float y = r*sin(phi);
+
+    glm::mat4 ret = proj;
+    ret[0].w += x*2.0f/width;
+    ret[1].w += y*2.0f/height;
+
+    return ret;
+}
 
 class AreaLight final : public gamecore::IGameApp
 {
@@ -193,6 +252,14 @@ void AreaLight::startup() noexcept
     light->setLightFilterd(filteredTex);
     m_Lights.emplace_back(std::move(light));
 
+    auto backLight = std::make_shared<Light>();
+	backLight->setRotation(glm::vec3(-90.f, 0, 0));
+	backLight->setPosition(glm::vec3(0, 0, 30));
+    backLight->setTexturedLight(false);
+    backLight->setLightSource(lightSource);
+    backLight->setLightFilterd(filteredTex);
+    m_Lights.emplace_back(std::move(backLight));
+
     // Ground plane
     m_Models.emplace_back(createPrimitive<PlaneMesh>(glm::mat4(1.f)));
 
@@ -218,11 +285,25 @@ void AreaLight::closeup() noexcept
 
 void AreaLight::update() noexcept
 {
-    m_Camera.update();
+    bool bCameraUpdated = m_Camera.update();
+
+    static float preWidth = 0.f;
+    static float preHeight = 0.f;
+
+    float width = (float)getFrameWidth();
+    float height = (float)getFrameHeight();
+    bool bResized = false;
+    if (preWidth != width || preHeight != height)
+    {
+        preWidth = width, preHeight = height;
+        bResized = true;
+    }
+    m_Settings.bSampleReset = (m_Settings.bUiChanged || bCameraUpdated || bResized);
 }
 
 void AreaLight::updateHUD() noexcept
 {
+    bool bUpdated = false;
     float width = (float)getFrameWidth(), height = (float)getFrameHeight();
 
     ImGui::SetNextWindowPos(
@@ -238,70 +319,137 @@ void AreaLight::updateHUD() noexcept
     {
         // global
         {
-            ImGui::SliderFloat("Roughness", &m_Settings.m_Roughness, 0.03f, 1.f);
-            ImGui::SliderFloat("Fresnel 0", &m_Settings.m_F0, 0.01f, 1.f);
-            ImGui::ColorWheel("Albedo Color:", glm::value_ptr(m_Settings.m_Albedo), 0.6f);
+            bUpdated |= ImGui::Checkbox("Ground Truth", &m_Settings.bGroudTruth);
+            bUpdated |= ImGui::Checkbox("Progressive Sampling", &m_Settings.bProgressiveSampling);
             ImGui::Separator();
+            bUpdated |= ImGui::SliderFloat("Roughness", &m_Settings.m_Roughness, 0.03f, 1.f);
+            bUpdated |= ImGui::SliderFloat("Fresnel", &m_Settings.m_F0, 0.01f, 1.f);
+            bUpdated |= ImGui::SliderFloat("Jitter Radius", &m_Settings.m_JitterAASigma, 0.01f, 2.f);
+            ImGui::ColorWheel("Albedo Color:", glm::value_ptr(m_Settings.m_Albedo), 0.6f);
         }
         if (m_Lights.size() > 1)
         {
             auto idx = (float)m_Settings.m_LightIndex;
-            ImGui::SliderFloat("Roughness", &idx, 0.0f, (float)m_Lights.size() - 1);
+            bUpdated |= ImGui::SliderFloat("Light index", &idx, 0.0f, (float)m_Lights.size() - 1);
             m_Settings.m_LightIndex = (uint32_t)idx;
-            ImGui::Separator();
         }
+        ImGui::Separator();
         // Local
         {
             auto idx = m_Settings.m_LightIndex;
-            ImGui::SliderFloat("Intensity", &m_Lights[idx]->m_Intensity, 0.f, 10.f);
-            ImGui::SliderFloat("Width", &m_Lights[idx]->m_Width, 0.1f, 15.f);
-            ImGui::SliderFloat("Height", &m_Lights[idx]->m_Height, 0.1f, 15.f);
-            ImGui::SliderFloat("Position X", &m_Lights[idx]->m_Position.x, -10.f, 10.f);
-            ImGui::SliderFloat("Position Y", &m_Lights[idx]->m_Position.y, -10.f, 10.f);
-            ImGui::SliderFloat("Position Z", &m_Lights[idx]->m_Position.z, -10.f, 10.f);
-            ImGui::SliderFloat("Rotation X", &m_Lights[idx]->m_Rotation.x, -180.f, 179.f);
-            ImGui::SliderFloat("Rotation Y", &m_Lights[idx]->m_Rotation.y, -180.f, 179.f);
-            ImGui::SliderFloat("Rotation Z", &m_Lights[idx]->m_Rotation.z, -180.f, 179.f);
-            ImGui::Checkbox("Tow sided", &m_Lights[idx]->m_bTwoSided);
-            ImGui::Checkbox("Textured Light", &m_Lights[idx]->m_bTexturedLight);
+            bUpdated |= ImGui::SliderFloat("Intensity", &m_Lights[idx]->m_Intensity, 0.f, 10.f);
+            bUpdated |= ImGui::SliderFloat("Width", &m_Lights[idx]->m_Width, 0.1f, 15.f);
+            bUpdated |= ImGui::SliderFloat("Height", &m_Lights[idx]->m_Height, 0.1f, 15.f);
+            ImGui::Separator();
+            bUpdated |= ImGui::SliderFloat("Position X", &m_Lights[idx]->m_Position.x, -30.f, 30.f);
+            bUpdated |= ImGui::SliderFloat("Position Y", &m_Lights[idx]->m_Position.y, -30.f, 30.f);
+            bUpdated |= ImGui::SliderFloat("Position Z", &m_Lights[idx]->m_Position.z, -30.f, 30.f);
+            ImGui::Separator();
+            bUpdated |= ImGui::SliderFloat("Rotation X", &m_Lights[idx]->m_Rotation.x, -180.f, 179.f);
+            bUpdated |= ImGui::SliderFloat("Rotation Y", &m_Lights[idx]->m_Rotation.y, -180.f, 179.f);
+            bUpdated |= ImGui::SliderFloat("Rotation Z", &m_Lights[idx]->m_Rotation.z, -180.f, 179.f);
+            ImGui::Separator();
+            bUpdated |= ImGui::Checkbox("Tow sided", &m_Lights[idx]->m_bTwoSided);
+            bUpdated |= ImGui::Checkbox("Textured Light", &m_Lights[idx]->m_bTexturedLight);
         }
     }
     ImGui::Unindent();
     ImGui::End();
+
+    static glm::vec4 prevAlbedo(0.f);
+    if (prevAlbedo != m_Settings.m_Albedo)
+    {
+        prevAlbedo = m_Settings.m_Albedo;
+        bUpdated |= true;
+    }
+    m_Settings.bUiChanged = bUpdated;
 }
 
 void AreaLight::render() noexcept
 {
+    // reset sampling count
+    if (m_Settings.bSampleReset)
+        m_Settings.m_SampleCount = 0;
+
+    // set the jittered projection matrix
+    auto projection = m_Camera.getProjectionMatrix();
+    projection = jitterProjMatrix(
+        projection,
+        m_Settings.m_SampleCount/SceneSettings::NumSamples,
+        m_Settings.m_JitterAASigma,
+        (float)getFrameWidth(), (float)getFrameHeight());
+
+    auto samples = Halton4D(SceneSettings::NumSamples, m_Settings.m_SampleCount);
+
+    const RenderingData renderData { 
+        m_Settings.bGroudTruth,
+        m_Camera.getPosition(),
+        m_Camera.getViewMatrix(),
+        projection,
+        samples
+    };
+
+    GLenum clearFlag = GL_DEPTH_BUFFER_BIT;
+    if (m_Settings.m_SampleCount == 0)
+        clearFlag |= GL_COLOR_BUFFER_BIT;
     m_Device->setFramebuffer(m_ColorRenderTarget);
 	glViewport(0, 0, getFrameWidth(), getFrameHeight());
-
-	// Rendering
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClearDepthf(1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glPolygonMode(GL_FRONT_AND_BACK, isWireframe() ? GL_LINE : GL_FILL);
+	glClear(clearFlag);
 
-    auto lightProgram = Light::BindLightProgram(m_Camera);
-    lightProgram = submitPerFrameUniformLight(lightProgram);
-    for (auto& light : m_Lights)
+    // depth pre-pass
     {
-        lightProgram = light->submitPerLightUniforms(lightProgram);
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        glDepthFunc(GL_LEQUAL);
+        glDisable(GL_CULL_FACE);
+        auto depthLightProgram = Light::BindLightProgram(renderData, true);
+        for (auto& light : m_Lights)
+            light->submit(depthLightProgram, true);
+        glEnable(GL_CULL_FACE);
+
+        auto program = Light::BindProgram(renderData, true);
         for (auto& model : m_Models)
-            model->submit(lightProgram);
+            model->submit(program);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     }
+    // color pass
+    {
+        glDepthMask(GL_TRUE);
+        glDepthFunc(GL_EQUAL);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE); // additive
+        glDisable(GL_CULL_FACE);
+        auto lightProgram = Light::BindLightProgram(renderData, false);
+        for (auto& light : m_Lights)
+            light->submit(lightProgram, false);
+        glEnable(GL_CULL_FACE);
 
-    auto areaProgram = Light::BindAreaProgram(m_Camera);
-    for (auto& light : m_Lights)
-        light->submit(areaProgram);
+        auto program = Light::BindProgram(renderData, false);
+        program = submitPerFrameUniformLight(program);
+        for (auto& light : m_Lights)
+        {
+            program = light->submitPerLightUniforms(renderData, program);
+            for (auto& model : m_Models)
+                model->submit(program);
+        }
+        glDisable(GL_BLEND);
+    }
+    // TAA resolve, tone mapping
+    {
+        // TODO: default frame buffer with/without depth test
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, getFrameWidth(), getFrameHeight());
 
-    // TODO: default frame buffer with/without depth test
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(0, 0, getFrameWidth(), getFrameHeight());
-    glDisable(GL_DEPTH_TEST);
-    m_BlitShader.bind();
-    m_BlitShader.bindTexture("uTexSource", m_ScreenColorTex, 0);
-    m_ScreenTraingle.draw();
-    glEnable(GL_DEPTH_TEST);
+        glDisable(GL_DEPTH_TEST);
+        m_BlitShader.bind();
+        m_BlitShader.bindTexture("uTexSource", m_ScreenColorTex, 0);
+        m_BlitShader.setUniform("uSampleCount", m_Settings.m_SampleCount);
+        m_ScreenTraingle.draw();
+        glEnable(GL_DEPTH_TEST);
+    }
+    if (m_Settings.bProgressiveSampling)
+        m_Settings.m_SampleCount += SceneSettings::NumSamples;
 }
 
 void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept

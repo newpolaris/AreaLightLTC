@@ -19,6 +19,7 @@ void main()
 // IN
 in vec2 vTexcoords;
 uniform sampler2D uTexSource;
+uniform int uSampleCount;
 
 // OUT
 out vec3 fragColor;
@@ -81,7 +82,12 @@ vec3 toSRGB(vec3 v)
 // ----------------------------------------------------------------------------
 void main() 
 {
-    vec3 col = texture(uTexSource, vTexcoords).rgb;
+    vec3 samples = texture(uTexSource, vTexcoords).rgb;
+
+    // normalize
+    const int NUM_SAMPLES = 4;
+    float frameCount = uSampleCount/float(NUM_SAMPLES) + 1.0;
+    vec3 col = samples.rgb/frameCount;
 
 	col = aces_fitted(col);
 	col = toSRGB(col);
