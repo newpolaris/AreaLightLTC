@@ -164,16 +164,14 @@ ShaderPtr Light::submitPerLightUniforms(const RenderingData& data, ShaderPtr& sh
 
     shader->setUniform("uTwoSided", m_bTwoSided);
     if (!data.bGroudTruth)
-    {
-        shader->setUniform("uTexturedLight", m_bTexturedLight);
-    }
+        shader->setUniform("ubTexturedLight", m_bTexturedLight);
     shader->setUniform("uIntensity", m_Intensity);
     shader->setUniform("uAlbedo", glm::vec3(m_Albedo));
     shader->setUniform("uQuadPoints", points, 4);
 
     if (m_bTexturedLight && !data.bGroudTruth)
         shader->bindTexture("uFilteredMap", m_LightFilteredTex, 2);
-    if (m_bTexturedLight && data.bGroudTruth)
+    if (data.bGroudTruth)
     {
         auto& texture = m_bTexturedLight ? m_LightSourceTex : m_WhiteTex;
         shader->bindTexture("uTexColor", texture, 0);

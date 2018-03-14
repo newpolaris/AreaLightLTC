@@ -373,7 +373,8 @@ void AreaLight::render() noexcept
         m_Settings.m_JitterAASigma,
         (float)getFrameWidth(), (float)getFrameHeight());
 
-    auto samples = Halton4D(SceneSettings::NumSamples, m_Settings.m_SampleCount);
+    static int i = 0;
+    auto samples = Halton4D(SceneSettings::NumSamples, i++);
 
     const RenderingData renderData { 
         m_Settings.bGroudTruth,
@@ -442,7 +443,7 @@ void AreaLight::render() noexcept
         m_ScreenTraingle.draw();
         glEnable(GL_DEPTH_TEST);
     }
-    m_Settings.m_SampleCount += SceneSettings::NumSamples;
+    // m_Settings.m_SampleCount += SceneSettings::NumSamples;
 }
 
 void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept

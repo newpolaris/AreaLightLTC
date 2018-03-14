@@ -53,7 +53,7 @@ uniform float uHeight;
 uniform float uRotY;
 uniform float uRotZ;
 uniform bool uTwoSided;
-uniform bool uTexturedLight;
+uniform bool ubTexturedLight;
 
 uniform sampler2D uLtcMat;
 uniform sampler2D uLtcMag;
@@ -329,7 +329,7 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
     L[4] = L[3]; // avoid warning
 
     vec3 textureLight = vec3(1, 1, 1);
-    if (uTexturedLight)
+    if (ubTexturedLight)
         textureLight = FetchDiffuseFilteredTexture(texFilteredMap, L[0], L[1], L[2], L[3]);
     
     int n;

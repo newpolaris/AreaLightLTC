@@ -30,10 +30,10 @@ void main()
 // bind height      {label:"Height", default: 8, min:0.1, max:15, step:0.1}
 // bind twoSided    {label:"Two-sided", default:false}
 
-bool bDiffuseBRDF = false;
-bool bDiffuseLight = false;
-bool bSpecBRDF = true;
+bool bDiffuseLight = true;
+bool bDiffuseBRDF = true;
 bool bSpecLight = true;
+bool bSpecBRDF = true;
 
 // IN
 in vec4 vPositionW;
@@ -119,23 +119,6 @@ mat3 mul(mat3 m1, mat3 m2)
     return m1 * m2;
 }
 
-// Scene helpers
-////////////////
-
-void InitRect(out Rect rect, in vec4 points[4])
-{
-    vec3 right = vec3(points[3] - points[0]);
-    vec3 up = vec3(points[0] - points[1]);
-    rect.dirx = normalize(right);
-    rect.diry = normalize(up);
-	rect.center = vec3((points[0] + points[2]))*0.5;
-	rect.halfx = 0.5*length(right);
-	rect.halfy = 0.5*length(up);
-
-	vec3 rectNormal = cross(rect.dirx, rect.diry);
-	rect.plane = vec4(rectNormal, -dot(rectNormal, rect.center));
-}
-
 vec3 toLinear(vec3 _rgb)
 {
 	return pow(abs(_rgb), vec3(2.2));
@@ -160,7 +143,6 @@ mat3 BasisFrisvad(vec3 n)
     return mat3(b1, b2, n);
 }
 
-// "An Area-Preserving Parametrization for Spherical Rectangles"
 struct SphQuad 
 {
     vec3 o, x, y, z; // local reference system 'R'
@@ -171,6 +153,13 @@ struct SphQuad
     float S; // solid angle of 'Q' 
 };
 
+//
+// "An Area-Preserving Parametrization for Spherical Rectangles"
+//
+// s: one of its vertice on 3D planar rectangle P
+// ex, ey: two perpendicular vectors
+// o: center of unit radius sphere
+//
 SphQuad SphQuadInit(vec3 s, vec3 ex, vec3 ey, vec3 o) 
 {
     SphQuad squad;
@@ -268,8 +257,8 @@ vec4 FAST_32_hash(vec2 gridcell)
 bool QuadRayTest(vec4 q[4], vec3 pos, vec3 dir, out vec2 uv, bool twoSided)
 {
     // compute plane normal and distance from origin
+    // note that in right hand coordinates, zaxis is toward plane backward
     vec3 xaxis = q[1].xyz - q[0].xyz;
-    // swap (0,3) to fit right hand coordinate
     vec3 yaxis = q[3].xyz - q[0].xyz;
 
     float xlen = length(xaxis);
@@ -278,14 +267,13 @@ bool QuadRayTest(vec4 q[4], vec3 pos, vec3 dir, out vec2 uv, bool twoSided)
     yaxis = yaxis / ylen;
 
     vec3 zaxis = normalize(cross(xaxis, yaxis));
+
     float d = -dot(zaxis, q[0].xyz);
 
+    // zaxis faces backwards in the plane
     float ndotz = dot(dir, zaxis);
     if (twoSided)
         ndotz = abs(ndotz);
-
-    if (ndotz < 0.00001)
-        return false;
 
     // compute intersection point
     float t = -(dot(pos, zaxis) + d) / dot(dir, zaxis);
@@ -299,7 +287,7 @@ bool QuadRayTest(vec4 q[4], vec3 pos, vec3 dir, out vec2 uv, bool twoSided)
     uv = vec2(dot(xaxis, projpt - q[0].xyz),
               dot(yaxis, projpt - q[0].xyz)) / vec2(xlen, ylen);
 
-    // swap y
+    // swap y in right hand coordinate
     uv.y = 1 - uv.y;
 
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
@@ -365,15 +353,19 @@ void main()
     // express receiver dir in tangent space
     vec3 o = mul(w2t, toEye);
 
+    // uQuadPoints[4]: {{ -1.f, 0.f, -1.f, 1.f }, { +1.f, 0.f, -1.f, 1.f }, { +1.f, 0.f, +1.f, 1.f }, { -1.f, 0.f, +1.f, 1.f }}
+    // note that in right hand ez is toward invese normal direction
     vec3 ex = uQuadPoints[1].xyz - uQuadPoints[0].xyz;
     vec3 ey = uQuadPoints[3].xyz - uQuadPoints[0].xyz;
     vec2 uvScale = vec2(length(ex), length(ey));
+
     SphQuad squad = SphQuadInit(uQuadPoints[0].xyz, ex, ey, position);
 
     float rcpSolidAngle = 1.0/squad.S;
     float alpha = roughness*roughness;
 
-    vec3 quadn = normalize(cross(ex, ey));
+    // since ey is downward,  reverses the direction of ez
+    vec3 quadn = -normalize(cross(ex, ey));
     quadn = mul(w2t, quadn);
 
     vec2 jitter = FAST_32_hash(gl_FragCoord.xy).xy;
@@ -400,7 +392,10 @@ void main()
 
             // Derive UVs from sample point
             vec3 pd = lightPos - uQuadPoints[0].xyz;
-            vec2 uv = vec2(dot(pd, squad.x), dot(pd, squad.y))/uvScale;
+            vec2 uv = vec2(dot(pd, squad.x), dot(pd, squad.y)) / uvScale;
+            // invert in OpenGL
+            uv.y = 1.0 - uv.y;
+
             vec3 color = textureLod(uTexColor, uv, 0.0).rgb;
 
             float pdfBRDF = 1.0/(2.0*pi);
@@ -414,6 +409,27 @@ void main()
         // specular light sample
         if (bSpecLight)
         {
+            // Derive UVs from sample point
+            vec3 pd = lightPos - uQuadPoints[0].xyz;
+            vec2 uv = vec2(dot(pd, squad.x), dot(pd, squad.y)) / uvScale;
+            // invert in OpenGL
+            uv.y = 1.0 - uv.y;
+
+            // derive UVs from sample point
+            vec3 h = normalize(i + o);
+
+            vec3 F = scol + (1.0 - scol)*pow(1.0 - clamp(dot(h, o), 0, 1), 5.0);
+            vec3 color = textureLod(uTexColor, uv, 0.0).rgb;
+
+            float pdfBRDF;
+            vec3 fr_p = GGX(o, i, alpha, pdfBRDF)*F*color;
+
+            float pdfLight = rcpSolidAngle;
+
+            float cos_theta_i = i.z;
+
+            if (cos_theta_i > 0.0 && (dot(i, quadn) < 0.0 || uTwoSided))
+                Lo_s += fr_p*cos_theta_i/(pdfBRDF + pdfLight);
         }
 
         // BRDF sample
@@ -449,14 +465,11 @@ void main()
             vec3 h = vec3(r*alpha*cp, r*alpha*sp, 1.0);
             h = normalize(h);
 
+            // o is normalized and transformed toEye vector
             vec3 i = reflect(-o, h);
 
             vec2 uv = vec2(0, 0);
             bool hit = QuadRayTest(uQuadPoints, position, mul(t2w, i), uv, uTwoSided);
-        #if 0
-            if (hit)
-                Lo_s += vec3(1, 1, 1) / 4;
-        #else
             vec3 F = scol + (1.0 - scol)*pow(1.0 - clamp(dot(h, o), 0, 1), 5.0);
 
             vec3 color = textureLod(uTexColor, uv, 0.0).rgb;
@@ -471,7 +484,6 @@ void main()
 
             if (cos_theta_i > 0.0 && pdfBRDF > 0.0)
                 Lo_s += fr_p*cos_theta_i/(pdfBRDF + pdfLight);
-        #endif
         }
     }
     // scale by diffuse albedo
