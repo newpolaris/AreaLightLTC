@@ -59,7 +59,7 @@ uniform float uWidth;
 uniform float uHeight;
 uniform float uRotY;
 uniform float uRotZ;
-uniform bool uTwoSided;
+uniform bool ubTwoSided;
 uniform bool uTexturedLight;
 uniform int uSampleCount;
 
@@ -405,7 +405,7 @@ void main()
 
             float pdfLight = rcpSolidAngle;
 
-            if (cos_theta_i > 0.0 && (dot(i, quadn) < 0.0 || uTwoSided))
+            if (cos_theta_i > 0.0 && (dot(i, quadn) < 0.0 || ubTwoSided))
                 Lo_d += fr_p*cos_theta_i/(pdfBRDF + pdfLight);
         }
         // specular light sample
@@ -430,7 +430,7 @@ void main()
 
             float cos_theta_i = i.z;
 
-            if (cos_theta_i > 0.0 && (dot(i, quadn) < 0.0 || uTwoSided))
+            if (cos_theta_i > 0.0 && (dot(i, quadn) < 0.0 || ubTwoSided))
                 Lo_s += fr_p*cos_theta_i/(pdfBRDF + pdfLight);
         }
 
@@ -448,7 +448,7 @@ void main()
             float cos_theta_i = i.z;
 
             vec2 uv = vec2(0, 0);
-            bool hit = QuadRayTest(uQuadPoints, position, mul(t2w, i), uv, uTwoSided);
+            bool hit = QuadRayTest(uQuadPoints, position, mul(t2w, i), uv, ubTwoSided);
             vec3 color = textureLod(uTexColor, uv, 0.0).rgb;
             color = hit ? color : vec3(0, 0, 0);
 
@@ -471,7 +471,7 @@ void main()
             vec3 i = reflect(-o, h);
 
             vec2 uv = vec2(0, 0);
-            bool hit = QuadRayTest(uQuadPoints, position, mul(t2w, i), uv, uTwoSided);
+            bool hit = QuadRayTest(uQuadPoints, position, mul(t2w, i), uv, ubTwoSided);
             vec3 F = scol + (1.0 - scol)*pow(1.0 - clamp(dot(h, o), 0, 1), 5.0);
 
             vec3 color = textureLod(uTexColor, uv, 0.0).rgb;

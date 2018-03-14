@@ -162,7 +162,7 @@ ShaderPtr Light::submitPerLightUniforms(const RenderingData& data, ShaderPtr& sh
     points[2] = model * points[2];
     points[3] = model * points[3];
 
-    shader->setUniform("uTwoSided", m_bTwoSided);
+    shader->setUniform("ubTwoSided", m_bTwoSided);
     if (!data.bGroudTruth)
         shader->setUniform("ubTexturedLight", m_bTexturedLight);
     shader->setUniform("uIntensity", m_Intensity);
