@@ -170,7 +170,10 @@ ShaderPtr Light::submitPerLightUniforms(const RenderingData& data, ShaderPtr& sh
     shader->setUniform("uQuadPoints", points, 4);
 
     if (m_bTexturedLight && !data.bGroudTruth)
-        shader->bindTexture("uFilteredMap", m_LightFilteredTex, 2);
+    {
+        shader->bindTexture("uColorMap", m_LightSourceTex, 2);
+        shader->bindTexture("uFilteredMap", m_LightFilteredTex, 3);
+    }
     if (data.bGroudTruth)
     {
         auto& texture = m_bTexturedLight ? m_LightSourceTex : m_WhiteTex;

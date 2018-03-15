@@ -23,6 +23,8 @@ void main()
 
 -- Fragment
 
+// #define USE_SPHERE_INTEGRAL 1
+
 const float LUT_SIZE = 32.0;
 const float LUT_SCALE = (LUT_SIZE - 1.0) / LUT_SIZE;
 const float LUT_BIAS = 0.5 / LUT_SIZE;
@@ -62,6 +64,7 @@ uniform bool ubTexturedLight;
 
 uniform sampler2D uLtc1;
 uniform sampler2D uLtc2;
+uniform sampler2D uColorMap;
 uniform sampler2D uFilteredMap;
 
 uniform mat4 uView;
@@ -153,7 +156,7 @@ vec3 rotation_yz(vec3 v, float ay, float az)
 // Linearly Transformed Cosines
 ///////////////////////////////
 
-// s2016_ltc_rnd
+// Real-Time Area Lighting: a Journey from Research to Production
 vec3 IntegrateEdgeVec(vec3 v1, vec3 v2)
 {
     float x = dot(v1, v2);
@@ -326,7 +329,7 @@ mat3 mul(mat3 m1, mat3 m2)
 }
 
 // Use code in 'LTC webgl sample'
-vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSided, sampler2D texFilteredMap)
+vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSided)
 {
     // construct orthonormal basis around N
     vec3 T1, T2;
@@ -346,7 +349,7 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
 
     vec3 textureLight = vec3(1, 1, 1);
     if (ubTexturedLight)
-        textureLight = FetchDiffuseFilteredTexture(texFilteredMap, L[0], L[1], L[2], L[3]);
+        textureLight = FetchDiffuseFilteredTexture(uFilteredMap, L[0], L[1], L[2], L[3]);
     
     // integrate
     float sum = 0.0;
@@ -370,6 +373,7 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
         vsum += IntegrateEdgeVec(L[3], L[0]);
 
         float len = length(vsum);
+    #ifndef USE_SPHERE_INTEGRAL
         float z = vsum.z/len;
 
         if (behind)
@@ -381,9 +385,11 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
         uv = uv*LUT_SCALE + LUT_BIAS;
 
         float scale = texture(uLtc2, uv).w;
-
         sum = len*scale;
-
+    #else
+        // SphereIntegral
+        sum = max((len*len + vsum.z)/(len + 1), 0);
+    #endif
         if (behind && !twoSided)
             sum = 0.0;
     }
@@ -474,12 +480,12 @@ void main()
         vec3(t1.w, 0, t2.x)
     );
 
-    vec3 spec = LTC_Evaluate(N, V, pos, Minv, uQuadPoints, ubTwoSided, uFilteredMap);
+    vec3 spec = LTC_Evaluate(N, V, pos, Minv, uQuadPoints, ubTwoSided);
 
     // apply BRDF scale terms (BRDF magnitude and Schlick Fresnel)
     spec *= scol*t2.y + (1.0 - scol)*t2.z;
 
-    vec3 diff = LTC_Evaluate(N, V, pos, mat3(1), uQuadPoints, ubTwoSided, uFilteredMap);
+    vec3 diff = LTC_Evaluate(N, V, pos, mat3(1), uQuadPoints, ubTwoSided);
 
     col = lcol*(spec + dcol*diff*albedo);
 
