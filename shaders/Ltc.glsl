@@ -174,7 +174,7 @@ float IntegrateEdge(vec3 v1, vec3 v2)
 #if USE_ACOS
     float cosTheta = dot(v1, v2);
     float theta = acos(cosTheta);
-    float res = cross(v1, v2).z * ((theta > 0.001) ? theta/sin(theta) : 1.0);
+    float res = normalize(cross(v1, v2)).z * theta;
 
     return res;
 #else

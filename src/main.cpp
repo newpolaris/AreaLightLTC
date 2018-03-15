@@ -207,7 +207,7 @@ AreaLight::~AreaLight() noexcept
 
 void AreaLight::startup() noexcept
 {
-	m_Camera.setViewParams(glm::vec3(0.0f, 5.0f, 15.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+	m_Camera.setViewParams(glm::vec3(2.0f, 5.0f, 15.0f), glm::vec3(2.0f, 0.0f, 0.0f));
 	m_Camera.setMoveCoefficient(0.35f);
 
 	GraphicsDeviceDesc deviceDesc;
@@ -337,7 +337,7 @@ void AreaLight::updateHUD() noexcept
         // Local
         {
             auto idx = m_Settings.m_LightIndex;
-            bUpdated |= ImGui::SliderFloat("Intensity", &m_Lights[idx]->m_Intensity, 0.f, 10.f);
+            bUpdated |= ImGui::SliderFloat("Intensity", &m_Lights[idx]->m_Intensity, 0.f, 50.f);
             bUpdated |= ImGui::SliderFloat("Width", &m_Lights[idx]->m_Width, 0.1f, 15.f);
             bUpdated |= ImGui::SliderFloat("Height", &m_Lights[idx]->m_Height, 0.1f, 15.f);
             ImGui::Separator();
@@ -471,7 +471,45 @@ void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
 	case GLFW_KEY_RIGHT:
 		m_Camera.keyboardHandler(MOVE_RIGHT, isPressed);
 		break;
-	}
+
+    case GLFW_KEY_1:
+        m_Camera.setViewParams(glm::vec3(2.0f, 5.0f, 15.0f), glm::vec3(2.0f, 0.0f, 0.0f));
+        m_Settings.bGroudTruth = false;
+        m_Settings.bProgressiveSampling = false;
+        break;
+
+    case GLFW_KEY_2:
+        m_Camera.setViewParams(glm::vec3(0.0f, 1.0f, 11.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        m_Settings.bGroudTruth = false;
+        m_Settings.bProgressiveSampling = false;
+        m_Settings.m_Roughness = 0.7f;
+        m_Settings.m_F0 = 0.04f;
+        if (m_Lights.size() > 0)
+        {
+            m_Lights[0]->setIntensity(15.f);
+            m_Lights[0]->setTexturedLight(false);
+            m_Lights[0]->m_Width = 1.f;
+            m_Lights[0]->m_Height = 1.f;
+            m_Lights[0]->m_Position = glm::vec3(0.f, 1.5f, 2.f);
+        }
+        break;
+
+    case GLFW_KEY_3:
+        m_Camera.setViewParams(glm::vec3(0.0f, 1.5f, 11.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        m_Settings.bGroudTruth = false;
+        m_Settings.bProgressiveSampling = false;
+        m_Settings.m_Roughness = 0.6f;
+        m_Settings.m_F0 = 0.8f;
+        if (m_Lights.size() > 0)
+        {
+            m_Lights[0]->setIntensity(8.5f);
+            m_Lights[0]->setTexturedLight(false);
+            m_Lights[0]->m_Width = 1.f;
+            m_Lights[0]->m_Height = 1.f;
+            m_Lights[0]->m_Position = glm::vec3(0.f, 1.5f, 2.f);
+        }
+        break;
+    }
 }
 
 void AreaLight::framesizeCallback(int32_t width, int32_t height) noexcept
