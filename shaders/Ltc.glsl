@@ -443,7 +443,6 @@ vec3 toLinear(vec3 _rgb)
 
 void main()
 {
-    const float pi = 3.14159265;
     const float minRoughness = 0.03;
     float metallic = 0.f;
     float roughness = max(uRoughness*uRoughness, minRoughness);
