@@ -23,8 +23,7 @@ void main()
 
 -- Fragment
 
-#define USE_ACOS 1
-
+const float pi = 3.14159265;
 const float LUT_SIZE = 32.0;
 const float LUT_SCALE = (LUT_SIZE - 1.0) / LUT_SIZE;
 const float LUT_BIAS = 0.5 / LUT_SIZE;
@@ -160,13 +159,16 @@ vec3 IntegrateEdgeVec(vec3 v1, vec3 v2)
     float x = dot(v1, v2);
     float y = abs(x);
 
-    float a = 0.8543985 + (0.4965155 + 0.0145206*y)*y;
-    float b = 3.4175940 + (4.1616724 + y)*y;
-    float v = a / b;
+    float a = 5.4203 + (3.12829 + 0.0902326*y)*y;
+    float b = 3.45068 + (4.18814 + y)*y;
+    float theta_sintheta = a / b;
 
-    float theta_sintheta = (x > 0.0) ? v : 0.5*inversesqrt(max(1.0 - x*x, 1e-7)) - v;
+    if (x < 0.0)
+        theta_sintheta = pi*inversesqrt(1.0 - x*x) - theta_sintheta;
 
-    return cross(v1, v2)*theta_sintheta;
+    vec3 u = cross(v1, v2);
+
+    return theta_sintheta*u;
 }
 
 float IntegrateEdge(vec3 v1, vec3 v2)
@@ -175,7 +177,6 @@ float IntegrateEdge(vec3 v1, vec3 v2)
     float cosTheta = dot(v1, v2);
     float theta = acos(cosTheta);
     float res = normalize(cross(v1, v2)).z * theta;
-
     return res;
 #else
     return IntegrateEdgeVec(v1, v2).z;
@@ -450,7 +451,6 @@ vec3 toLinear(vec3 _rgb)
 
 void main()
 {
-    const float pi = 3.14159265;
     const float minRoughness = 0.03;
     float metallic = 0.f;
     float roughness = max(uRoughness*uRoughness, minRoughness);
