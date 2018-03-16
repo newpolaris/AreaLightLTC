@@ -3,8 +3,9 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
-using namespace std;
+#include <gli/gli.hpp>
 
+using namespace std;
 
 #include <glm/glm.hpp>
 using namespace glm;
@@ -177,10 +178,11 @@ void filterWithBorder(CImg<float>& imageInput, CImg<float>& imageOutput, const i
     return;
 }
 
-
+#define TEST 1
 
 int main(int argc, char* argv[])
 {
+#if !TEST
     // Skip executable argument
     argc--;
     argv++;
@@ -188,17 +190,25 @@ int main(int argc, char* argv[])
     if (argc < 1)
     {
         printf("Syntax: <input file>\n");
-        return 0;
+        return -1;
     }
 
     string filenameInput(argv[0]);
-    size_t pos = filenameInput.find_last_of(".");
+#else
+    string filenameInput("screen3_small.jpg");
+#endif
+	size_t pos = filenameInput.find_last_of(".");
     string filename  = filenameInput.substr(0, pos);
     string extension = filenameInput.substr(pos + 1, string::npos);
 
     // input image
     int x, y, n;
     float* data = stbi_loadf(filenameInput.c_str(), &x, &y, &n, 3);
+    if (data == nullptr)
+    {
+        cerr << "can't find file " << filenameInput.c_str() << endl;
+        return -1;
+    }
 
     int offset = 0;
     CImg<float> imageInput(x, y, 1, 3);
@@ -215,6 +225,10 @@ int main(int argc, char* argv[])
     // filtered levels
     unsigned int Nlevels;
     for (Nlevels = 1; (imageInput.width() >> Nlevels) > 0; ++Nlevels);
+
+    size_t levels = static_cast<size_t>(Nlevels);
+    gli::extent3d extent(imageInput.width(), imageInput.height(), 1); 
+    gli::texture texture(gli::TARGET_2D, gli::FORMAT_RGB32_SFLOAT_PACK32, extent, 1, 1, levels);
 
     // borders
     for (unsigned int level = 0; level < Nlevels; ++level)
@@ -241,9 +255,10 @@ int main(int argc, char* argv[])
             data[offset++] = imageOutput(i, j, 0, 1);
             data[offset++] = imageOutput(i, j, 0, 2);
         }
-
-        stbi_write_hdr(filenameOutput.str().c_str(), width, height, 3, data);
+        void* dest = texture.data(0, 0, level);
+        memcpy(dest, dest, width*height*3*sizeof(float));
     }
+    gli::save(texture, filename+".dds");
 
     return 0;
 }
