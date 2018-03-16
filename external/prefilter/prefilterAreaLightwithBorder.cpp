@@ -195,7 +195,7 @@ int main(int argc, char* argv[])
 
     string filenameInput(argv[0]);
 #else
-    string filenameInput("screen3_small.jpg");
+    string filenameInput("test.bmp");
 #endif
 	size_t pos = filenameInput.find_last_of(".");
     string filename  = filenameInput.substr(0, pos);
@@ -228,15 +228,15 @@ int main(int argc, char* argv[])
 
     size_t levels = static_cast<size_t>(Nlevels);
     gli::extent3d extent(imageInput.width(), imageInput.height(), 1); 
-    gli::texture texture(gli::TARGET_2D, gli::FORMAT_RGB32_SFLOAT_PACK32, extent, 1, 1, levels);
+    gli::texture texture(gli::TARGET_2D, gli::FORMAT_RGBA32_SFLOAT_PACK32, extent, 1, 1, levels);
 
     // borders
+    stringstream filenameOutput (stringstream::in | stringstream::out);
+    filenameOutput << filename << "_filtered" << ".dds";
+
     for (unsigned int level = 0; level < Nlevels; ++level)
     {
-        stringstream filenameOutput (stringstream::in | stringstream::out);
-        filenameOutput << filename << "_filtered_" << level << ".hdr";
-
-        cout << "processing file " << filenameOutput.str() << endl;
+        cout << "processing file " << filenameOutput.str() << " Level: " << level << endl;
         unsigned int width = imageInput.width() >> level;
         unsigned int height = imageInput.height() >> level;
 
@@ -248,17 +248,17 @@ int main(int argc, char* argv[])
         filterWithBorder(imageInput, imageOutput, level, Nlevels);
 
         offset = 0;
+        float* dest = reinterpret_cast<float*>(texture.data(0, 0, level));
         for (int j = 0; j < imageOutput.height(); ++j)
         for (int i = 0; i < imageOutput.width();  ++i)
         {
-            data[offset++] = imageOutput(i, j, 0, 0);
-            data[offset++] = imageOutput(i, j, 0, 1);
-            data[offset++] = imageOutput(i, j, 0, 2);
+            dest[offset++] = imageOutput(i, j, 0, 0);
+            dest[offset++] = imageOutput(i, j, 0, 1);
+            dest[offset++] = imageOutput(i, j, 0, 2);
+            dest[offset++] = 1.f;
         }
-        void* dest = texture.data(0, 0, level);
-        memcpy(dest, dest, width*height*3*sizeof(float));
     }
-    gli::save(texture, filename+".dds");
+    gli::save(texture, filenameOutput.str());
 
     return 0;
 }

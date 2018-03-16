@@ -314,7 +314,7 @@ vec3 FetchDiffuseFilteredTexture(sampler2D texLightFiltered, vec3 p1_, vec3 p2_,
     float d = abs(planeDistxPlaneArea) / pow(planeAreaSquared, 0.75);
 
     // 0.125, 0.75 looks like border gap and content length
-    // 2048.0 is may be image size
+    // 2048.0 is might be image size
     return textureLod(texLightFiltered, vec2(0.125, 0.125) + 0.75 * Puv, log(2048.0*d)/log(3.0) ).rgb;
 }
 

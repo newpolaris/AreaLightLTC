@@ -371,6 +371,7 @@ bool OGLCoreTexture::createFromMemoryDDS(const char* data, size_t dataSize) noex
 	return true;
 }
 
+// TODO: stbi_is_hdr_from_memory etc
 bool OGLCoreTexture::createFromMemoryHDR(const char* data, size_t size) noexcept
 {
     stbi_set_flip_vertically_on_load(true);
