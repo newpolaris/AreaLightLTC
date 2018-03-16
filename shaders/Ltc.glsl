@@ -466,7 +466,8 @@ void main()
     vec3 V = -ray.dir;
     vec3 N = normal;
 
-    vec2 uv = vec2(roughness, dot(N, V));
+    float ndotv = clamp(dot(N, V), 0, 1);
+    vec2 uv = vec2(roughness, sqrt(1.0 - ndotv));
     // if mtx data is loaded from image need to be flip
     uv.y = 1 - uv.y;
     // scale and bias coordinates, for correct filtered lookup
