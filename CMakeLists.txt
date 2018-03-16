@@ -59,6 +59,13 @@ add_definitions(
 file( GLOB GLSW external/glsw/*.c external/glsw/*.h )
 add_library( glsw ${GLSW} )
 
+#CImg
+#if( APPLE ) 
+find_package(X11 REQUIRED)
+include_directories(${X11_INCLUDE_DIR})
+list(APPEND ALL_LIBS ${X11_LIBRARIES})
+#endif()
+
 file( GLOB_RECURSE SRC src/* )
 
 add_executable(${APP_TARGET} ${SRC})

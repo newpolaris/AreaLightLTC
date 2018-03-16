@@ -178,7 +178,7 @@ void filterWithBorder(CImg<float>& imageInput, CImg<float>& imageOutput, const i
     return;
 }
 
-#define TEST 1
+// #define TEST 1
 
 int main(int argc, char* argv[])
 {

@@ -4,6 +4,10 @@
 #include <string>
 #include <memory>
 #include <cassert>
+#include <istream>
+#include <iostream>
+#include <sstream>
+#include <streambuf>
 
 namespace util
 {
@@ -14,17 +18,17 @@ namespace util
     using BytesArray = std::shared_ptr<FileContainer>;
 
     template<typename CharT, typename TraitsT = std::char_traits<CharT> >
-    class Vectorwrapbuf: public std::basic_streambuf<CharT, TraitsT> {
+    class Vectorwrapbuf : public std::basic_streambuf<CharT, TraitsT> {
     public:
         Vectorwrapbuf(BytesArray vec): m_Vec(vec)
         {
-            setg(m_Vec->data(), m_Vec->data(), m_Vec->data() + m_Vec->size());
+			this->setg(m_Vec->data(), m_Vec->data(), m_Vec->data() + m_Vec->size());
         }
         BytesArray m_Vec;
     };
 
     template<typename CharT, typename TraitsT = std::char_traits<CharT> >
-    class Vectorstream: public std::basic_istream<CharT, TraitsT> {
+    class Vectorstream : public std::basic_istream<CharT, TraitsT> {
     public:
         Vectorstream(BytesArray vec): std::istream(&m_buf), m_buf(vec)
         {

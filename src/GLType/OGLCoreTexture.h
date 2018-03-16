@@ -25,7 +25,7 @@ public:
     GLuint getTextureID() const noexcept;
     GLenum getFormat() const noexcept;
 
-    const GraphicsTextureDesc& getGraphicsTextureDesc() const noexcept;
+    const GraphicsTextureDesc& getGraphicsTextureDesc() const noexcept override;
 
 private:
 
