@@ -4,4 +4,4 @@ G: Ground truth
 A: Basic integrate edge
 B: Repace acos
 C: Normalized matrix (v3.0)
-D:
+D: Improved LUT parameterisation: sqrt(1 - cos(theta))
