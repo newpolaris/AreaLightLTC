@@ -61,6 +61,7 @@ uniform float uRotZ;
 uniform bool ubTwoSided;
 uniform bool ubClipless;
 uniform bool ubTexturedLight;
+uniform bool ubDebug;
 
 uniform sampler2D uLtc1;
 uniform sampler2D uLtc2;
@@ -114,6 +115,18 @@ bool RayRectIntersect(Ray ray, Rect rect, out float t)
 			intersect = false;
 	}
 	return intersect;
+}
+
+vec2 RectUVs(vec3 pos, Rect rect)
+{
+    vec3 lpos = pos - rect.center;
+
+    float x = dot(lpos, rect.dirx);
+    float y = dot(lpos, rect.diry);
+
+    return vec2(
+        0.5*x/rect.halfx + 0.5,
+        0.5*y/rect.halfy + 0.5);
 }
 
 // Camera functions
@@ -287,37 +300,6 @@ void ClipQuadToHorizon(inout vec3 L[5], out int n)
         L[4] = L[0];
 }
 
-// Use code in 'LTC demo sample'
-vec3 FetchDiffuseFilteredTexture(sampler2D texLightFiltered, vec3 p1_, vec3 p2_, vec3 p3_, vec3 p4_)
-{
-    // area light plane basis
-    vec3 V1 = p2_ - p1_;
-    vec3 V2 = p4_ - p1_;
-    vec3 planeOrtho = (cross(V1, V2));
-    float planeAreaSquared = dot(planeOrtho, planeOrtho);
-    float planeDistxPlaneArea = dot(planeOrtho, p1_);
-    // orthonormal projection of (0,0,0) in area light space
-    vec3 P = planeDistxPlaneArea * planeOrtho / planeAreaSquared - p1_;
-
-    // find tex coords of P
-    float dot_V1_V2 = dot(V1,V2);
-    float inv_dot_V1_V1 = 1.0 / dot(V1, V1);
-    vec3 V2_ = V2 - V1 * dot_V1_V2 * inv_dot_V1_V1;
-    vec2 Puv;
-    Puv.y = dot(V2_, P) / dot(V2_, V2_);
-    Puv.x = dot(V1, P)*inv_dot_V1_V1 - dot_V1_V2*inv_dot_V1_V1*Puv.y ;
-
-    // invert UV
-    Puv.y = 1 - Puv.y;
-
-    // LOD
-    float d = abs(planeDistxPlaneArea) / pow(planeAreaSquared, 0.75);
-
-    // 0.125, 0.75 looks like border gap and content length
-    // 2048.0 is might be image size
-    return textureLod(texLightFiltered, vec2(0.125, 0.125) + 0.75 * Puv, log(2048.0*d)/log(3.0) ).rgb;
-}
-
 vec3 mul(mat3 m, vec3 v)
 {
     return m * v;
@@ -326,6 +308,150 @@ vec3 mul(mat3 m, vec3 v)
 mat3 mul(mat3 m1, mat3 m2)
 {
     return m1 * m2;
+}
+
+// Use code in 'LTC demo sample'
+vec3 FetchDiffuseFilteredTexture(sampler2D texLightFiltered, vec3 p1, vec3 p2, vec3 p3, vec3 p4)
+{
+    // area light plane basis
+    vec3 V1 = p2 - p1;
+    vec3 V2 = p4 - p1;
+    vec3 planeOrtho = cross(V1, V2);
+    float planeAreaSquared = dot(planeOrtho, planeOrtho);
+    float planeDistxPlaneArea = dot(planeOrtho, p1);
+    // orthonormal projection of (0,0,0) in area light space
+    vec3 P = planeDistxPlaneArea * planeOrtho / planeAreaSquared - p1;
+
+    // find tex coords of P
+    float dot_V1_V2 = dot(V1, V2);
+    float inv_dot_V1_V1 = 1.0 / dot(V1, V1);
+    vec3 V2_ = V2 - V1 * dot_V1_V2 * inv_dot_V1_V1;
+    vec2 Puv;
+    Puv.y = dot(V2_, P) / dot(V2_, V2_);
+    Puv.x = dot(V1, P)*inv_dot_V1_V1 - dot_V1_V2*inv_dot_V1_V1*Puv.y;
+
+    // LOD
+    float d = abs(planeDistxPlaneArea) / pow(planeAreaSquared, 0.75);
+    
+    // Flip texture to match OpenGL conventions
+    Puv = Puv*vec2(1, -1) + vec2(0, 1);
+    
+    // 0.125, 0.75 looks like border gap and content length
+    // 2048.0 is might be image size
+    float lod = log(2048.0*d)/log(3.0);
+    lod = min(lod, 8.0);
+
+    return textureLod(texLightFiltered, vec2(0.125, 0.125) + 0.75 * Puv, lod).rgb;
+}
+
+vec3 nearestTexture(sampler2D sampler, mat3 M, mat3 Minv, vec3 p1_, vec3 p2_, vec3 p3_, vec3 p4_)
+{
+    vec3 p1_diffuse = mul(Minv, p1_);
+    vec3 p2_diffuse = mul(Minv, p2_);
+    vec3 p3_diffuse = mul(Minv, p3_);
+    vec3 p4_diffuse = mul(Minv, p4_);
+
+    vec3 planeNormal = normalize(cross(p1_diffuse-p2_diffuse, p1_diffuse-p4_diffuse));
+
+    if (dot(planeNormal, p1_diffuse) < 0.0)
+        planeNormal *= -1.0;
+
+    float planeDist = dot(planeNormal, p1_diffuse);
+
+    vec3 intersection_diffuse = planeDist * planeNormal;
+
+    vec3 intersection = mul(M, intersection_diffuse);
+
+    vec2 interTex = vec2(dot(intersection-p1_, p2_-p1_)/length(p2_-p1_)/length(p2_-p1_), dot(intersection-p1_, p4_-p1_)/length(p4_-p1_)/length(p4_-p1_));
+
+    vec3 areaTextureVector = cross(p2_diffuse-p1_diffuse, p4_diffuse-p1_diffuse);
+    float areaTexture = dot(areaTextureVector, areaTextureVector);
+    float d = planeDist/pow(areaTexture, 0.25);
+
+    // Flip texture to match OpenGL conventions
+    interTex = interTex*vec2(1, -1) + vec2(0, 1);
+
+    float lod = log(2048.0*d)/log(3.0);
+    lod = min(lod, 8.0);
+
+    return textureLod(sampler, vec2(0.125, 0.125) + 0.75 * interTex, lod).rgb;
+}
+
+vec3 nearestTexture2(sampler2D sampler, mat3 M, mat3 Minv, vec3 p1_, vec3 p2_, vec3 p3_, vec3 p4_, vec3 dir)
+{
+    vec3 p1_diffuse = mul(Minv, p1_);
+    vec3 p2_diffuse = mul(Minv, p2_);
+    vec3 p3_diffuse = mul(Minv, p3_);
+    vec3 p4_diffuse = mul(Minv, p4_);
+
+    vec3 planeNormal = normalize(cross(p1_diffuse-p2_diffuse, p1_diffuse-p4_diffuse));
+
+    if (dot(planeNormal, p1_diffuse) < 0.0)
+        planeNormal *= -1.0;
+
+    Ray ray;
+    ray.origin = vec3(0, 0, 0);
+    ray.dir = dir;
+    vec4 plane = vec4(planeNormal, -dot(planeNormal, p1_diffuse));
+    float planeDist;
+    RayPlaneIntersect(ray, plane, planeDist);
+
+    //float planeDist = dot(planeNormal, p1_diffuse);
+
+    vec3 intersection_diffuse = planeDist * ray.dir;
+
+    vec3 intersection = mul(M, intersection_diffuse);
+
+    vec2 interTex = vec2(dot(intersection-p1_, p2_-p1_)/length(p2_-p1_)/length(p2_-p1_), dot(intersection-p1_, p4_-p1_)/length(p4_-p1_)/length(p4_-p1_));
+
+    vec3 areaTextureVector = cross(p2_diffuse-p1_diffuse, p4_diffuse-p1_diffuse);
+    float areaTexture = dot(areaTextureVector, areaTextureVector);
+    float d = planeDist/pow(areaTexture, 0.25);
+
+    // Flip texture to match OpenGL conventions
+    interTex = interTex*vec2(1, -1) + vec2(0, 1);
+
+    float lod = log(2048.0*d)/log(3.0);
+    lod = min(lod, 8.0);
+
+    return textureLod(sampler, vec2(0.125, 0.125) + 0.75 * interTex, lod).rgb;
+}
+
+vec3 FetchDiffuseFilteredTexture2(sampler2D texLightFiltered, vec3 p1, vec3 p2, vec3 p3, vec3 p4, vec3 dir)
+{
+    // area light plane basis
+    vec3 V1 = p2 - p1;
+    vec3 V2 = p4 - p1;
+    vec3 planeOrtho = cross(V1, V2);
+    float planeAreaSquared = dot(planeOrtho, planeOrtho);
+
+    Ray ray;
+    ray.origin = vec3(0, 0, 0);
+    ray.dir = dir;
+    vec4 plane = vec4(planeOrtho, -dot(planeOrtho, p1));
+    float planeDist;
+    RayPlaneIntersect(ray, plane, planeDist);
+ 
+    vec3 P = planeDist*ray.dir - p1;
+ 
+    // find tex coords of P
+    float dot_V1_V2 = dot(V1, V2);
+    float inv_dot_V1_V1 = 1.0 / dot(V1, V1);
+    vec3 V2_ = V2 - V1 * dot_V1_V2 * inv_dot_V1_V1;
+    vec2 Puv;
+    Puv.y = dot(V2_, P) / dot(V2_, V2_);
+    Puv.x = dot(V1, P)*inv_dot_V1_V1 - dot_V1_V2*inv_dot_V1_V1*Puv.y;
+
+    // LOD
+    float d = abs(planeDist) / pow(planeAreaSquared, 0.25);
+    
+    // Flip texture to match OpenGL conventions
+    Puv = Puv*vec2(1, -1) + vec2(0, 1);
+    
+    float lod = log(2048.0*d)/log(3.0);
+    lod = min(lod, 8.0);
+
+    return textureLod(texLightFiltered, vec2(0.125, 0.125) + 0.75 * Puv, lod).rgb;
 }
 
 // Use code in 'LTC webgl sample'
@@ -339,6 +465,14 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
     // rotate area light in (T1, T2, N) basis
     Minv = mul(Minv, transpose(mat3(T1, T2, N)));
 
+    mat3 MM = mat3(1);
+    
+    vec3 PP[4];
+    PP[0] = points[0].xyz - P;
+    PP[1] = points[1].xyz - P;
+    PP[2] = points[2].xyz - P;
+    PP[3] = points[3].xyz - P;
+
     // polygon (allocate 5 vertices for clipping)
     vec3 L[5];
     L[0] = mul(Minv, points[0].xyz - P);
@@ -346,6 +480,12 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
     L[2] = mul(Minv, points[2].xyz - P);
     L[3] = mul(Minv, points[3].xyz - P);
     L[4] = L[3]; // avoid warning
+
+    vec3 LL[4];
+    LL[0] = L[0];
+    LL[1] = L[1];
+    LL[2] = L[2];
+    LL[3] = L[3];
 
     vec3 textureLight = vec3(1, 1, 1);
     if (ubTexturedLight)
@@ -407,22 +547,32 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
         L[3] = normalize(L[3]);
         L[4] = normalize(L[4]);
 
-        // integrate
-        sum += IntegrateEdge(L[0], L[1]);
-        sum += IntegrateEdge(L[1], L[2]);
-        sum += IntegrateEdge(L[2], L[3]);
-        if (n >= 4)
-            sum += IntegrateEdge(L[3], L[4]);
-        if (n == 5)
-            sum += IntegrateEdge(L[4], L[0]);
+        vec3 vsum;
 
-        sum = twoSided ? abs(sum) : max(0.0, sum);
+        // integrate
+        vsum  = IntegrateEdgeVec(L[0], L[1]);
+        vsum += IntegrateEdgeVec(L[1], L[2]);
+        vsum += IntegrateEdgeVec(L[2], L[3]);
+        if (n >= 4)
+            vsum += IntegrateEdgeVec(L[3], L[4]);
+        if (n == 5)
+            vsum += IntegrateEdgeVec(L[4], L[0]);
+            
+        vec3 dir = normalize(vsum);
+            
+        mat3 M = inverse(Minv);
+        
+        if (ubTexturedLight)
+            textureLight = FetchDiffuseFilteredTexture2(uFilteredMap, LL[0], LL[1], LL[2], LL[3], dir);
+        
+        if (ubTexturedLight && ubDebug)
+            textureLight = nearestTexture2(uFilteredMap, M, Minv, PP[0], PP[1], PP[2], PP[3], dir);
+
+        sum = twoSided ? abs(vsum.z) : max(0.0, vsum.z);
     }
 
-    vec3 Lo_i = vec3(sum, sum, sum);
-
     // scale by filtered light color
-    return Lo_i * textureLight;
+    return sum * textureLight;
 }
 
 // Scene helpers
