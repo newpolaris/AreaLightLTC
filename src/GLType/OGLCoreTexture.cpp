@@ -1,15 +1,16 @@
 #include <gli/gli.hpp>
 #include <tools/stb_image.h>
 #include <tools/string.h>
+#include <tools/FileUtility.h>
 #include <GLType/OGLTypes.h>
 #include <GLType/OGLCoreTexture.h>
 
 __ImplementSubInterface(OGLCoreTexture, GraphicsTexture)
 
-OGLCoreTexture::OGLCoreTexture() :
-	m_TextureID(0),
-	m_Target(GL_INVALID_ENUM),
-	m_Format(GL_INVALID_ENUM)
+OGLCoreTexture::OGLCoreTexture()
+    : m_TextureID(0)
+    , m_Target(GL_INVALID_ENUM)
+    , m_Format(GL_INVALID_ENUM)
 {
 }
 
@@ -18,7 +19,7 @@ OGLCoreTexture::~OGLCoreTexture()
 	destroy();
 }
 
-bool OGLCoreTexture::create(GLint width, GLint height, GLenum target, GraphicsFormat format, GLuint levels, uint8_t* data, uint32_t size)
+bool OGLCoreTexture::create(GLint width, GLint height, GLenum target, GraphicsFormat format, GLuint levels, const uint8_t* data, uint32_t size) noexcept
 {
     using namespace gli;
 
@@ -44,39 +45,206 @@ bool OGLCoreTexture::create(GLint width, GLint height, GLenum target, GraphicsFo
 	return true;
 }
 
-bool OGLCoreTexture::create(const GraphicsTextureDesc& desc)
+bool OGLCoreTexture::create(const GraphicsTextureDesc& desc) noexcept
 {
     m_TextureDesc = desc;
 
+    bool bSuccess = false;
     auto filename = desc.getFileName();
     if (!filename.empty())
-        return create(filename);
-
-    auto width = desc.getWidth();
-    auto height = desc.getHeight();
-    auto levels = desc.getLevels();
-    auto data = desc.getStream();
-    auto format = desc.getFormat();
-    auto target = OGLTypes::translate(desc.getTarget());
-    auto size = desc.getStreamSize();
-    return create(width, height, target, format, levels, data, size);
+        bSuccess = create(filename);
+    else
+    {
+        auto width = desc.getWidth();
+        auto height = desc.getHeight();
+        auto levels = desc.getLevels();
+        auto format = desc.getFormat();
+        auto data = desc.getStream();
+        auto size = desc.getStreamSize();
+        auto target = OGLTypes::translate(desc.getTarget());
+        bSuccess = create(width, height, target, format, levels, data, size);
+    }
+    if (bSuccess) applyParameters(desc);
+    return bSuccess;
 }
 
-bool OGLCoreTexture::create(const std::string& filename)
+bool OGLCoreTexture::create(const std::string& filename) noexcept
 {
-    if (filename.empty()) return false;
-    std::string ext = util::getFileExtension(filename);
-    if (util::stricmp(ext, "DDX") || util::stricmp(ext, "DDS"))
-        return createFromFileGLI(filename);
-    return createFromFileSTB(filename);
+    static_assert(std::is_same<char, std::istream::char_type>::value, "Compatible type needed");
+
+    if (filename.empty()) 
+        return false;
+
+    auto data = util::ReadFileSync(filename);
+    if (data == util::NullFile)
+        return false;
+
+    const std::string ext = util::getFileExtension(filename);
+    if (util::stricmp(ext, "zlib"))
+        return createFromMemoryZIP(data->data(), data->size());
+    else if (util::stricmp(ext, "DDS") || util::stricmp(ext, "KTX"))
+        return createFromMemoryDDS(data->data(), data->size());
+    else if (util::stricmp(ext, "HDR"))
+        return createFromMemoryHDR(data->data(), data->size());
+    return createFromMemoryLDR(data->data(), data->size());
 } 
 
-// filename can be KTX or DDS files
-bool OGLCoreTexture::createFromFileGLI(const std::string& filename)
+bool OGLCoreTexture::createFromMemoryLDR(const char* data, size_t size) noexcept
 {
-	gli::texture Texture = gli::load(filename);
-	if(Texture.empty())
+    stbi_set_flip_vertically_on_load(true);
+
+	GLenum target = GL_TEXTURE_2D;
+    GLenum type = GL_UNSIGNED_BYTE;
+    int width = 0, height = 0, nrComponents = 0;
+    stbi_uc* imagedata = stbi_load_from_memory((stbi_uc*)data, (int)size, &width, &height, &nrComponents, 0);
+    if (!imagedata) return false;
+
+    GLenum Format = OGLTypes::getComponent(nrComponents);
+    GLenum InternalFormat = OGLTypes::getInternalComponent(nrComponents, type == GL_FLOAT);
+
+	gli::gl GL(gli::gl::PROFILE_GL33);
+    gli::format format = GL.find(
+        static_cast<gli::gl::internal_format>(InternalFormat),
+        static_cast<gli::gl::external_format>(Format),
+        static_cast<gli::gl::type_format>(type));
+
+    bool bSuccess = create(width, height, target, format, 1, (const uint8_t*)imagedata, size);
+    stbi_image_free(imagedata);
+    return bSuccess;
+}
+
+// TODO: decodesize error or dds sample image have dummy data at the end. Which causes an gli assert
+bool OGLCoreTexture::createFromMemoryZIP(const char* data, size_t dataSize) noexcept
+{
+    int decodesize = 0;
+    // malloc never throws exception
+    char* decodedata = stbi_zlib_decode_malloc(data, (int)dataSize, &decodesize);
+    if (decodedata == nullptr)
+        return false;
+    bool bSuccess = createFromMemory(decodedata, decodesize);
+    free(decodedata);
+    return bSuccess;
+}
+
+GLuint OGLCoreTexture::getTextureID() const noexcept
+{
+    return m_TextureID;
+}
+
+GLenum OGLCoreTexture::getFormat() const noexcept
+{
+    return m_Format;
+}
+
+const GraphicsTextureDesc& OGLCoreTexture::getGraphicsTextureDesc() const noexcept
+{
+    return m_TextureDesc;
+}
+
+void OGLCoreTexture::setDevice(const GraphicsDevicePtr& device) noexcept
+{
+    m_Device = device;
+}
+
+GraphicsDevicePtr OGLCoreTexture::getDevice() noexcept
+{
+    return m_Device.lock();
+}
+
+void OGLCoreTexture::destroy() noexcept
+{
+	if (!m_TextureID)
+	{
+		glDeleteTextures(1, &m_TextureID);
+		m_TextureID = 0;
+
+        m_Format = GL_INVALID_ENUM;
+	}
+	m_Target = GL_INVALID_ENUM;
+}
+
+void OGLCoreTexture::bind(GLuint unit) const
+{
+	assert( 0u != m_TextureID );  
+    glBindTextureUnit(unit, m_TextureID);
+}
+
+void OGLCoreTexture::unbind(GLuint unit) const
+{
+    glBindTextureUnit(unit, 0);
+}
+
+void OGLCoreTexture::generateMipmap()
+{
+	assert(m_Target != GL_INVALID_ENUM);
+	assert(m_TextureID != 0);
+
+	glGenerateTextureMipmap(m_TextureID);
+}
+
+void OGLCoreTexture::applyParameters(const GraphicsTextureDesc& desc)
+{
+    auto wrapS = desc.getWrapS();
+    auto wrapT = desc.getWrapT();
+    auto wrapR = desc.getWrapR();
+    auto defaultWrap = GL_REPEAT;
+
+    if (wrapS != defaultWrap)
+        parameteri(GL_TEXTURE_WRAP_S, wrapS);
+    if (wrapT != defaultWrap)
+        parameteri(GL_TEXTURE_WRAP_T, wrapS);
+    if (wrapR != defaultWrap)
+        parameteri(GL_TEXTURE_WRAP_R, wrapR);
+
+    auto minFilter = desc.getMinFilter();
+    auto magFilter = desc.getMagFilter();
+    auto defaultMinFilter = GL_LINEAR_MIPMAP_LINEAR;
+    auto defaultMagFilter = GL_LINEAR;
+    assert(magFilter == GL_NEAREST || magFilter == GL_LINEAR);
+    if (minFilter != defaultMinFilter)
+        parameteri(GL_TEXTURE_MIN_FILTER, minFilter);
+    if (magFilter != defaultMagFilter)
+        parameteri(GL_TEXTURE_MAG_FILTER, magFilter);
+
+    GLfloat defaultAnisoLevel = 0;
+    auto anisoLevel = desc.getAnisotropyLevel();
+    if (anisoLevel > defaultAnisoLevel)
+        parameterf(GL_TEXTURE_MAX_ANISOTROPY_EXT, anisoLevel);
+}
+
+void OGLCoreTexture::parameteri(GLenum pname, GLint param)
+{
+	assert(m_Target != GL_INVALID_ENUM);
+	assert(m_TextureID != 0);
+
+    glTextureParameteri(m_TextureID, pname, param);
+}
+
+void OGLCoreTexture::parameterf(GLenum pname, GLfloat param)
+{
+	assert(m_Target != GL_INVALID_ENUM);
+	assert(m_TextureID != 0);
+
+    glTextureParameterf(m_TextureID, pname, param);
+}
+
+bool OGLCoreTexture::createFromMemory(const char* data, size_t dataSize) noexcept
+{
+    if (createFromMemoryZIP(data, dataSize)
+        || createFromMemoryDDS(data, dataSize)
+        || createFromMemoryLDR(data, dataSize)
+        || createFromMemoryHDR(data, dataSize))
+        return true;
+    return false;
+}
+
+bool OGLCoreTexture::createFromMemoryDDS(const char* data, size_t dataSize) noexcept
+{
+	gli::texture Texture = gli::load(data, dataSize);
+	if (Texture.empty())
 		return false;
+
+    Texture = gli::flip(Texture);
 
 	gli::gl GL(gli::gl::PROFILE_GL33);
 	gli::gl::format const Format = GL.translate(Texture.format(), Texture.swizzles());
@@ -203,113 +371,27 @@ bool OGLCoreTexture::createFromFileGLI(const std::string& filename)
 	return true;
 }
 
-// filename can be JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC files
-bool OGLCoreTexture::createFromFileSTB(const std::string& filename)
+// TODO: stbi_is_hdr_from_memory etc
+bool OGLCoreTexture::createFromMemoryHDR(const char* data, size_t size) noexcept
 {
     stbi_set_flip_vertically_on_load(true);
 
-	GLenum Target = GL_TEXTURE_2D;
-    GLenum Type = GL_UNSIGNED_BYTE;
-    int Width = 0, Height = 0, nrComponents = 0;
-    void* Data = nullptr;
-    std::string Ext = util::getFileExtension(filename);
-    if (util::stricmp(Ext, "HDR"))
-    {
-        Type = GL_FLOAT;
-        Data = stbi_loadf(filename.c_str(), &Width, &Height, &nrComponents, 0);
-    }
-    else
-    {
-        Data = stbi_load(filename.c_str(), &Width, &Height, &nrComponents, 0);
-    }
-    if (!Data) return false;
+	GLenum target = GL_TEXTURE_2D;
+    GLenum type = GL_FLOAT;
+    int width = 0, height = 0, nrComponents = 0;
+    float* imagedata = stbi_loadf_from_memory((const stbi_uc*)data, (int)size, &width, &height, &nrComponents, 0);
+    if (!imagedata) return false;
 
     GLenum Format = OGLTypes::getComponent(nrComponents);
-    GLenum InternalFormat = OGLTypes::getInternalComponent(nrComponents, Type == GL_FLOAT);
+    GLenum InternalFormat = OGLTypes::getInternalComponent(nrComponents, type == GL_FLOAT);
 
-	GLuint TextureID = 0;
-	glCreateTextures(Target, 1, &TextureID);
+	gli::gl GL(gli::gl::PROFILE_GL33);
+    gli::format format = GL.find(
+        static_cast<gli::gl::internal_format>(InternalFormat),
+        static_cast<gli::gl::external_format>(Format),
+        static_cast<gli::gl::type_format>(type));
 
-	// Use fixed storage
-    glTextureStorage2D(TextureID, 1, InternalFormat, Width, Height);
-    glTextureSubImage2D(TextureID, 0, 0, 0, Width, Height, Format, Type, Data);
-
-    stbi_image_free(Data);
-
-	m_Target = Target;
-	m_TextureID = TextureID;
-	m_Format = Type;
-
-    m_TextureDesc.setTarget(gli::TARGET_2D);
-    m_TextureDesc.setFormat(gli::FORMAT_UNDEFINED);
-    m_TextureDesc.setWidth(Width);
-    m_TextureDesc.setHeight(Height);
-	m_TextureDesc.setDepth(1);
-    m_TextureDesc.setLevels(1);
-
-	return true;
-}
-
-GLuint OGLCoreTexture::getTextureID() const noexcept
-{
-    return m_TextureID;
-}
-
-GLenum OGLCoreTexture::getFormat() const noexcept
-{
-    return m_Format;
-}
-
-const GraphicsTextureDesc& OGLCoreTexture::getGraphicsTextureDesc() const noexcept
-{
-    return m_TextureDesc;
-}
-
-void OGLCoreTexture::setDevice(const GraphicsDevicePtr& device) noexcept
-{
-    m_Device = device;
-}
-
-GraphicsDevicePtr OGLCoreTexture::getDevice() noexcept
-{
-    return m_Device.lock();
-}
-
-void OGLCoreTexture::destroy()
-{
-	if (!m_TextureID)
-	{
-		glDeleteTextures(1, &m_TextureID);
-		m_TextureID = 0;
-
-        m_Format = GL_INVALID_ENUM;
-	}
-	m_Target = GL_INVALID_ENUM;
-}
-
-void OGLCoreTexture::bind(GLuint unit) const
-{
-	assert( 0u != m_TextureID );  
-    glBindTextureUnit(unit, m_TextureID);
-}
-
-void OGLCoreTexture::unbind(GLuint unit) const
-{
-    glBindTextureUnit(unit, 0);
-}
-
-void OGLCoreTexture::generateMipmap()
-{
-	assert(m_Target != GL_INVALID_ENUM);
-	assert(m_TextureID != 0);
-
-	glGenerateTextureMipmap(m_TextureID);
-}
-
-void OGLCoreTexture::parameter(GLenum pname, GLint param)
-{
-	assert(m_Target != GL_INVALID_ENUM);
-	assert(m_TextureID != 0);
-
-    glTextureParameteri(m_TextureID, pname, param);
+    bool bSuccess = create(width, height, target, format, 1, (const uint8_t*)imagedata, size);
+    stbi_image_free(imagedata);
+    return bSuccess;
 }

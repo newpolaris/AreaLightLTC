@@ -13,10 +13,13 @@ public:
     bool create(const GraphicsDeviceDesc& desc) noexcept;
     void destoy() noexcept;
 
-    GraphicsDataPtr createGraphicsData(const GraphicsDataDesc& desc) noexcept;
-    GraphicsTexturePtr createTexture(const GraphicsTextureDesc& desc) noexcept;
+    GraphicsDataPtr createGraphicsData(const GraphicsDataDesc& desc) noexcept override;
+    GraphicsTexturePtr createTexture(const GraphicsTextureDesc& desc) noexcept override;
+    GraphicsFramebufferPtr createFramebuffer(const GraphicsFramebufferDesc& desc) noexcept override;
 
-	const GraphicsDeviceDesc& getGraphicsDeviceDesc() const noexcept;
+    void setFramebuffer(const GraphicsFramebufferPtr& framebuffer) noexcept override;
+
+	const GraphicsDeviceDesc& getGraphicsDeviceDesc() const noexcept override;
 
 private:
 

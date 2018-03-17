@@ -15,8 +15,11 @@
 #include <GLType/GraphicsData.h>
 #include <GLType/OGLDevice.h>
 #include <GLType/ProgramShader.h>
+#include <GLType/GraphicsFramebuffer.h>
+
+#include <GLType/OGLTexture.h>
 #include <GLType/OGLCoreTexture.h>
-#include <GLType/Framebuffer.h>
+#include <GLType/OGLCoreFramebuffer.h>
 
 #include <GraphicsTypes.h>
 #include <SkyBox.h>
@@ -74,8 +77,8 @@ private:
     ProgramShader m_Shader;
     ProgramShader m_BlitShader;
     GraphicsDevicePtr m_Device;
-    GraphicsTexturePtr m_LtcMatTex;
-    GraphicsTexturePtr m_LtcMagTex;
+    GraphicsTexturePtr m_Ltc1Tex;
+    GraphicsTexturePtr m_Ltc2Tex;
 };
 
 CREATE_APPLICATION(AreaLight);
@@ -113,24 +116,36 @@ void AreaLight::startup() noexcept
 	m_BlitShader.link();
 
     m_ScreenTraingle.create();
+	
+	GraphicsTextureDesc filteredDesc;
+    filteredDesc.setFilename("resources/stained_glass.dds");
+    filteredDesc.setWrapS(GL_CLAMP_TO_EDGE);
+    filteredDesc.setWrapT(GL_CLAMP_TO_EDGE);
+    filteredDesc.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
+    filteredDesc.setMagFilter(GL_LINEAR);
+    filteredDesc.setAnisotropyLevel(16);
+    auto filteredTex = m_Device->createTexture(filteredDesc);
+
+    GraphicsTextureDesc source;
+    source.setFilename("resources/stained_glass.png");
+    source.setAnisotropyLevel(16);
+    auto lightSource = m_Device->createTexture(source);
 
     GraphicsTextureDesc ltcMatDesc;
-    ltcMatDesc.setTarget(gli::TARGET_2D);
-    ltcMatDesc.setFormat(gli::FORMAT_RGBA32_SFLOAT_PACK32);
-    ltcMatDesc.setWidth(64);
-    ltcMatDesc.setHeight(64);
-    ltcMatDesc.setStream((uint8_t*)g_ltc_mat);
-    ltcMatDesc.setStreamSize(sizeof(g_ltc_mat));
-    m_LtcMatTex = m_Device->createTexture(ltcMatDesc);
+    ltcMatDesc.setFilename("resources/ltc_1.dds");
+    ltcMatDesc.setWrapS(GL_CLAMP_TO_EDGE);
+    ltcMatDesc.setWrapT(GL_CLAMP_TO_EDGE);
+    ltcMatDesc.setMinFilter(GL_NEAREST);
+    ltcMatDesc.setMagFilter(GL_LINEAR);
+    m_Ltc1Tex = m_Device->createTexture(ltcMatDesc);
 
     GraphicsTextureDesc ltcMagDesc;
-    ltcMagDesc.setTarget(gli::TARGET_2D);
-    ltcMagDesc.setFormat(gli::FORMAT_R32_SFLOAT_PACK32);
-    ltcMagDesc.setWidth(64);
-    ltcMagDesc.setHeight(64);
-    ltcMagDesc.setStream((uint8_t*)g_ltc_mag);
-    ltcMagDesc.setStreamSize(sizeof(g_ltc_mag));
-    m_LtcMagTex = m_Device->createTexture(ltcMagDesc);
+    ltcMagDesc.setFilename("resources/ltc_2.dds");
+    ltcMagDesc.setWrapS(GL_CLAMP_TO_EDGE);
+    ltcMagDesc.setWrapT(GL_CLAMP_TO_EDGE);
+    ltcMagDesc.setMinFilter(GL_NEAREST);
+    ltcMagDesc.setMagFilter(GL_LINEAR);
+    m_Ltc2Tex = m_Device->createTexture(ltcMagDesc);
 }
 
 void AreaLight::closeup() noexcept
@@ -193,12 +208,8 @@ void AreaLight::render() noexcept
     glm::vec3 dcolor = glm::vec3(1.f, 1.f, 1.f);
     glm::vec3 scolor = glm::vec3(1.f, 1.f, 1.f);
 
-#ifdef DRAW_LTC_MAT
-    m_BlitShader.bind();
-    m_BlitShader.bindTexture("uTexSource", m_LtcMatTex, 0);
-#else
 	m_Shader.bind();
-    m_Shader.setUniform("uTwoSided", m_Light.m_bTwoSided);
+    m_Shader.setUniform("ubTwoSided", m_Light.m_bTwoSided);
     m_Shader.setUniform("uIntensity", m_Light.m_Intensity);
     m_Shader.setUniform("uView", m_View);
     m_Shader.setUniform("uResolution", resolution);
@@ -209,9 +220,10 @@ void AreaLight::render() noexcept
     m_Shader.setUniform("uRotY", m_Light.m_RotY);
     m_Shader.setUniform("uRotZ", m_Light.m_RotZ);
     m_Shader.setUniform("uRoughness", m_Light.m_Roughness);
-    m_Shader.bindTexture("uLtcMat", m_LtcMatTex, 0);
-    m_Shader.bindTexture("uLtcMag", m_LtcMagTex, 1);
-#endif
+    m_Shader.bindTexture("uLtc1", m_Ltc1Tex, 0);
+    m_Shader.bindTexture("uLtc2", m_Ltc2Tex, 1);
+    // m_BlitShader.bindTexture("uTexSource", m_LtcMatTex, 0);
+
     m_ScreenTraingle.draw();
 }
 

@@ -3,6 +3,8 @@
 #include <GLType/OGLCoreGraphicsData.h>
 #include <GLType/OGLTexture.h>
 #include <GLType/OGLCoreTexture.h>
+#include <GLType/OGLFramebuffer.h>
+#include <GLType/OGLCoreFramebuffer.h>
 
 __ImplementSubInterface(OGLDevice, GraphicsDevice)
 
@@ -56,10 +58,6 @@ GraphicsTexturePtr OGLDevice::createTexture(const GraphicsTextureDesc& desc) noe
 		texture->setDevice(this->downcast_pointer<OGLDevice>());
         if (texture->create(desc))
             return texture;
-        texture->parameter(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        texture->parameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        texture->parameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        texture->parameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         return nullptr;
     }
     else if (m_Desc.getDeviceType() == GraphicsDeviceType::GraphicsDeviceTypeOpenGL)
@@ -72,6 +70,45 @@ GraphicsTexturePtr OGLDevice::createTexture(const GraphicsTextureDesc& desc) noe
         return nullptr;
     }
     return nullptr;
+}
+
+GraphicsFramebufferPtr OGLDevice::createFramebuffer(const GraphicsFramebufferDesc& desc) noexcept
+{
+    if (m_Desc.getDeviceType() == GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore)
+    {
+        auto fbo = std::make_shared<OGLCoreFramebuffer>();
+        if (!fbo) return nullptr;
+		fbo->setDevice(this->downcast_pointer<OGLDevice>());
+        if (fbo->create(desc))
+            return fbo;
+        return nullptr;
+    }
+    else if (m_Desc.getDeviceType() == GraphicsDeviceType::GraphicsDeviceTypeOpenGL)
+    {
+        auto fbo = std::make_shared<OGLFramebuffer>();
+        if (!fbo) return nullptr;
+		fbo->setDevice(this->downcast_pointer<OGLDevice>());
+        if (fbo->create(desc))
+            return fbo;
+        return nullptr;
+    }
+    return nullptr;
+}
+
+void OGLDevice::setFramebuffer(const GraphicsFramebufferPtr& framebuffer) noexcept
+{
+    assert(framebuffer);
+
+    if (m_Desc.getDeviceType() == GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore)
+    {
+        auto fbo = framebuffer->downcast_pointer<OGLCoreFramebuffer>();
+        if (fbo) fbo->bind();
+    }
+    else if (m_Desc.getDeviceType() == GraphicsDeviceType::GraphicsDeviceTypeOpenGL)
+    {
+        auto fbo = framebuffer->downcast_pointer<OGLFramebuffer>();
+        if (fbo) fbo->bind();
+    }
 }
 
 const GraphicsDeviceDesc& OGLDevice::getGraphicsDeviceDesc() const noexcept

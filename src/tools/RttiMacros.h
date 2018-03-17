@@ -44,7 +44,7 @@ namespace rtti
 public:\
 	static _NAME rtti::Rtti RTTI;\
 	static _NAME rtti::Rtti* getRtti() noexcept;\
-    virtual _NAME rtti::Rtti* rtti() const noexcept;\
+    virtual _NAME rtti::Rtti* rtti() const noexcept override;\
 private:
 
 #define __ImplementSubInterface(Derived, Base) \
