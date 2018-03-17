@@ -75,12 +75,16 @@ namespace light
         ltcMatDesc.setFilename("resources/ltc_1.dds");
         ltcMatDesc.setWrapS(GL_CLAMP_TO_EDGE);
         ltcMatDesc.setWrapT(GL_CLAMP_TO_EDGE);
+        ltcMatDesc.setMinFilter(GL_NEAREST);
+        ltcMatDesc.setMagFilter(GL_LINEAR);
         m_Ltc1Tex = device->createTexture(ltcMatDesc);
 
         GraphicsTextureDesc ltcMagDesc;
         ltcMagDesc.setFilename("resources/ltc_2.dds");
         ltcMagDesc.setWrapS(GL_CLAMP_TO_EDGE);
         ltcMagDesc.setWrapT(GL_CLAMP_TO_EDGE);
+        ltcMagDesc.setMinFilter(GL_NEAREST);
+        ltcMagDesc.setMagFilter(GL_LINEAR);
         m_Ltc2Tex = device->createTexture(ltcMagDesc);
     }
 

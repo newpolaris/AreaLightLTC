@@ -71,7 +71,7 @@ file( GLOB_RECURSE SRC src/* )
 add_executable(${APP_TARGET} ${SRC})
 target_link_libraries(${APP_TARGET} glsw ${ALL_LIBS})
 
-add_executable(${PREFILTER_TARGET} external/prefilter/prefilterAreaLightwithBorder.cpp)
+add_executable(${PREFILTER_TARGET} external/prefilter/prefilterAreaLight.cpp)
 target_link_libraries(${PREFILTER_TARGET} ${ALL_LIBS})
 
 # Xcode and Visual working directories
