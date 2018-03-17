@@ -24,6 +24,7 @@ void main()
 -- Fragment
 
 // #define USE_SPHERE_INTEGRAL 1
+// #define USE_TEXTURE_DIR 1
 
 const float LUT_SIZE = 64.0;
 const float LUT_SCALE = (LUT_SIZE - 1.0) / LUT_SIZE;
@@ -316,6 +317,50 @@ vec3 FetchColorTexture(vec2 uv, float lod)
     return texture(uFilteredMap, vec3(uv, lod)).rgb;
 }
 
+// Use code in 'LTC demo sample'
+vec3 FetchDiffuseFilteredTexture(vec3 p1, vec3 p2, vec3 p3, vec3 p4)
+{
+    if (ubTexturedLight == false)
+        return vec3(1, 1, 1);
+	
+    // area light plane basis
+    vec3 V1 = p2 - p1;
+    vec3 V2 = p4 - p1;
+    vec3 planeOrtho = cross(V1, V2);
+    float planeAreaSquared = dot(planeOrtho, planeOrtho);
+    float planeDistxPlaneArea = dot(planeOrtho, p1);
+    // orthonormal projection of (0,0,0) in area light space
+    vec3 P = planeDistxPlaneArea * planeOrtho / planeAreaSquared - p1;
+
+    // find tex coords of P
+    float dot_V1_V2 = dot(V1, V2);
+    float inv_dot_V1_V1 = 1.0 / dot(V1, V1);
+    vec3 V2_ = V2 - V1 * dot_V1_V2 * inv_dot_V1_V1;
+    vec2 Puv;
+    Puv.y = dot(V2_, P) / dot(V2_, V2_);
+    Puv.x = dot(V1, P)*inv_dot_V1_V1 - dot_V1_V2*inv_dot_V1_V1*Puv.y;
+
+    // LOD
+    float d = abs(planeDistxPlaneArea) / pow(planeAreaSquared, 0.75);
+    
+    // Flip texture to match OpenGL conventions
+    Puv = Puv*vec2(1, -1) + vec2(0, 1);
+    
+    // 0.125, 0.75 looks like border gap and content length
+    // 2048.0 is might be image size
+    float lod = log(2048.0*d)/log(3.0);
+    lod = min(lod, 7.0);
+    
+    float lodA = floor(lod);
+    float lodB = ceil(lod);
+    float t = lod - lodA;
+    
+    vec3 a = FetchColorTexture(Puv, lodA);
+    vec3 b = FetchColorTexture(Puv, lodB);
+
+    return mix(a, b, t);
+}
+
 vec3 FetchDiffuseFilteredTexture(vec3 p1, vec3 p2, vec3 p3, vec3 p4, vec3 dir)
 {
     if (ubTexturedLight == false)
@@ -434,7 +479,11 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
             sum = 0.0;
 
         vec3 fetchDir = vsum/len;
+    #ifdef USE_TEXTURE_DIR
         colorMap = FetchDiffuseFilteredTexture(LL[0], LL[1], LL[2], LL[3], fetchDir);
+    #else
+        colorMap = FetchDiffuseFilteredTexture(LL[0], LL[1], LL[2], LL[3]);
+    #endif
     }
     else
     {
@@ -465,7 +514,11 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
         sum = twoSided ? abs(vsum.z) : max(0.0, vsum.z);
 
         vec3 fetchDir = normalize(vsum);
+    #ifdef USE_TEXTURE_DIR
         colorMap = FetchDiffuseFilteredTexture(LL[0], LL[1], LL[2], LL[3], fetchDir);
+    #else
+        colorMap = FetchDiffuseFilteredTexture(LL[0], LL[1], LL[2], LL[3]);
+    #endif
     }
 
     // scale by filtered light color
