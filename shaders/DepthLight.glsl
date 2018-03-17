@@ -12,3 +12,13 @@ void main()
 {
     gl_Position = (uViewProj * uWorld) * vec4(aPosition, 1.0);
 }
+
+-- Fragment
+
+// OUT
+out vec3 fragColor;
+
+void main()
+{
+	fragColor = vec3(1, 1, 1);
+}

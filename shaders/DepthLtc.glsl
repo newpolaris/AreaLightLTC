@@ -11,3 +11,13 @@ void main()
     mat4 worldViewProj = uProjection*uView*uWorld;
 	gl_Position = worldViewProj * vec4(inPosition, 1.0);
 }
+
+-- Fragment
+
+// OUT
+out vec3 fragColor;
+
+void main()
+{
+	fragColor = vec3(1, 1, 1);
+}
