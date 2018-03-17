@@ -25,7 +25,7 @@ void main()
 
 // #define USE_SPHERE_INTEGRAL 1
 
-const float LUT_SIZE = 32.0;
+const float LUT_SIZE = 64.0;
 const float LUT_SCALE = (LUT_SIZE - 1.0) / LUT_SIZE;
 const float LUT_BIAS = 0.5 / LUT_SIZE;
 
