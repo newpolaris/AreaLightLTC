@@ -306,7 +306,7 @@ void AreaLight::update() noexcept
 void AreaLight::updateHUD() noexcept
 {
     bool bUpdated = false;
-    float width = (float)getFrameWidth(), height = (float)getFrameHeight();
+    float width = (float)getWindowWidth(), height = (float)getWindowHeight();
 
     ImGui::SetNextWindowPos(
         ImVec2(width - width / 4.f - 10.f, 10.f),
