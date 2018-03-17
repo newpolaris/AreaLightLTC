@@ -65,7 +65,6 @@ uniform bool ubDebug;
 
 uniform sampler2D uLtc1;
 uniform sampler2D uLtc2;
-uniform sampler2D uColorMap;
 uniform sampler2D uFilteredMap;
 
 uniform mat4 uView;
@@ -310,8 +309,11 @@ mat3 mul(mat3 m1, mat3 m2)
     return m1 * m2;
 }
 
-vec3 FetchDiffuseFilteredTexture(sampler2D texLightFiltered, vec3 p1, vec3 p2, vec3 p3, vec3 p4, vec3 dir)
+vec3 FetchDiffuseFilteredTexture(vec3 p1, vec3 p2, vec3 p3, vec3 p4, vec3 dir)
 {
+    if (ubTexturedLight == false)
+        return vec3(1, 1, 1);
+    
     // area light plane basis
     vec3 V1 = p2 - p1;
     vec3 V2 = p4 - p1;
@@ -344,7 +346,7 @@ vec3 FetchDiffuseFilteredTexture(sampler2D texLightFiltered, vec3 p1, vec3 p2, v
     float lod = log(2048.0*d)/log(3.0);
     lod = min(lod, 8.0);
 
-    return textureLod(texLightFiltered, Puv, lod).rgb;
+    return textureLod(uFilteredMap, Puv, lod).rgb;
 }
 
 // Use code in 'LTC webgl sample'
@@ -418,8 +420,7 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
             sum = 0.0;
 
         vec3 fetchDir = vsum/len;
-        if (ubTexturedLight)
-            colorMap = FetchDiffuseFilteredTexture(uFilteredMap, LL[0], LL[1], LL[2], LL[3], fetchDir);
+        colorMap = FetchDiffuseFilteredTexture(LL[0], LL[1], LL[2], LL[3], fetchDir);
     }
     else
     {
@@ -450,8 +451,7 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
         sum = twoSided ? abs(vsum.z) : max(0.0, vsum.z);
 
         vec3 fetchDir = normalize(vsum);
-        if (ubTexturedLight)
-            colorMap = FetchDiffuseFilteredTexture(uFilteredMap, LL[0], LL[1], LL[2], LL[3], fetchDir);
+        colorMap = FetchDiffuseFilteredTexture(LL[0], LL[1], LL[2], LL[3], fetchDir);
     }
 
     // scale by filtered light color
