@@ -31,34 +31,32 @@ void filter(CImg<float>& imageInput, CImg<float>& imageOutput, const int level, 
     cout << "distance to texture plane = " << dist << endl;
     cout << "filterStd = " << filterStd << endl << endl;
 
-    CImg<float> tmp = imageInput;
+    CImg<float> tmp(imageInput.width(), imageInput.height(), 1, 4);
+
+    for (int j = 0; j < imageInput.height(); ++j)
+    for (int i = 0; i < imageInput.width();  ++i)
+    {
+        tmp(i, j, 0, 0) = imageInput(i, j, 0, 0);
+        tmp(i, j, 0, 1) = imageInput(i, j, 0, 1);
+        tmp(i, j, 0, 2) = imageInput(i, j, 0, 2);
+        tmp(i, j, 0, 3) = 1.0f;
+    }
+
     tmp.blur(filterStd, filterStd, filterStd, false);
+
+    // renormalise based on alpha
+    for (int j = 0; j < imageInput.height(); ++j)
+    for (int i = 0; i < imageInput.width();  ++i)
+    {
+        float alpha = tmp(i, j, 0, 3);
+        for (int k = 0; k < tmp.spectrum(); ++k)
+          tmp(i, j, 0, k) /= alpha;
+    }
 
     // rescale image
     imageOutput = tmp.resize(imageOutput, 5); // 5 = cubic interpolation
     return;
 }
-
-// filtered textures
-
-CImg<float> * imageInputPrefiltered;
-
-// STD of gaussian filter applied on 2D image imageInputPrefiltered(:, :, level)
-float level2gaussianFilterSTD(int level)
-{
-    float filterSTD = 0.5f * powf(1.3f, level);
-    return filterSTD;
-}
-
-// inverse function
-float gaussianFilterSTD2level(int filterSTD)
-{
-    float level = (logf(filterSTD) - logf(0.5f)) / logf(1.3f);
-    level = std::max<float>(0.0f, std::min<float>(float((*imageInputPrefiltered).depth()) - 1.0f, level));
-    return level;
-}
-
-
 
 int main(int argc, char* argv[])
 {
