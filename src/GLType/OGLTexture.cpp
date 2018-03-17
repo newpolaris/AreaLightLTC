@@ -346,17 +346,17 @@ bool OGLTexture::createFromMemoryDDS(const char* data, size_t dataSize) noexcept
 			if(gli::is_compressed(Texture.format()))
 				glCompressedTexSubImage3D(
 					_Target, static_cast<GLint>(Level),
-					0, 0, 0,
+					0, 0, Texture.target() == gli::TARGET_3D ? 0 : LayerGL,
 					Extent.x, Extent.y,
-					Texture.target() == gli::TARGET_3D ? Extent.z : LayerGL,
+					Texture.target() == gli::TARGET_3D ? Extent.z : 1,
 					Format.Internal, static_cast<GLsizei>(Texture.size(Level)),
 					Texture.data(Layer, Face, Level));
 			else
 				glTexSubImage3D(
 					_Target, static_cast<GLint>(Level),
-					0, 0, 0,
+                    0, 0, Texture.target() == gli::TARGET_3D ? 0 : (GLint)(LayerGL * Texture.faces() + Face),
 					Extent.x, Extent.y,
-					Texture.target() == gli::TARGET_3D ? Extent.z : LayerGL,
+                    Texture.target() == gli::TARGET_3D ? Extent.z : 1,
 					Format.External, Format.Type,
 					Texture.data(Layer, Face, Level));
 			break;
