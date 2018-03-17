@@ -37,6 +37,9 @@ namespace light
         m_ShaderDepthLight->setDevice(device);
         m_ShaderDepthLight->initialize();
         m_ShaderDepthLight->addShader(GL_VERTEX_SHADER, "DepthLight.Vertex");
+	#if __APPLE__
+        m_ShaderDepthLight->addShader(GL_FRAGMENT_SHADER, "DepthLight.Fragment");
+	#endif
         m_ShaderDepthLight->link();
 
         m_ShaderLTC = std::make_shared<ProgramShader>();
@@ -49,7 +52,10 @@ namespace light
         m_ShaderDepthLTC = std::make_shared<ProgramShader>();
         m_ShaderDepthLTC->setDevice(device);
         m_ShaderDepthLTC->initialize();
-        m_ShaderDepthLTC->addShader(GL_VERTEX_SHADER, "Ltc.Vertex");
+        m_ShaderDepthLTC->addShader(GL_VERTEX_SHADER, "DepthLtc.Vertex");
+	#if __APPLE__
+        m_ShaderDepthLTC->addShader(GL_FRAGMENT_SHADER, "DepthLtc.Fragment");
+	#endif
         m_ShaderDepthLTC->link();
 
         m_ShaderGroudTruth  = std::make_shared<ProgramShader>();

@@ -19,7 +19,7 @@ public:
 
     void setFramebuffer(const GraphicsFramebufferPtr& framebuffer) noexcept override;
 
-	const GraphicsDeviceDesc& getGraphicsDeviceDesc() const noexcept;
+	const GraphicsDeviceDesc& getGraphicsDeviceDesc() const noexcept override;
 
 private:
 

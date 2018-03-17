@@ -83,7 +83,7 @@ class PlaneMesh : public Mesh
     }
     
     void create() override;
-    void draw() const;
+    void draw() const override;
 };
 
 
@@ -103,7 +103,7 @@ class SphereMesh : public Mesh
     {}
     
     void create() override;
-    void draw() const;
+    void draw() const override;
 };
 
 
@@ -117,7 +117,7 @@ class ConeMesh : public Mesh
     {}
     
     void create() override;
-    void draw() const;
+    void draw() const override;
 };
 
 
@@ -131,7 +131,7 @@ class CubeMesh : public Mesh
     {}
     
     void create() override;
-    void draw() const;
+    void draw() const override;
 };
 
 /** FULL SCREEN TRIANGLE MESH -------------------------- */
@@ -144,7 +144,7 @@ class FullscreenTriangleMesh : public Mesh
 		{}
 
     void create() override;
-    void draw() const;
+    void draw() const override;
 };
 
 #endif //MESH_HPP

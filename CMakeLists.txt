@@ -3,6 +3,7 @@ cmake_minimum_required (VERSION 3.0)
 project (AreaLightLTC)
 
 set(APP_TARGET AreaLightLTC.app)
+set(PREFILTER_TARGET Prefilter.app)
 
 #if( APPLE )
     set(CMAKE_CXX_STANDARD 14)
@@ -58,11 +59,24 @@ add_definitions(
 file( GLOB GLSW external/glsw/*.c external/glsw/*.h )
 add_library( glsw ${GLSW} )
 
+#CImg
+#if( APPLE ) 
+find_package(X11 REQUIRED)
+include_directories(${X11_INCLUDE_DIR})
+list(APPEND ALL_LIBS ${X11_LIBRARIES})
+#endif()
+
 file( GLOB_RECURSE SRC src/* )
 
 add_executable(${APP_TARGET} ${SRC})
 target_link_libraries(${APP_TARGET} glsw ${ALL_LIBS})
 
+add_executable(${PREFILTER_TARGET} external/prefilter/prefilterAreaLightwithBorder.cpp)
+target_link_libraries(${PREFILTER_TARGET} ${ALL_LIBS})
+
 # Xcode and Visual working directories
 set_target_properties(${APP_TARGET} PROPERTIES XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/")
 create_target_launcher(${APP_TARGET} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/")
+
+set_target_properties(${PREFILTER_TARGET} PROPERTIES XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/")
+create_target_launcher(${PREFILTER_TARGET} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/")

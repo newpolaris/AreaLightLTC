@@ -14,10 +14,10 @@ public:
     bool create(const GraphicsDataDesc& desc) noexcept; 
 	void destroy() noexcept;
 
-	virtual bool map(std::ptrdiff_t offset, std::ptrdiff_t count, void** data, GraphicsUsageFlags flags) noexcept;
-	virtual void unmap() noexcept;
+	virtual bool map(std::ptrdiff_t offset, std::ptrdiff_t count, void** data, GraphicsUsageFlags flags) noexcept override;
+	virtual void unmap() noexcept override;
 
-    virtual void update(std::ptrdiff_t offset, std::ptrdiff_t count, void* data);
+    virtual void update(std::ptrdiff_t offset, std::ptrdiff_t count, void* data) override;
 
 	GLuint getInstanceID() const noexcept;
 
