@@ -72,15 +72,18 @@ class PlaneMesh : public Mesh
 {
   protected:
     float m_size;
+    float m_res;
     
   public:
-    PlaneMesh(float size=100.0f)//
-      : Mesh(),
-        m_size(size)
-    {}
+    PlaneMesh(float size = 100.0f, float res = 32)//
+      : Mesh()
+      , m_size(size)
+      , m_res(res)
+    {
+    }
     
     void create() override;
-    void draw() const;
+    void draw() const override;
 };
 
 
@@ -93,14 +96,14 @@ class SphereMesh : public Mesh
     float m_radius;
     
   public:
-    SphereMesh(int res=8, float radius=1.0f)
+    SphereMesh(int res = 16, float radius = 1.0f)
       : Mesh(),
         m_meshResolution(res),
         m_radius(radius)
     {}
     
     void create() override;
-    void draw() const;
+    void draw() const override;
 };
 
 
@@ -114,7 +117,7 @@ class ConeMesh : public Mesh
     {}
     
     void create() override;
-    void draw() const;
+    void draw() const override;
 };
 
 
@@ -128,7 +131,7 @@ class CubeMesh : public Mesh
     {}
     
     void create() override;
-    void draw() const;
+    void draw() const override;
 };
 
 /** FULL SCREEN TRIANGLE MESH -------------------------- */
@@ -141,7 +144,7 @@ class FullscreenTriangleMesh : public Mesh
 		{}
 
     void create() override;
-    void draw() const;
+    void draw() const override;
 };
 
 #endif //MESH_HPP

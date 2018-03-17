@@ -5,19 +5,32 @@ layout (location = 1) in vec3 inNormal;
 layout (location = 2) in vec2 inTexcoords;
 
 // Out
-out vec2 vTexcoords;
+out vec4 vPositionW;
+out vec3 vNormalW;
+
+uniform mat4 uWorld;
+uniform mat4 uView;
+uniform mat4 uProjection;
 
 void main()
 {
-	vTexcoords = inTexcoords;
-	gl_Position = vec4(inPosition, 1.0);
+    mat4 worldViewProj = uProjection*uView*uWorld;
+
+    vPositionW = uWorld * vec4(inPosition, 1.0);
+    vNormalW = mat3(uWorld) * inNormal;
+	gl_Position = worldViewProj * vec4(inPosition, 1.0);
 }
 
 -- Fragment
 
+// #define USE_SPHERE_INTEGRAL 1
+
+const float LUT_SIZE = 64.0;
+const float LUT_SCALE = (LUT_SIZE - 1.0) / LUT_SIZE;
+const float LUT_BIAS = 0.5 / LUT_SIZE;
+
 // bind roughness   {label:"Roughness", default:0.25, min:0.01, max:1, step:0.001}
 // bind dcolor      {label:"Diffuse Color",  r:1.0, g:1.0, b:1.0}
-// bind scolor      {label:"Specular Color", r:1.0, g:1.0, b:1.0}
 // bind intensity   {label:"Light Intensity", default:4, min:0, max:10}
 // bind width       {label:"Width",  default: 8, min:0.1, max:15, step:0.1}
 // bind height      {label:"Height", default: 8, min:0.1, max:15, step:0.1}
@@ -25,11 +38,21 @@ void main()
 // bind rotz        {label:"Rotation Z", default: 0, min:0, max:1, step:0.001}
 // bind twoSided    {label:"Two-sided", default:false}
 
-out vec4 FragColor;
+// IN
+in vec4 vPositionW;
+in vec3 vNormalW;
 
+// OUT
+out vec3 FragColor;
+
+uniform vec4 uQuadPoints[4]; // Area light quad
+uniform vec4 uStarPoints[10]; // Area light star
+uniform vec3 uViewPositionW;
+
+uniform float uF0; // frenel
 uniform float uRoughness;
-uniform vec3 uDcolor;
-uniform vec3 uScolor;
+uniform vec3 uAlbedo; // from material
+uniform vec4 uAlbedo2; // additional albedo
 uniform float uIntensity;
 uniform float uWidth;
 uniform float uHeight;
@@ -37,21 +60,16 @@ uniform float uRotY;
 uniform float uRotZ;
 uniform bool ubTwoSided;
 uniform bool ubClipless;
-uniform bool ubTextured;
+uniform bool ubTexturedLight;
+uniform bool ubDebug;
 
 uniform sampler2D uLtc1;
 uniform sampler2D uLtc2;
+uniform sampler2DArray uFilteredMap;
 
-uniform sampler2DArray tex;
 uniform mat4 uView;
 uniform vec2 uResolution;
 uniform int uSampleCount;
-
-const float LUT_SIZE = 64.0;
-const float LUT_SCALE = (LUT_SIZE - 1.0)/LUT_SIZE;
-const float LUT_BIAS = 0.5/LUT_SIZE;
-
-const float pi = 3.14159265;
 
 // Tracing and intersection
 ///////////////////////////
@@ -110,103 +128,16 @@ vec2 RectUVs(vec3 pos, Rect rect)
         0.5*y/rect.halfy + 0.5);
 }
 
-mat3 transpose(mat3 v)
-{
-    mat3 tmp;
-    tmp[0] = vec3(v[0].x, v[1].x, v[2].x);
-    tmp[1] = vec3(v[0].y, v[1].y, v[2].y);
-    tmp[2] = vec3(v[0].z, v[1].z, v[2].z);
-
-    return tmp;
-}
-
-vec3 PowVec3(vec3 v, float p)
-{
-    return vec3(pow(v.x, p), pow(v.y, p), pow(v.z, p));
-}
-
-vec3 rrt_odt_fit(vec3 v)
-{
-    vec3 a = v*(         v + 0.0245786) - 0.000090537;
-    vec3 b = v*(0.983729*v + 0.4329510) + 0.238081;
-    return a/b;
-}
-
-mat3 mat3_from_rows(vec3 c0, vec3 c1, vec3 c2)
-{
-    mat3 m = mat3(c0, c1, c2);
-    m = transpose(m);
-
-    return m;
-}
-
-vec3 mul(mat3 m, vec3 v)
-{
-    return m * v;
-}
-
-mat3 mul(mat3 m1, mat3 m2)
-{
-    return m1 * m2;
-}
-
-float saturate(float v)
-{
-    return clamp(v, 0.0, 1.0);
-}
-
-vec3 saturate(vec3 v)
-{
-    return clamp(v, 0.0, 1.0);
-}
-
-vec3 aces_fitted(vec3 color)
-{
-	mat3 ACES_INPUT_MAT = mat3_from_rows(
-	    vec3( 0.59719, 0.35458, 0.04823),
-	    vec3( 0.07600, 0.90834, 0.01566),
-	    vec3( 0.02840, 0.13383, 0.83777));
-
-	mat3 ACES_OUTPUT_MAT = mat3_from_rows(
-	    vec3( 1.60475,-0.53108,-0.07367),
-	    vec3(-0.10208, 1.10813,-0.00605),
-	    vec3(-0.00327,-0.07276, 1.07602));
-
-    color = mul(ACES_INPUT_MAT, color);
-
-    // Apply RRT and ODT
-    color = rrt_odt_fit(color);
-
-    color = mul(ACES_OUTPUT_MAT, color);
-
-    // Clamp to [0, 1]
-    color = saturate(color);
-
-    return color;
-}
-
 // Camera functions
 ///////////////////
 
-Ray GenerateCameraRay()
+Ray GenerateCameraRay(vec3 position, vec3 target)
 {
 	Ray ray;
 
 	// Random jitter within pixel for AA
-	vec2 xy = 2.0*(gl_FragCoord.xy)/uResolution - vec2(1.0);
-
-	ray.dir = normalize(vec3(xy, 2.0));
-
-	float focalDistance = 2.0;
-	float ft = focalDistance/ray.dir.z;
-	vec3 pFocus = ray.dir*ft;
-
-	ray.origin = vec3(0);
-	ray.dir = normalize(pFocus - ray.origin);
-
-	// Apply camera transform
-	ray.origin = (uView*vec4(ray.origin, 1)).xyz;
-	ray.dir = (uView*vec4(ray.dir, 0)).xyz;
+	ray.origin = position;
+	ray.dir = normalize(target - position);
 
 	return ray;
 }
@@ -237,6 +168,7 @@ vec3 rotation_yz(vec3 v, float ay, float az)
 // Linearly Transformed Cosines
 ///////////////////////////////
 
+// Real-Time Area Lighting: a Journey from Research to Production
 vec3 IntegrateEdgeVec(vec3 v1, vec3 v2)
 {
     float x = dot(v1, v2);
@@ -367,17 +299,26 @@ void ClipQuadToHorizon(inout vec3 L[5], out int n)
         L[4] = L[0];
 }
 
+vec3 mul(mat3 m, vec3 v)
+{
+    return m * v;
+}
+
+mat3 mul(mat3 m1, mat3 m2)
+{
+    return m1 * m2;
+}
+
 vec3 FetchColorTexture(vec2 uv, float lod)
 {
-    if (!ubTextured)
+    if (!ubTexturedLight)
         return vec3(1, 1, 1);
-    uv.y = 1.0 - uv.y;
-    return texture(tex, vec3(uv, lod)).rgb;
+    return texture(uFilteredMap, vec3(uv, lod)).rgb;
 }
 
 vec3 FetchDiffuseFilteredTexture(vec3 p1, vec3 p2, vec3 p3, vec3 p4, vec3 dir)
 {
-    if (ubTextured == false)
+    if (ubTexturedLight == false)
         return vec3(1, 1, 1);
     
     // area light plane basis
@@ -422,8 +363,8 @@ vec3 FetchDiffuseFilteredTexture(vec3 p1, vec3 p2, vec3 p3, vec3 p4, vec3 dir)
     return mix(a, b, t);
 }
 
-vec3 LTC_Evaluate(
-    vec3 N, vec3 V, vec3 P, mat3 Minv, vec3 points[4], bool twoSided)
+// Use code in 'LTC webgl sample'
+vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSided)
 {
     // construct orthonormal basis around N
     vec3 T1, T2;
@@ -437,11 +378,12 @@ vec3 LTC_Evaluate(
 
     // polygon (allocate 5 vertices for clipping)
     vec3 L[5];
-    L[0] = mul(Minv, points[0] - P);
-    L[1] = mul(Minv, points[1] - P);
-    L[2] = mul(Minv, points[2] - P);
-    L[3] = mul(Minv, points[3] - P);
-    
+    L[0] = mul(Minv, points[0].xyz - P);
+    L[1] = mul(Minv, points[1].xyz - P);
+    L[2] = mul(Minv, points[2].xyz - P);
+    L[3] = mul(Minv, points[3].xyz - P);
+    L[4] = L[3]; // avoid warning
+
     vec3 LL[4];
     LL[0] = L[0];
     LL[1] = L[1];
@@ -450,12 +392,12 @@ vec3 LTC_Evaluate(
 
     // integrate
     float sum = 0.0;
-    vec3 colorMap;
+    vec3 colorMap = vec3(1);
 
     if (ubClipless)
     {
         vec3 dir = points[0].xyz - P;
-        vec3 lightNormal = cross(points[1] - points[0], points[3] - points[0]);
+        vec3 lightNormal = cross(points[1].xyz - points[0].xyz, points[3].xyz - points[0].xyz);
         bool behind = (dot(dir, lightNormal) < 0.0);
 
         L[0] = normalize(L[0]);
@@ -471,19 +413,23 @@ vec3 LTC_Evaluate(
         vsum += IntegrateEdgeVec(L[3], L[0]);
 
         float len = length(vsum);
+    #ifndef USE_SPHERE_INTEGRAL
         float z = vsum.z/len;
 
         if (behind)
             z = -z;
 
         vec2 uv = vec2(z*0.5 + 0.5, len);
+        // if mtx data is loaded from image need to be flip
         uv.y = 1 - uv.y;
         uv = uv*LUT_SCALE + LUT_BIAS;
 
         float scale = texture(uLtc2, uv).w;
-
         sum = len*scale;
-
+    #else
+        // SphereIntegral
+        sum = max((len*len + vsum.z)/(len + 1), 0);
+    #endif
         if (behind && !twoSided)
             sum = 0.0;
 
@@ -495,15 +441,15 @@ vec3 LTC_Evaluate(
         int n;
         ClipQuadToHorizon(L, n);
 
-    if (n == 0)
-        return vec3(0, 0, 0);
+        if (n == 0)
+            return vec3(0, 0, 0);
 
-    // project onto sphere
-    L[0] = normalize(L[0]);
-    L[1] = normalize(L[1]);
-    L[2] = normalize(L[2]);
-    L[3] = normalize(L[3]);
-    L[4] = normalize(L[4]);
+        // project onto sphere
+        L[0] = normalize(L[0]);
+        L[1] = normalize(L[1]);
+        L[2] = normalize(L[2]);
+        L[3] = normalize(L[3]);
+        L[4] = normalize(L[4]);
         
         vec3 vsum;
 
@@ -522,110 +468,74 @@ vec3 LTC_Evaluate(
         colorMap = FetchDiffuseFilteredTexture(LL[0], LL[1], LL[2], LL[3], fetchDir);
     }
 
-    vec3 Lo_i = sum * colorMap;
-    return Lo_i;
+    // scale by filtered light color
+    return sum * colorMap;
 }
 
 // Scene helpers
 ////////////////
 
-void InitRect(out Rect rect)
+void InitRect(out Rect rect, in vec4 points[4])
 {
-    rect.dirx = rotation_yz(vec3(1, 0, 0), uRotY*2.0*pi, uRotZ*2.0*pi);
-    rect.diry = rotation_yz(vec3(0, 1, 0), uRotY*2.0*pi, uRotZ*2.0*pi);
-	rect.center = vec3(0, 6, 32);
-	rect.halfx = 0.5*uWidth;
-	rect.halfy = 0.5*uHeight;
+    vec3 right = vec3(points[3] - points[0]);
+    vec3 up = vec3(points[0] - points[1]);
+    rect.dirx = normalize(right);
+    rect.diry = normalize(up);
+	rect.center = vec3((points[0] + points[2]))*0.5;
+	rect.halfx = 0.5*length(right);
+	rect.halfy = 0.5*length(up);
 
 	vec3 rectNormal = cross(rect.dirx, rect.diry);
 	rect.plane = vec4(rectNormal, -dot(rectNormal, rect.center));
 }
 
-void InitRectPoints(Rect rect, out vec3 points[4])
+vec3 toLinear(vec3 _rgb)
 {
-	vec3 ex = rect.halfx*rect.dirx;
-	vec3 ey = rect.halfy*rect.diry;
-
-	points[0] = rect.center - ex - ey;
-	points[1] = rect.center + ex - ey;
-	points[2] = rect.center + ex + ey;
-	points[3] = rect.center - ex + ey;
+	return pow(abs(_rgb), vec3(2.2));
 }
-
-// Misc. helpers
-////////////////
-
-const float gamma = 2.2;
-
-vec3 ToLinear(vec3 v) { return PowVec3(v,     gamma); }
-vec3 ToSRGB(vec3 v)   { return PowVec3(v, 1.0/gamma); }
 
 void main()
 {
-	Rect rect;
-	InitRect(rect);
-
-	vec3 points[4];
-	InitRectPoints(rect, points);
-
-	vec4 floorPlane = vec4(0, 1, 0, 0);
-
+    const float minRoughness = 0.03;
+    float metallic = 0.f;
+    float roughness = max(uRoughness*uRoughness, minRoughness);
+    vec3 normal = normalize(vec3(vNormalW));
 	vec3 lcol = vec3(uIntensity);
-    vec3 dcol = ToLinear(uDcolor);
-    vec3 scol = ToLinear(uScolor);
+    vec3 albedo = toLinear(vec3(uAlbedo2));
+    vec3 baseColor = toLinear(uAlbedo);
+    vec3 dcol = baseColor*(1.0 - metallic);
+    vec3 scol = mix(vec3(uF0), baseColor, metallic);
+
+	Ray ray = GenerateCameraRay(uViewPositionW, vPositionW.xyz);
+
 	vec3 col = vec3(0);
+    vec3 pos = vPositionW.xyz;
+    vec3 V = -ray.dir;
+    vec3 N = normal;
 
-    Ray ray = GenerateCameraRay();
+    float ndotv = clamp(dot(N, V), 0, 1);
+    vec2 uv = vec2(roughness, sqrt(1.0 - ndotv));
+    // if mtx data is loaded from image need to be flip
+    uv.y = 1 - uv.y;
+    // scale and bias coordinates, for correct filtered lookup
+    uv = uv*LUT_SCALE + LUT_BIAS;
 
-    float distToFloor;
-    bool hitFloor = RayPlaneIntersect(ray, floorPlane, distToFloor);
-    if (hitFloor)
-    {
-        vec3 pos = ray.origin + ray.dir*distToFloor;
+    vec4 t1 = texture(uLtc1, uv);
+    vec4 t2 = texture(uLtc2, uv);
+    mat3 Minv = mat3(
+        vec3(t1.x, 0, t1.y),
+        vec3(   0, 1, 0),
+        vec3(t1.z, 0, t1.w)
+    );
 
-        vec3 N = floorPlane.xyz;
-        vec3 V = -ray.dir;
+    vec3 spec = LTC_Evaluate(N, V, pos, Minv, uQuadPoints, ubTwoSided);
 
-        float ndotv = saturate(dot(N, V));
-        vec2 uv = vec2(uRoughness, sqrt(1.0 - ndotv));
-        uv.y = 1.0 - uv.y;
-        uv = uv*LUT_SCALE + LUT_BIAS;
+    // apply BRDF scale terms (BRDF magnitude and Schlick Fresnel)
+    spec *= scol*t2.x + (1.0 - scol)*t2.y;
 
-        vec4 t1 = texture(uLtc1, uv);
-        vec4 t2 = texture(uLtc2, uv);
+    vec3 diff = LTC_Evaluate(N, V, pos, mat3(1), uQuadPoints, ubTwoSided);
 
-        mat3 Minv = mat3(
-            vec3(t1.x, 0, t1.y),
-            vec3(  0,  1,    0),
-            vec3(t1.z, 0, t1.w)
-        );
+    col = lcol*(spec + dcol*diff*albedo);
 
-        vec3 spec = LTC_Evaluate(N, V, pos, Minv, points, ubTwoSided);
-        // BRDF shadowing and Fresnel
-        spec *= scol*t2.x + (1.0 - scol)*t2.y;
-
-        vec3 diff = LTC_Evaluate(N, V, pos, mat3(1), points, ubTwoSided);
-
-        col = lcol*(spec + dcol*diff);
-    }
-
-    float distToRect;
-    if (RayRectIntersect(ray, rect, distToRect))
-    {
-        if ((distToRect < distToFloor) || !hitFloor)
-        {
-            vec3 pos = ray.origin + ray.dir*distToRect;
-            vec2 uv  = RectUVs(pos, rect);
-            uv = uv*vec2(1, -1) + vec2(0, 1);
-            col = lcol*texture(tex, vec3(uv, 0.0)).rgb;
-            if (!ubTextured)
-                col = lcol;
-        }
-    }
-
-
-	col = aces_fitted(col);
-	col = ToSRGB(col);
-
-	FragColor = vec4(col, 1.0);
+	FragColor = col;
 }
