@@ -79,6 +79,7 @@ private:
     GraphicsDevicePtr m_Device;
     GraphicsTexturePtr m_Ltc1Tex;
     GraphicsTexturePtr m_Ltc2Tex;
+    GraphicsTexturePtr m_Texture;
 };
 
 CREATE_APPLICATION(AreaLight);
@@ -118,18 +119,13 @@ void AreaLight::startup() noexcept
     m_ScreenTraingle.create();
 	
 	GraphicsTextureDesc filteredDesc;
-    filteredDesc.setFilename("resources/stained_glass.dds");
+    filteredDesc.setFilename("resources/stained_glass_filtered.dds");
     filteredDesc.setWrapS(GL_CLAMP_TO_EDGE);
     filteredDesc.setWrapT(GL_CLAMP_TO_EDGE);
-    filteredDesc.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
-    filteredDesc.setMagFilter(GL_LINEAR);
+    filteredDesc.setMinFilter(GL_NEAREST);
+    filteredDesc.setMagFilter(GL_NEAREST);
     filteredDesc.setAnisotropyLevel(16);
-    auto filteredTex = m_Device->createTexture(filteredDesc);
-
-    GraphicsTextureDesc source;
-    source.setFilename("resources/stained_glass.png");
-    source.setAnisotropyLevel(16);
-    auto lightSource = m_Device->createTexture(source);
+    m_Texture = m_Device->createTexture(filteredDesc);
 
     GraphicsTextureDesc ltcMatDesc;
     ltcMatDesc.setFilename("resources/ltc_1.dds");
@@ -210,6 +206,7 @@ void AreaLight::render() noexcept
 
 	m_Shader.bind();
     m_Shader.setUniform("ubTwoSided", m_Light.m_bTwoSided);
+    m_Shader.setUniform("ubTextured", true);
     m_Shader.setUniform("uIntensity", m_Light.m_Intensity);
     m_Shader.setUniform("uView", m_View);
     m_Shader.setUniform("uResolution", resolution);
@@ -222,8 +219,7 @@ void AreaLight::render() noexcept
     m_Shader.setUniform("uRoughness", m_Light.m_Roughness);
     m_Shader.bindTexture("uLtc1", m_Ltc1Tex, 0);
     m_Shader.bindTexture("uLtc2", m_Ltc2Tex, 1);
-    // m_BlitShader.bindTexture("uTexSource", m_LtcMatTex, 0);
-
+    m_Shader.bindTexture("tex", m_Texture, 2);
     m_ScreenTraingle.draw();
 }
 
