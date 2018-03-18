@@ -24,6 +24,7 @@ void main()
 -- Fragment
 
 // #define USE_SPHERE_INTEGRAL 1
+// #define USE_TEXTURE_DIR 1
 
 const float LUT_SIZE = 64.0;
 const float LUT_SCALE = (LUT_SIZE - 1.0) / LUT_SIZE;
@@ -65,8 +66,7 @@ uniform bool ubDebug;
 
 uniform sampler2D uLtc1;
 uniform sampler2D uLtc2;
-uniform sampler2D uColorMap;
-uniform sampler2D uFilteredMap;
+uniform sampler2DArray uFilteredMap;
 
 uniform mat4 uView;
 uniform vec2 uResolution;
@@ -314,7 +314,7 @@ vec3 FetchColorTexture(vec2 uv, float lod)
 {
     if (!ubTexturedLight)
         return vec3(1, 1, 1);
-    return textureLod(uFilteredMap, uv, lod).rgb;
+    return texture(uFilteredMap, vec3(uv, lod)).rgb;
 }
 
 // Use code in 'LTC demo sample'
@@ -479,7 +479,11 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
             sum = 0.0;
 
         vec3 fetchDir = vsum/len;
+    #ifdef USE_TEXTURE_DIR
         colorMap = FetchDiffuseFilteredTexture(LL[0], LL[1], LL[2], LL[3], fetchDir);
+    #else
+        colorMap = FetchDiffuseFilteredTexture(LL[0], LL[1], LL[2], LL[3]);
+    #endif
     }
     else
     {
@@ -510,7 +514,11 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
         sum = twoSided ? abs(vsum.z) : max(0.0, vsum.z);
 
         vec3 fetchDir = normalize(vsum);
+    #ifdef USE_TEXTURE_DIR
         colorMap = FetchDiffuseFilteredTexture(LL[0], LL[1], LL[2], LL[3], fetchDir);
+    #else
+        colorMap = FetchDiffuseFilteredTexture(LL[0], LL[1], LL[2], LL[3]);
+    #endif
     }
 
     // scale by filtered light color

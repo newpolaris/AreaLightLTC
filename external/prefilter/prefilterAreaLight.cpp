@@ -31,34 +31,32 @@ void filter(CImg<float>& imageInput, CImg<float>& imageOutput, const int level, 
     cout << "distance to texture plane = " << dist << endl;
     cout << "filterStd = " << filterStd << endl << endl;
 
-    CImg<float> tmp = imageInput;
+    CImg<float> tmp(imageInput.width(), imageInput.height(), 1, 4);
+
+    for (int j = 0; j < imageInput.height(); ++j)
+    for (int i = 0; i < imageInput.width();  ++i)
+    {
+        tmp(i, j, 0, 0) = imageInput(i, j, 0, 0);
+        tmp(i, j, 0, 1) = imageInput(i, j, 0, 1);
+        tmp(i, j, 0, 2) = imageInput(i, j, 0, 2);
+        tmp(i, j, 0, 3) = 1.0f;
+    }
+
     tmp.blur(filterStd, filterStd, filterStd, false);
+
+    // renormalise based on alpha
+    for (int j = 0; j < imageInput.height(); ++j)
+    for (int i = 0; i < imageInput.width();  ++i)
+    {
+        float alpha = tmp(i, j, 0, 3);
+        for (int k = 0; k < tmp.spectrum(); ++k)
+          tmp(i, j, 0, k) /= alpha;
+    }
 
     // rescale image
     imageOutput = tmp.resize(imageOutput, 5); // 5 = cubic interpolation
     return;
 }
-
-// filtered textures
-
-CImg<float> * imageInputPrefiltered;
-
-// STD of gaussian filter applied on 2D image imageInputPrefiltered(:, :, level)
-float level2gaussianFilterSTD(int level)
-{
-    float filterSTD = 0.5f * powf(1.3f, level);
-    return filterSTD;
-}
-
-// inverse function
-float gaussianFilterSTD2level(int filterSTD)
-{
-    float level = (logf(filterSTD) - logf(0.5f)) / logf(1.3f);
-    level = std::max<float>(0.0f, std::min<float>(float((*imageInputPrefiltered).depth()) - 1.0f, level));
-    return level;
-}
-
-
 
 int main(int argc, char* argv[])
 {
@@ -90,42 +88,40 @@ int main(int argc, char* argv[])
 
     int offset = 0;
     CImg<float> imageInput(x, y, 1, 3);
-    for (int j = 0; j < imageInput.height(); ++j)
-    for (int i = 0; i < imageInput.width();  ++i)
+    for (int j = 0; j < y; ++j)
+    for (int i = 0; i < x; ++i)
     {
         for (int k = 0; k < imageInput.spectrum(); ++k)
             imageInput(i, j, 0, k) = data[offset++];
     }
 
     // filtered levels
-    unsigned int Nlevels;
-    for (Nlevels = 1; (imageInput.width() >> Nlevels) > 0; ++Nlevels);
+    //unsigned int Nlevels;
+    //for (Nlevels = 1; (imageInput.width() >> Nlevels) > 0; ++Nlevels);
 
+    // Beyond 8 levels, the result is ~= a constant colour
+    // so pretend we have 12 levels, but truncate at 8
+    const unsigned int Nlevels = 12;
+    const unsigned int maxLevels = 8;
+	
     size_t levels = static_cast<size_t>(Nlevels);
     gli::extent3d extent(imageInput.width(), imageInput.height(), 1); 
-    gli::texture texture(gli::TARGET_2D, gli::FORMAT_RGBA32_SFLOAT_PACK32, extent, 1, 1, levels);
+    gli::texture texture(gli::TARGET_2D_ARRAY, gli::FORMAT_RGBA32_SFLOAT_PACK32, extent, maxLevels, 1, 1);
 
     // borders
     stringstream filenameOutput (stringstream::in | stringstream::out);
     filenameOutput << filename << "_filtered" << ".dds";
 
-    for (unsigned int level = 0; level < Nlevels; ++level)
+    for (unsigned int idx = 0; idx < maxLevels; ++idx)
     {
-        cout << "processing file " << filenameOutput.str() << " Level: " << level << endl;
-        unsigned int width = imageInput.width() >> level;
-        unsigned int height = imageInput.height() >> level;
-
-        if (width <= 0 || height <= 0)
-            break;
-
-        CImg<float> imageOutput(width, height, 1, 3);
-
-        filter(imageInput, imageOutput, level, Nlevels);
+        cout << "processing file " << filenameOutput.str() << " Level: " << idx << endl;
+        CImg<float> imageOutput(x, y, 1, 4);
+        filter(imageInput, imageOutput, idx, Nlevels);
 
         offset = 0;
-        float* dest = reinterpret_cast<float*>(texture.data(0, 0, level));
-        for (int j = 0; j < imageOutput.height(); ++j)
-        for (int i = 0; i < imageOutput.width();  ++i)
+        float* dest = reinterpret_cast<float*>(texture.data(idx, 0, 0));
+        for (int j = 0; j < y; ++j)
+        for (int i = 0; i < x; ++i)
         {
             dest[offset++] = imageOutput(i, j, 0, 0);
             dest[offset++] = imageOutput(i, j, 0, 1);

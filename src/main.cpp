@@ -106,7 +106,7 @@ struct SceneSettings
     float Roughness = 0.25f;
     float F0 = 0.04f; // fresnel
     glm::vec4 Albedo = glm::vec4(0.5f, 0.5f, 0.5f, 1.f); // additional albedo
-    // tempolar
+    // tempolar values
     bool bUiChanged = false;
     bool bResized = false;
     bool bSampleReset = false;
@@ -230,16 +230,18 @@ void AreaLight::startup() noexcept
 	m_BlitShader.link();
 
     m_ScreenTraingle.create();
-
-    GraphicsTextureDesc filteredDesc;
+	
+	GraphicsTextureDesc filteredDesc;
     filteredDesc.setFilename("resources/stained_glass_filtered.dds");
-    filteredDesc.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
-    filteredDesc.setMagFilter(GL_LINEAR);
+    filteredDesc.setWrapS(GL_CLAMP_TO_EDGE);
+    filteredDesc.setWrapT(GL_CLAMP_TO_EDGE);
+    filteredDesc.setMinFilter(GL_NEAREST);
+    filteredDesc.setMagFilter(GL_NEAREST);
     filteredDesc.setAnisotropyLevel(16);
     auto filteredTex = m_Device->createTexture(filteredDesc);
 
     GraphicsTextureDesc source;
-    source.setFilename("resources/stained_glass.png");
+    source.setFilename("resources/stained_glass.dds");
     source.setAnisotropyLevel(16);
     auto lightSource = m_Device->createTexture(source);
 

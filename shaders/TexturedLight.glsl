@@ -39,7 +39,7 @@ void main()
     vec3 color = vec3(1);
     if (ubTexturedLight)
     	color = texture(uTexColor, vTexcoords).rgb;
-    color = toLinear(color);
+    // color = toLinear(color);
     color *= uIntensity;
     FragColor = vec4(color, 1.0);
 }
