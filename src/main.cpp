@@ -232,9 +232,7 @@ void AreaLight::startup() noexcept
     m_ScreenTraingle.create();
 
     GraphicsTextureDesc filteredDesc;
-    filteredDesc.setFilename("resources/stained_glass.dds");
-    filteredDesc.setWrapS(GL_CLAMP_TO_EDGE);
-    filteredDesc.setWrapT(GL_CLAMP_TO_EDGE);
+    filteredDesc.setFilename("resources/stained_glass_filtered.dds");
     filteredDesc.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
     filteredDesc.setMagFilter(GL_LINEAR);
     filteredDesc.setAnisotropyLevel(16);
