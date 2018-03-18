@@ -346,8 +346,8 @@ vec3 FetchDiffuseFilteredTexture(vec3 p1, vec3 p2, vec3 p3, vec3 p4)
     // Flip texture to match OpenGL conventions
     Puv = Puv*vec2(1, -1) + vec2(0, 1);
     
-    // 0.125, 0.75 looks like border gap and content length
-    // 2048.0 is might be image size
+    // in source file(prefilterAreaLight.cpp)
+    // const float dist = powf(3.0f, level) / powf(2.0f, Nlevels - 1.0f);
     float lod = log(2048.0*d)/log(3.0);
     lod = min(lod, 7.0);
     

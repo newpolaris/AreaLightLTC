@@ -14,9 +14,6 @@ using namespace cimg_library;
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-
 void filter(CImg<float>& imageInput, CImg<float>& imageOutput, const int level, const int Nlevels)
 {
     // distance to texture plane
