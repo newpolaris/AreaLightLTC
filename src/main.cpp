@@ -232,7 +232,7 @@ void AreaLight::startup() noexcept
     m_ScreenTraingle.create();
 	
 	GraphicsTextureDesc filteredDesc;
-    filteredDesc.setFilename("resources/hatsune-miku-in-the-rain_filtered.dds");
+    filteredDesc.setFilename("resources/hatsune-miku-hiking-with-her-dog_filtered.dds");
     filteredDesc.setWrapS(GL_CLAMP_TO_EDGE);
     filteredDesc.setWrapT(GL_CLAMP_TO_EDGE);
     filteredDesc.setMinFilter(GL_LINEAR);
@@ -241,14 +241,14 @@ void AreaLight::startup() noexcept
     auto filteredTex = m_Device->createTexture(filteredDesc);
 
     GraphicsTextureDesc source;
-    source.setFilename("resources/hatsune-miku-in-the-rain.jpg");
+    source.setFilename("resources/hatsune-miku-hiking-with-her-dog.dds");
     source.setAnisotropyLevel(16);
     auto lightSource = m_Device->createTexture(source);
 
 	auto rot = glm::angleAxis(glm::half_pi<float>(), glm::vec3(1, 0, 0));
     auto light = std::make_shared<Light>();
 	light->setRotation(glm::vec3(90.f, 0, 0));
-	light->setPosition(glm::vec3(0, -1, 2));
+	light->setPosition(glm::vec3(0, 1, 2));
     light->setTexturedLight(true);
     light->setLightSource(lightSource);
     light->setLightFilterd(filteredTex);
