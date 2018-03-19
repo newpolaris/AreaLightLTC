@@ -98,13 +98,13 @@ namespace OGLTypes
             switch (Base)
             {
             case GL_RED:
-                return 0x8FBD; //GL_SR8_EXT - GL_EXT_texture_sRGB_R8
+                return GL_R8;
             case GL_RG:
-			    return 0x8FBE; //GL_SRG8_EXT
+			    return GL_RG8;
             case GL_RGB:
-                return GL_SRGB8;
+                return GL_RGB8;
             case GL_RGBA:
-                return GL_SRGB8_ALPHA8;
+                return GL_RGBA8;
             }
         }
         return Base;

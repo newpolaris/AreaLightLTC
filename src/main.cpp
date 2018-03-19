@@ -98,12 +98,11 @@ struct SceneSettings
 {
     static const uint32_t NumSamples = 4;
     bool bProgressiveSampling = true;
-    bool bGroudTruth = true;
+    bool bGroudTruth = false;
     bool bClipless = true;
     int32_t SampleCount = 0;
     uint32_t LightIndex = 0;
     float JitterAASigma = 0.6f;
-    float Roughness = 0.25f;
     float F0 = 0.04f; // fresnel
     glm::vec4 Albedo = glm::vec4(0.5f, 0.5f, 0.5f, 1.f); // additional albedo
     // tempolar values
@@ -193,6 +192,10 @@ private:
     FullscreenTriangleMesh m_ScreenTraingle;
     ProgramShader m_BlitShader;
     GraphicsTexturePtr m_ScreenColorTex;
+	GraphicsTexturePtr m_NormalTex;
+	GraphicsTexturePtr m_RoughnessTex;
+	GraphicsTexturePtr m_MetalnessTex;
+	GraphicsTexturePtr m_AlbedoTex;
     GraphicsFramebufferPtr m_ColorRenderTarget;
     GraphicsDevicePtr m_Device;
 };
@@ -232,7 +235,7 @@ void AreaLight::startup() noexcept
     m_ScreenTraingle.create();
 	
 	GraphicsTextureDesc filteredDesc;
-    filteredDesc.setFilename("resources/hatsune-miku-hiking-with-her-dog_filtered.dds");
+    filteredDesc.setFilename("resources/stained_glass_filtered.dds");
     filteredDesc.setWrapS(GL_CLAMP_TO_EDGE);
     filteredDesc.setWrapT(GL_CLAMP_TO_EDGE);
     filteredDesc.setMinFilter(GL_LINEAR);
@@ -241,9 +244,27 @@ void AreaLight::startup() noexcept
     auto filteredTex = m_Device->createTexture(filteredDesc);
 
     GraphicsTextureDesc source;
-    source.setFilename("resources/hatsune-miku-hiking-with-her-dog.dds");
+    source.setFilename("resources/stained_glass.dds");
     source.setAnisotropyLevel(16);
     auto lightSource = m_Device->createTexture(source);
+
+	{
+		GraphicsTextureDesc normal;
+		normal.setFilename("resources/marble/normal.png");
+		m_NormalTex = m_Device->createTexture(normal);
+
+		GraphicsTextureDesc roughness;
+		roughness.setFilename("resources/marble/roughness.png");
+		m_RoughnessTex = m_Device->createTexture(roughness);
+
+		GraphicsTextureDesc metalness;
+		metalness.setFilename("resources/marble/metalness.png");
+		m_MetalnessTex = m_Device->createTexture(metalness);
+
+		GraphicsTextureDesc albedo;
+		albedo.setFilename("resources/marble/albedo.png");
+		m_AlbedoTex = m_Device->createTexture(albedo);
+	}
 
 	auto rot = glm::angleAxis(glm::half_pi<float>(), glm::vec3(1, 0, 0));
     auto light = std::make_shared<Light>();
@@ -263,7 +284,10 @@ void AreaLight::startup() noexcept
     m_Lights.emplace_back(std::move(backLight));
 
     // Ground plane
-    m_Models.emplace_back(createPrimitive<PlaneMesh>(glm::mat4(1.f)));
+	{
+		glm::mat4 world = glm::mat4(1.f);
+		m_Models.emplace_back(createPrimitive<PlaneMesh>(world, 100.f, 32.f, 20.f));
+	}
 
     // Simple cube
     {
@@ -325,7 +349,6 @@ void AreaLight::updateHUD() noexcept
             bUpdated |= ImGui::Checkbox("Progressive Sampling", &m_Settings.bProgressiveSampling);
             bUpdated |= ImGui::Checkbox("Use Clipless", &m_Settings.bClipless);
             ImGui::Separator();
-            bUpdated |= ImGui::SliderFloat("Roughness", &m_Settings.Roughness, 0.03f, 1.f);
             bUpdated |= ImGui::SliderFloat("Fresnel", &m_Settings.F0, 0.01f, 1.f);
             bUpdated |= ImGui::SliderFloat("Jitter Radius", &m_Settings.JitterAASigma, 0.01f, 2.f);
             ImGui::ColorWheel("Albedo Color:", glm::value_ptr(m_Settings.Albedo), 0.6f);
@@ -435,7 +458,14 @@ void AreaLight::render() noexcept
         {
             program = light->submitPerLightUniforms(renderData, program);
             for (auto& model : m_Models)
+			{
+				program->bindTexture("uAlbedo", m_AlbedoTex, 3);
+				program->bindTexture("uNormal", m_NormalTex, 4);
+				program->bindTexture("uMetalness", m_MetalnessTex, 5);
+				program->bindTexture("uRoughness", m_RoughnessTex, 6);
+
                 model->submit(program);
+			}
         }
         glDisable(GL_BLEND);
     }
@@ -486,7 +516,6 @@ void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
         m_Camera.setViewParams(glm::vec3(0.0f, 1.0f, 11.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         m_Settings.bGroudTruth = false;
         m_Settings.bProgressiveSampling = false;
-        m_Settings.Roughness = 0.7f;
         m_Settings.F0 = 0.04f;
         if (m_Lights.size() > 0)
         {
@@ -502,7 +531,6 @@ void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
         m_Camera.setViewParams(glm::vec3(0.0f, 1.5f, 11.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         m_Settings.bGroudTruth = false;
         m_Settings.bProgressiveSampling = false;
-        m_Settings.Roughness = 0.6f;
         m_Settings.F0 = 0.8f;
         if (m_Lights.size() > 0)
         {
@@ -573,7 +601,6 @@ GraphicsDevicePtr AreaLight::createDevice(const GraphicsDeviceDesc& desc) noexce
 
 ShaderPtr AreaLight::submitPerFrameUniformLight(ShaderPtr& shader) noexcept
 {
-    shader->setUniform("uRoughness", m_Settings.Roughness);
     shader->setUniform("uAlbedo2", m_Settings.Albedo);
     shader->setUniform("uF0", m_Settings.F0);
     if (!m_Settings.bGroudTruth)

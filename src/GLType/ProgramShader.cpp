@@ -279,7 +279,7 @@ bool ProgramShader::bindTexture(const std::string& name, const GraphicsTexturePt
     if (!device) return false;
     auto type = device->getGraphicsDeviceDesc().getDeviceType();
 
-    // Bind the buffer object to the uniform block
+    // Bind the buffer object to the texture 
     if (type == GraphicsDeviceType::GraphicsDeviceTypeOpenGLCore)
     {
         auto tex = texture->downcast_pointer<OGLCoreTexture>();
