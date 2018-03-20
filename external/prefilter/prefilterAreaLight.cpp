@@ -112,7 +112,10 @@ int main(int argc, char* argv[])
 		gli::save(texture, filenameOutput.str());
 	}
 
-	imageInput.resize(512, 512, 1, 3);
+    float aspect = float(y)/x;
+    float xnew = float(640);
+    float ynew = xnew * aspect;
+	imageInput.resize(xnew, ynew, 1, 3, 6);
 
     // filtered levels
     //unsigned int Nlevels;
@@ -126,6 +129,9 @@ int main(int argc, char* argv[])
     size_t levels = static_cast<size_t>(Nlevels);
     gli::extent3d extent(imageInput.width(), imageInput.height(), 1); 
     gli::texture texture(gli::TARGET_2D_ARRAY, gli::FORMAT_RGBA32_SFLOAT_PACK32, extent, maxLevels, 1, 1);
+
+    x = imageInput.width();
+    y = imageInput.height();
 
     // borders
     stringstream filenameOutput (stringstream::in | stringstream::out);

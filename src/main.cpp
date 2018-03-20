@@ -7,7 +7,7 @@
 #include <glm/gtc/type_ptr.hpp> 
 
 #include <tools/gltools.hpp>
-#include <tools/SimpleProfile.h>
+#include <tools/Profile.h>
 #include <tools/imgui.h>
 #include <tools/TCamera.h>
 
@@ -225,6 +225,7 @@ void AreaLight::startup() noexcept
 	assert(m_Device);
 
 	light::initialize(m_Device);
+	profiler::initialize();
 	
 	m_BlitShader.setDevice(m_Device);
 	m_BlitShader.initialize();
@@ -235,7 +236,7 @@ void AreaLight::startup() noexcept
     m_ScreenTraingle.create();
 	
 	GraphicsTextureDesc filteredDesc;
-    filteredDesc.setFilename("resources/stained_glass_filtered.dds");
+    filteredDesc.setFilename("resources/hatsune-miku-in-the-rain_filtered.dds");
     filteredDesc.setWrapS(GL_CLAMP_TO_EDGE);
     filteredDesc.setWrapT(GL_CLAMP_TO_EDGE);
     filteredDesc.setMinFilter(GL_LINEAR);
@@ -244,25 +245,25 @@ void AreaLight::startup() noexcept
     auto filteredTex = m_Device->createTexture(filteredDesc);
 
     GraphicsTextureDesc source;
-    source.setFilename("resources/stained_glass.dds");
+    source.setFilename("resources/hatsune-miku-in-the-rain.dds");
     source.setAnisotropyLevel(16);
     auto lightSource = m_Device->createTexture(source);
 
 	{
 		GraphicsTextureDesc normal;
-		normal.setFilename("resources/marble/normal.png");
+		normal.setFilename("resources/floor/normal.dds");
 		m_NormalTex = m_Device->createTexture(normal);
 
 		GraphicsTextureDesc roughness;
-		roughness.setFilename("resources/marble/roughness.png");
+		roughness.setFilename("resources/floor/roughness.dds");
 		m_RoughnessTex = m_Device->createTexture(roughness);
 
 		GraphicsTextureDesc metalness;
-		metalness.setFilename("resources/marble/metalness.png");
+		metalness.setFilename("resources/floor/metalness.dds");
 		m_MetalnessTex = m_Device->createTexture(metalness);
 
 		GraphicsTextureDesc albedo;
-		albedo.setFilename("resources/marble/albedo.png");
+		albedo.setFilename("resources/floor/albedo.dds");
 		m_AlbedoTex = m_Device->createTexture(albedo);
 	}
 
@@ -307,6 +308,7 @@ void AreaLight::closeup() noexcept
 {
     m_ScreenTraingle.destroy();
     light::shutdown();
+    profiler::shutdown();
 }
 
 void AreaLight::update() noexcept
@@ -392,8 +394,12 @@ void AreaLight::updateHUD() noexcept
     m_Settings.bUiChanged = bUpdated;
 }
 
+enum ProfilerType { ProfilerTypeMainRender = 0 };
+
 void AreaLight::render() noexcept
 {
+    profiler::start(ProfilerTypeMainRender);
+
     // reset sampling count
     if (m_Settings.bSampleReset)
         m_Settings.SampleCount = 0;
@@ -484,6 +490,9 @@ void AreaLight::render() noexcept
     }
     if (m_Settings.bProgressiveSampling)
         m_Settings.SampleCount += SceneSettings::NumSamples;
+
+    profiler::stop(ProfilerTypeMainRender);
+    profiler::tick(ProfilerTypeMainRender);
 }
 
 void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
