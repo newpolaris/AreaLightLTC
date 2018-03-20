@@ -7,6 +7,7 @@ layout (location = 2) in vec2 inTexcoords;
 // Out
 out vec4 vPositionW;
 out vec3 vNormalW;
+out vec2 vTexcoords;
 
 uniform mat4 uWorld;
 uniform mat4 uView;
@@ -18,6 +19,7 @@ void main()
 
     vPositionW = uWorld * vec4(inPosition, 1.0);
     vNormalW = mat3(uWorld) * inNormal;
+	vTexcoords = inTexcoords; 
 	gl_Position = worldViewProj * vec4(inPosition, 1.0);
 }
 
@@ -38,6 +40,7 @@ bool bSpecBRDF = true;
 // IN
 in vec4 vPositionW;
 in vec3 vNormalW;
+in vec2 vTexcoords;
 
 // OUT
 out vec3 FragColor;
@@ -51,8 +54,6 @@ uniform vec4 uSamples[NumSamples];
 uniform vec3 uViewPositionW;
 
 uniform float uF0; // frenel
-uniform float uRoughness;
-uniform vec3 uAlbedo; // from material
 uniform vec4 uAlbedo2; // additional albedo
 uniform float uIntensity;
 uniform float uWidth;
@@ -63,6 +64,10 @@ uniform bool ubTwoSided;
 uniform bool uTexturedLight;
 uniform int uSampleCount;
 
+uniform sampler2D uAlbedo;
+uniform sampler2D uNormal;
+uniform sampler2D uRoughness;
+uniform sampler2D uMetalness;
 uniform sampler2D uTexColor;
 
 // Tracing and intersection
@@ -334,18 +339,36 @@ float GGX(vec3 V, vec3 L, float alpha, out float pdf)
     return res;
 }
 
+mat3 calcTbn(vec3 _normal, vec3 _worldPos, vec2 _texCoords)
+{
+    vec3 Q1  = dFdx(_worldPos);
+    vec3 Q2  = dFdy(_worldPos);
+    vec2 st1 = dFdx(_texCoords);
+    vec2 st2 = dFdy(_texCoords);
+
+    vec3 N  = _normal;
+    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
+    vec3 B  = -normalize(cross(N, T));
+    return mat3(T, B, N);
+}
+
 void main()
 {
     const float pi = 3.14159265;
     const float minRoughness = 0.03;
-    float metallic = 0.f;
-    float roughness = max(uRoughness*uRoughness, minRoughness);
-    vec3 normal = normalize(vec3(vNormalW));
+    float metallic = texture(uMetalness, vTexcoords).x;
+    float roughness = texture(uRoughness, vTexcoords).x;
+    roughness = max(roughness*roughness, minRoughness);
 	vec3 lcol = vec3(uIntensity);
     vec3 albedo = toLinear(vec3(uAlbedo2));
-    vec3 baseColor = toLinear(uAlbedo);
+    vec3 baseColor = toLinear(texture(uAlbedo, vTexcoords).xyz);
     vec3 dcol = baseColor*(1.0 - metallic);
     vec3 scol = mix(vec3(uF0), baseColor, metallic);
+
+	vec3 normal = normalize(vec3(vNormalW));
+	mat3 tbn = calcTbn(normal, vPositionW.xyz, vTexcoords);
+	vec3 tangentNormal = texture(uNormal, vTexcoords).xyz * 2.0 - 1.0;
+	normal = normalize(tbn * tangentNormal);
 
     mat3 t2w = BasisFrisvad(normal);
     mat3 w2t = transpose(t2w);

@@ -99,7 +99,6 @@ using namespace light;
 Light::Light() noexcept
     : m_Position(0.f)
     , m_Rotation(0.f)
-    , m_Albedo(1.f)
     , m_Width(8.f)
     , m_Height(8.f)
     , m_Intensity(4.f)
@@ -176,7 +175,6 @@ ShaderPtr Light::submitPerLightUniforms(const RenderingData& data, ShaderPtr& sh
     if (!data.bGroudTruth)
         shader->setUniform("ubTexturedLight", m_bTexturedLight);
     shader->setUniform("uIntensity", m_Intensity);
-    shader->setUniform("uAlbedo", glm::vec3(m_Albedo));
     shader->setUniform("uQuadPoints", points, 4);
 
     if (m_bTexturedLight && !data.bGroudTruth)

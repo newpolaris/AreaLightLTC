@@ -100,7 +100,7 @@ namespace OGLTypes
             case GL_RED:
                 return GL_R8;
             case GL_RG:
-                return GL_RG8;
+			    return GL_RG8;
             case GL_RGB:
                 return GL_RGB8;
             case GL_RGBA:

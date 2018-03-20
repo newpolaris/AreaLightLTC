@@ -48,7 +48,6 @@ public:
 
     glm::vec3 m_Position; // where are we
     glm::vec3 m_Rotation;
-    glm::vec4 m_Albedo;
     glm::vec4 m_Specular;
 
     float m_Width;

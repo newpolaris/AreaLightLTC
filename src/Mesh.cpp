@@ -49,6 +49,7 @@ void PlaneMesh::create()
     glm::vec3 *pPos = &(positions[0]);
     glm::vec2 *pUV = &(texCoords[0]);
 
+	float UVScale = m_UVScale;
 
     const float Delta = 1.0f / float(RES);
 
@@ -60,14 +61,17 @@ void PlaneMesh::create()
 
             *pUV = glm::vec2(vInd.x, vInd.y);
             *pPos = SIZE * glm::vec3(pUV->x - 0.5f, 0.0f, pUV->y - 0.5f);
+			*pUV *= UVScale;
             ++pPos; ++pUV;
 
             *pUV = glm::vec2(vInd.x, vInd.w);
             *pPos = SIZE * glm::vec3(pUV->x - 0.5f, 0.0f, pUV->y - 0.5f);
+			*pUV *= UVScale;
             ++pPos; ++pUV;
 
             *pUV = glm::vec2(vInd.z, vInd.y);
             *pPos = SIZE * glm::vec3(pUV->x - 0.5f, 0.0f, pUV->y - 0.5f);
+			*pUV *= UVScale;
             ++pPos; ++pUV;
 
 
@@ -81,6 +85,7 @@ void PlaneMesh::create()
 
             *pUV = glm::vec2(vInd.z, vInd.w);
             *pPos = SIZE * glm::vec3(pUV->x - 0.5f, 0.0f, pUV->y - 0.5f);
+			*pUV *= UVScale;
             ++pPos; ++pUV;
         }
     }

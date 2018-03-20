@@ -92,6 +92,31 @@ int main(int argc, char* argv[])
             imageInput(i, j, 0, k) = data[offset++];
     }
 
+	// linearize and save to dds
+	{
+		gli::extent3d extent(imageInput.width(), imageInput.height(), 1); 
+		gli::texture texture(gli::TARGET_2D_ARRAY, gli::FORMAT_RGBA32_SFLOAT_PACK32, extent, 1, 1, 1);
+
+        offset = 0;
+        float* dest = reinterpret_cast<float*>(texture.data(0, 0, 0));
+        for (int j = 0; j < y; ++j)
+        for (int i = 0; i < x; ++i)
+        {
+            dest[offset++] = imageInput(i, j, 0, 0);
+            dest[offset++] = imageInput(i, j, 0, 1);
+            dest[offset++] = imageInput(i, j, 0, 2);
+            dest[offset++] = 1.f;
+        }
+		stringstream filenameOutput (stringstream::in | stringstream::out);
+		filenameOutput << filename << ".dds"; 
+		gli::save(texture, filenameOutput.str());
+	}
+
+    float aspect = float(y)/x;
+    float xnew = float(640);
+    float ynew = xnew * aspect;
+	imageInput.resize(xnew, ynew, 1, 3, 6);
+
     // filtered levels
     //unsigned int Nlevels;
     //for (Nlevels = 1; (imageInput.width() >> Nlevels) > 0; ++Nlevels);
@@ -105,10 +130,12 @@ int main(int argc, char* argv[])
     gli::extent3d extent(imageInput.width(), imageInput.height(), 1); 
     gli::texture texture(gli::TARGET_2D_ARRAY, gli::FORMAT_RGBA32_SFLOAT_PACK32, extent, maxLevels, 1, 1);
 
+    x = imageInput.width();
+    y = imageInput.height();
+
     // borders
     stringstream filenameOutput (stringstream::in | stringstream::out);
-    filenameOutput << filename << "_filtered" << ".dds";
-
+    filenameOutput << filename << "_filtered" << ".dds"; 
     for (unsigned int idx = 0; idx < maxLevels; ++idx)
     {
         cout << "processing file " << filenameOutput.str() << " Level: " << idx << endl;
