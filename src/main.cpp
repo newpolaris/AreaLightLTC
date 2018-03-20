@@ -96,19 +96,13 @@ ModelPtr createPrimitive(const glm::mat4& world, Args&&... args)
 
 struct SceneSettings
 {
-    static const uint32_t NumSamples = 4;
     bool bProgressiveSampling = true;
     bool bGroudTruth = false;
     bool bClipless = true;
-    int32_t SampleCount = 0;
     uint32_t LightIndex = 0;
     float JitterAASigma = 0.6f;
     float F0 = 0.04f; // fresnel
     glm::vec4 Albedo = glm::vec4(0.5f, 0.5f, 0.5f, 1.f); // additional albedo
-    // tempolar values
-    bool bUiChanged = false;
-    bool bResized = false;
-    bool bSampleReset = false;
 };
 
 static float Halton(int index, float base)
@@ -162,6 +156,19 @@ glm::mat4 jitterProjMatrix(const glm::mat4& proj, int sampleCount, float jitterA
     return ret;
 }
 
+enum ProfilerType { ProfilerTypeMainRender = 0 };
+
+namespace 
+{
+    static const uint32_t NumSamples = 4;
+
+    bool s_bSampleReset = false;
+    bool s_bUiChanged = false;
+    float s_CpuTick = 0.f;
+    float s_GpuTick = 0.f;
+    int32_t s_SampleCount = 0;
+}
+
 class AreaLight final : public gamecore::IGameApp
 {
 public:
@@ -191,6 +198,7 @@ private:
     ModelList m_Models;
     FullscreenTriangleMesh m_ScreenTraingle;
     ProgramShader m_BlitShader;
+
     GraphicsTexturePtr m_ScreenColorTex;
 	GraphicsTexturePtr m_NormalTex;
 	GraphicsTexturePtr m_RoughnessTex;
@@ -326,7 +334,7 @@ void AreaLight::update() noexcept
         preWidth = width, preHeight = height;
         bResized = true;
     }
-    m_Settings.bSampleReset = (m_Settings.bUiChanged || bCameraUpdated || bResized);
+    s_bSampleReset = (s_bUiChanged || bCameraUpdated || bResized);
 }
 
 void AreaLight::updateHUD() noexcept
@@ -347,6 +355,9 @@ void AreaLight::updateHUD() noexcept
     {
         // global
         {
+            ImGui::Text("CPU %s: %10.5f ms\n", "Main", s_CpuTick);
+            ImGui::Text("GPU %s: %10.5f ms\n", "Main", s_GpuTick);
+            ImGui::Separator();
             bUpdated |= ImGui::Checkbox("Ground Truth", &m_Settings.bGroudTruth);
             bUpdated |= ImGui::Checkbox("Progressive Sampling", &m_Settings.bProgressiveSampling);
             bUpdated |= ImGui::Checkbox("Use Clipless", &m_Settings.bClipless);
@@ -391,28 +402,26 @@ void AreaLight::updateHUD() noexcept
         prevAlbedo = m_Settings.Albedo;
         bUpdated |= true;
     }
-    m_Settings.bUiChanged = bUpdated;
+    s_bUiChanged = bUpdated;
 }
-
-enum ProfilerType { ProfilerTypeMainRender = 0 };
 
 void AreaLight::render() noexcept
 {
     profiler::start(ProfilerTypeMainRender);
 
     // reset sampling count
-    if (m_Settings.bSampleReset)
-        m_Settings.SampleCount = 0;
+    if (s_bSampleReset)
+        s_SampleCount = 0;
 
     // set the jittered projection matrix
     auto projection = m_Camera.getProjectionMatrix();
     projection = jitterProjMatrix(
         projection,
-        m_Settings.SampleCount/SceneSettings::NumSamples,
+        s_SampleCount/NumSamples,
         m_Settings.JitterAASigma,
         (float)getFrameWidth(), (float)getFrameHeight());
 
-    auto samples = Halton4D(SceneSettings::NumSamples, m_Settings.SampleCount);
+    auto samples = Halton4D(NumSamples, s_SampleCount);
 
     const RenderingData renderData { 
         m_Settings.bGroudTruth,
@@ -423,7 +432,7 @@ void AreaLight::render() noexcept
     };
 
     GLenum clearFlag = GL_DEPTH_BUFFER_BIT;
-    if (m_Settings.SampleCount == 0)
+    if (s_SampleCount == 0)
         clearFlag |= GL_COLOR_BUFFER_BIT;
     m_Device->setFramebuffer(m_ColorRenderTarget);
 	glViewport(0, 0, getFrameWidth(), getFrameHeight());
@@ -484,15 +493,15 @@ void AreaLight::render() noexcept
         glDisable(GL_DEPTH_TEST);
         m_BlitShader.bind();
         m_BlitShader.bindTexture("uTexSource", m_ScreenColorTex, 0);
-        m_BlitShader.setUniform("uSampleCount", m_Settings.SampleCount);
+        m_BlitShader.setUniform("uSampleCount", s_SampleCount);
         m_ScreenTraingle.draw();
         glEnable(GL_DEPTH_TEST);
     }
     if (m_Settings.bProgressiveSampling)
-        m_Settings.SampleCount += SceneSettings::NumSamples;
+        s_SampleCount += NumSamples;
 
     profiler::stop(ProfilerTypeMainRender);
-    profiler::tick(ProfilerTypeMainRender);
+    profiler::tick(ProfilerTypeMainRender, s_CpuTick, s_GpuTick);
 }
 
 void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
