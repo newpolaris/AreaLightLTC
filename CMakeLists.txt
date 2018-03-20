@@ -13,6 +13,7 @@ set(PREFILTER_TARGET Prefilter.app)
 find_package(OpenGL REQUIRED)
 
 set(UseGLI TRUE)
+set(UseZlib TRUE)
 
 # Compile external dependencies 
 add_subdirectory (external)
@@ -46,6 +47,7 @@ set(ALL_LIBS
 	GLEW_1130
 	imgui
 	gli
+	zlib
 )
 
 add_definitions(

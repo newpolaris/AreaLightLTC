@@ -146,3 +146,8 @@ endif(UseNVDDS)
 if (UseGLI)
 	add_subdirectory(gli)
 endif(UseGLI)
+
+### Zlib ###
+if (UseZlib)
+	add_subdirectory(zlib)
+endif(UseZlib)
