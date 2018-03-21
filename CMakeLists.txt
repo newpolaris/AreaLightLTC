@@ -38,6 +38,7 @@ include_directories(
 	external/assimp-3.0.1270/include/
 	external/bullet-2.81-rev2613/src/
 	external/gli/
+	external/zlib/
 	.
 )
 
@@ -47,7 +48,7 @@ set(ALL_LIBS
 	GLEW_1130
 	imgui
 	gli
-	zlib
+	zlibstatic
 )
 
 add_definitions(
@@ -69,11 +70,15 @@ list(APPEND ALL_LIBS ${X11_LIBRARIES})
 #endif()
 
 file( GLOB_RECURSE SRC src/* )
+set( FILTER_SRC 
+	external/prefilter/prefilterAreaLight.cpp
+	src/tools/FileUtility.cpp
+)
 
 add_executable(${APP_TARGET} ${SRC})
 target_link_libraries(${APP_TARGET} glsw ${ALL_LIBS})
 
-add_executable(${PREFILTER_TARGET} external/prefilter/prefilterAreaLight.cpp)
+add_executable(${PREFILTER_TARGET} ${FILTER_SRC})
 target_link_libraries(${PREFILTER_TARGET} ${ALL_LIBS})
 
 # Xcode and Visual working directories

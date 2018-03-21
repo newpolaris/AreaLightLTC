@@ -253,7 +253,7 @@ void AreaLight::startup() noexcept
     auto filteredTex = m_Device->createTexture(filteredDesc);
 
     GraphicsTextureDesc source;
-    source.setFilename("resources/hatsune-miku-in-the-rain.dds");
+    source.setFilename("resources/hatsune-miku-in-the-rain.zlib");
     source.setAnisotropyLevel(16);
     auto lightSource = m_Device->createTexture(source);
 

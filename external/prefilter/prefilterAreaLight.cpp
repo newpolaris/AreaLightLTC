@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <cstdint>
 #include <gli/gli.hpp>
+#include <tools/FileUtility.h>
 
 using namespace std;
 
@@ -108,7 +109,11 @@ int main(int argc, char* argv[])
             dest[offset++] = 1.f;
         }
 		stringstream filenameOutput (stringstream::in | stringstream::out);
-		filenameOutput << filename << ".dds"; 
+		filenameOutput << filename << ".zlib"; 
+        std::vector<char> memory;
+        gli::save_dds(texture, memory);
+        auto bytes = std::make_shared<util::FileContainer>(memory);
+        util::CompressFile(filenameOutput.str(), bytes);
 		gli::save(texture, filenameOutput.str());
 	}
 
