@@ -1,5 +1,6 @@
 #include <GL/glew.h>
 #include <glfw3.h>
+#include <string.h>
 
 // GLM for matrix transformation
 #include <glm/glm.hpp>

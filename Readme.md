@@ -1,6 +1,10 @@
-[![link text](./screenshots/Textured.jpg)](./screenshots/Textured.jpg)
+[![link text](./screenshots/screenshot.jpg)](./screenshots/screenshot.jpg)
 
-https://eheitzresearch.wordpress.com/415-2/
+LTC Area Light
+
+TODO:
+
+http://patapom.com/blog/BRDF/MSBRDFEnergyCompensation2/
 
 Reference:
 
