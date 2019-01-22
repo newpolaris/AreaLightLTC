@@ -37,7 +37,7 @@ namespace light
         m_ShaderDepthLight->setDevice(device);
         m_ShaderDepthLight->initialize();
         m_ShaderDepthLight->addShader(GL_VERTEX_SHADER, "DepthLight.Vertex");
-	#if __APPLE__
+	#if 1 // __APPLE__
         m_ShaderDepthLight->addShader(GL_FRAGMENT_SHADER, "DepthLight.Fragment");
 	#endif
         m_ShaderDepthLight->link();
@@ -53,7 +53,7 @@ namespace light
         m_ShaderDepthLTC->setDevice(device);
         m_ShaderDepthLTC->initialize();
         m_ShaderDepthLTC->addShader(GL_VERTEX_SHADER, "DepthLtc.Vertex");
-	#if __APPLE__
+	#if 1 // __APPLE__
         m_ShaderDepthLTC->addShader(GL_FRAGMENT_SHADER, "DepthLtc.Fragment");
 	#endif
         m_ShaderDepthLTC->link();

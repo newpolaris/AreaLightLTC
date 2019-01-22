@@ -153,7 +153,7 @@ namespace gamecore {
 #ifdef __APPLE__
 		glswAddDirectiveToken("*", "#version 330 core");
 #else
-		glswAddDirectiveToken("*", "#version 450 core");
+		glswAddDirectiveToken("*", "#version 320 es");
 #endif
 
 		// to prevent osx input bug
@@ -186,7 +186,7 @@ namespace gamecore {
 			std::cerr << "OpenGL error: " << err << std::endl;
 		}
 
-		std::printf("%s\n%s\n", 
+		std::printf("%s\n%s\n",
 			glGetString(GL_RENDERER),  // e.g. Intel HD Graphics 3000 OpenGL Engine
 			glGetString(GL_VERSION)    // e.g. 3.2 INTEL-8.0.61
 		);
@@ -204,6 +204,18 @@ namespace gamecore {
 			std::cout << "glDebugMessageCallback not available" << std::endl;
 		}
 #endif
+
+		// TODO: TEST
+		glCullFace(GL_FRONT);
+		glBindTexture(1, 0);
+		glBindTexture(GL_TEXTURE_2D, 11);
+		glCullFace(3);
+		glPolygonMode(5, 5);
+		glActiveTexture(GL_TEXTURE0 + 55);
+		glEnableVertexAttribArray(0);
+		while ((err = glGetError()) != GL_NO_ERROR) {
+			std::cerr << "OpenGL error: " << err << std::endl;
+		}
 
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
@@ -239,12 +251,14 @@ namespace gamecore {
 #ifdef _DEBUG
 		glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 #endif
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, minor);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 #ifdef __APPLE__
 		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
+		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+		// glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 		
 		auto window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, name.c_str(), NULL, NULL );
 		if ( window == NULL ) {
