@@ -36,23 +36,13 @@
 #include <chrono>
 #include <thread>
 
+bool bRotate = true;
 float rotx, roty = 0;
-GLfloat global[] = { 0.2, 0.2, 0.2, 1.0 };
-float ambient[4] = { 0.0, 0.0, 0.0, 1.0};
-float diffuse[4] = { 1.0, 1.0, 1.0, 1.0 };
+float global_ambient_light[4] = { 0.2, 0.2, 0.2, 1.0 };
+float ambient_light[4] = { 0.338, 0.338, 0.338, 1.0};
+float diffuse_light[4] = { 1.0, 1.0, 1.0, 1.0 };
+float materialColor[] = { 91.f/255, 0.0, 0.0, 1.0 };
 float lightpos[4] = {-5, 5, 10, 0};
-
-struct SceneSettings
-{
-    bool bProgressiveSampling = true;
-    bool bGroudTruth = false;
-    bool bClipless = true;
-    uint32_t LightIndex = 0;
-    float JitterAASigma = 0.6f;
-    float F0 = 0.04f; // fresnel
-    glm::vec4 Albedo = glm::vec4(0.5f, 0.5f, 0.5f, 1.f); // additional albedo
-};
-
 
 namespace 
 {
@@ -87,8 +77,6 @@ public:
     ShaderPtr submitPerFrameUniformLight(ShaderPtr& shader) noexcept;
 
 private:
-
-    SceneSettings m_Settings;
 };
 
 CREATE_APPLICATION(AreaLight);
@@ -142,13 +130,12 @@ void AreaLight::updateHUD() noexcept
             ImGui::Text("CPU %s: %10.5f ms\n", "Main", s_CpuTick);
             ImGui::Text("GPU %s: %10.5f ms\n", "Main", s_GpuTick);
             ImGui::Separator();
-            bUpdated |= ImGui::Checkbox("Ground Truth", &m_Settings.bGroudTruth);
-            bUpdated |= ImGui::Checkbox("Progressive Sampling", &m_Settings.bProgressiveSampling);
-            bUpdated |= ImGui::Checkbox("Use Clipless", &m_Settings.bClipless);
+            bUpdated |= ImGui::Checkbox("Rotate", &bRotate);
             ImGui::Separator();
-            bUpdated |= ImGui::SliderFloat("Fresnel", &m_Settings.F0, 0.01f, 1.f);
-            bUpdated |= ImGui::SliderFloat("Jitter Radius", &m_Settings.JitterAASigma, 0.01f, 2.f);
-            ImGui::ColorWheel("Albedo Color:", glm::value_ptr(m_Settings.Albedo), 0.6f);
+            ImGui::ColorWheel("global ambient light color:", global_ambient_light, 0.6f);
+            ImGui::ColorWheel("ambient light color:", ambient_light, 0.6f);
+            ImGui::ColorWheel("diffuse light color:", diffuse_light, 0.6f);
+			ImGui::ColorWheel("material ambient/diffuse color:", materialColor, 0.6f);
         }
         ImGui::Separator();
         ImGui::Separator();
@@ -164,9 +151,10 @@ void AreaLight::render() noexcept
 {
 	std::this_thread::sleep_for(std::chrono::milliseconds(33));
 
-	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global);
-	glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient_light);
+
+	glLightfv(GL_LIGHT0, GL_AMBIENT, ambient_light);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse_light);
 	glLightfv(GL_LIGHT0, GL_POSITION, lightpos);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -177,12 +165,14 @@ void AreaLight::render() noexcept
 	glRotatef(rotx, 1, 0, 0);
 	glRotatef(roty, 0, 1, 1);
 
-	rotx += 0.5;
-	roty += 0.5;
-
-	glColor4f(1, 1, 1, 1);
+	if (bRotate) {
+		rotx += 0.5;
+		roty += 0.5;
+	}
 
 	glBegin(GL_QUADS);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, materialColor);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, materialColor);
 
 	glNormal3f(0, 0, 1);
 	glVertex3f(-1, -1, 1);
