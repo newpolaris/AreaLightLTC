@@ -324,6 +324,30 @@ void _glfwTerminateContextAPI(void)
     assert((size_t) index < sizeof(attribs) / sizeof(attribs[0])); \
 }
 
+void CreateGLContext(HDC hDC) {
+	const GLubyte * version = glGetString(GL_VERSION);
+
+	UINT PixelFormat = 0;
+	PIXELFORMATDESCRIPTOR oPixelFormatDes = { 0 };
+	oPixelFormatDes.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+	oPixelFormatDes.nVersion = 1;
+	oPixelFormatDes.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;	//|PFD_GENERIC_ACCELERATED;
+	oPixelFormatDes.iPixelType = PFD_TYPE_RGBA;
+	oPixelFormatDes.cColorBits = 16;
+	oPixelFormatDes.cDepthBits = 24;
+	oPixelFormatDes.cStencilBits = 8;
+	oPixelFormatDes.iLayerType = PFD_MAIN_PLANE;
+
+
+	PixelFormat = ChoosePixelFormat(hDC, &oPixelFormatDes);
+
+	BOOL bRet = TRUE;
+	bRet = SetPixelFormat(hDC, PixelFormat, &oPixelFormatDes);
+
+	HGLRC m_hRC = wglCreateContext(hDC);
+	bRet = wglMakeCurrent(hDC, m_hRC);
+}
+
 // Create the OpenGL or OpenGL ES context
 //
 int _glfwCreateContext(_GLFWwindow* window,
