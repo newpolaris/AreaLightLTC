@@ -244,7 +244,7 @@ namespace gamecore {
 #ifdef __APPLE__
 		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
-		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
+		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		
 		auto window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, name.c_str(), NULL, NULL );
 		if ( window == NULL ) {
