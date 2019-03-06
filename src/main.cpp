@@ -45,7 +45,7 @@ in vec2 texcoord;\n\
 out vec2 UV;\n\
 void main()\n\
 {\n\
-  gl_Position = vec4(point, 1);\n\
+  gl_Position = vec4(point, 1.0);\n\
   UV = texcoord;\n\
 }";
 
@@ -63,6 +63,9 @@ GLuint vbo;
 GLuint idx;
 GLuint tex;
 GLuint program;
+GLuint vertexShader = 0;
+GLuint fragmentShader = 0;
+
 int width = 320;
 int height = 240;
 
@@ -177,12 +180,12 @@ AreaLight::~AreaLight() noexcept
 
 void AreaLight::startup() noexcept
 {
-	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexSource, NULL);
 	glCompileShader(vertexShader);
 	printCompileStatus("Vertex shader", vertexShader);
 
-	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
 	glCompileShader(fragmentShader);
 	printCompileStatus("Fragment shader", fragmentShader);
@@ -204,22 +207,37 @@ void AreaLight::startup() noexcept
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, idx);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(glGetAttribLocation(program, "point"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
-	glVertexAttribPointer(glGetAttribLocation(program, "texcoord"), 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
+    // glGetAttribLocation requires program
+    glUseProgram(program);
 
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+	glVertexAttribPointer(glGetAttribLocation(program, "point"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
+	glVertexAttribPointer(glGetAttribLocation(program, "texcoord"), 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, idx);
 
 	glGenTextures(1, &tex);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, tex);
+
+    // uniform1i requires program
+    glUseProgram(program);
 	glUniform1i(glGetUniformLocation(program, "tex"), 0);
+
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_BGR, GL_FLOAT, pixels);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glGenerateMipmap(GL_TEXTURE_2D);
 
+}
+
+void AreaLight::closeup() noexcept
+{
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(0);
 
@@ -240,10 +258,6 @@ void AreaLight::startup() noexcept
 	glDeleteProgram(program);
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
-}
-
-void AreaLight::closeup() noexcept
-{
 }
 
 void AreaLight::update() noexcept
@@ -293,9 +307,14 @@ void AreaLight::render() noexcept
 	std::this_thread::sleep_for(std::chrono::milliseconds(33));
 
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+    glClearDepth(1.f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // glDrawElements requires array object
 	glUseProgram(program);
+	glBindVertexArray(vao);
 	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void *)0);
+	glBindVertexArray(0);
 }
 
 void AreaLight::keyboardCallback(uint32_t key, bool isPressed) noexcept
