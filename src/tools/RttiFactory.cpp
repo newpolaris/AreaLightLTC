@@ -51,6 +51,7 @@ Factory::~Factory() noexcept
 
 bool rtti::Factory::add(class Rtti* rtti) noexcept
 {
-	_rttis.push_back(rtti);
+	// NOTE: dynmaic initializer error when insert 5th item
+	// _rttis.push_back(rtti);
 	return true;
 }

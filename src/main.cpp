@@ -424,6 +424,7 @@ void AreaLight::render() noexcept
 
     auto samples = Halton4D(NumSamples, s_SampleCount);
 
+    // TODO: make sure aligned
     const RenderingData renderData { 
         m_Settings.bGroudTruth,
         m_Camera.getPosition(),
